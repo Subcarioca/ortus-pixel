@@ -179,7 +179,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
                   title={`Só o que importa de ${category.name}`}
                   description={`Receba as novidades de ${category.name} direto no seu e-mail.`}
                   source={`categoria-${slug}`}
-                  compact
+                  variant="inline"
                 />
               </div>
 

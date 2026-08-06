@@ -187,7 +187,7 @@ export default async function SubcategoryPage({
               title={`Ofertas e reviews de ${subcategory.name}`}
               description="Avisamos quando sair review novo ou quando um produto que testamos cair de preço."
               source={`sub-${sub}`}
-              compact
+              variant="inline"
             />
           </div>
         </div>

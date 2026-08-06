@@ -242,7 +242,7 @@ export default async function TrendingPage() {
           title="Receba o resumo diário"
           description="O que subiu no ranking, uma vez por dia."
           source="trending-sidebar"
-          compact
+          variant="sidebar"
         />
       </aside>
     </div>

@@ -375,15 +375,16 @@ export default async function ArticlePage({
           )}
 
           {/* CTA de newsletter embutido no corpo, sem overlay: "não interrompe,
-              não cobre texto, não muda o layout" (design §3). */}
-          <div className="cta-inline">
-            <NewsletterForm
-              title="Gostou? Receba o resumo diário"
-              description="Uma edição por dia com o que importou de verdade."
-              source={`artigo-${categoria}`}
-              compact
-            />
-          </div>
+              não cobre texto, não muda o layout" (design §3).
+              O `.cta-inline` que envolvia esta chamada saiu: o próprio
+              componente já renderiza `.cta-inline` na variante `inline`, e o
+              aninhamento duplicava os filetes de cima e de baixo. */}
+          <NewsletterForm
+            title="Gostou? Receba o resumo diário"
+            description="Uma edição por dia com o que importou de verdade."
+            source={`artigo-${categoria}`}
+            variant="inline"
+          />
 
           <ShareBar url={articleUrl} title={article.title} showCount />
 

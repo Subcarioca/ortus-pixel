@@ -92,7 +92,15 @@ export default async function HomePage() {
       <div className="container">
         {/* ---------- HERO ---------- */}
         {leadStory ? (
-          <section className="hero-layout" aria-labelledby="hero-titulo">
+          // `.hero-layout` é uma grade de duas colunas (1.62fr / 1fr) a partir
+          // de 1024px. Com uma única notícia quente — que é o estado NORMAL do
+          // site, não a exceção — a segunda coluna ficaria vazia e o hero
+          // ocuparia 62% da largura com um buraco ao lado. Sem os secundários,
+          // o hero simplesmente ocupa a linha inteira.
+          <section
+            className={secondaryHot.length > 0 ? 'hero-layout' : undefined}
+            aria-labelledby="hero-titulo"
+          >
             <article className="hero">
               {leadStory.coverImageUrl && (
                 <div className="hero__media">

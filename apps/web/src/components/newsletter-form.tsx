@@ -15,32 +15,61 @@
  *  - Feedback de sucesso NO LUGAR do formulário, não em outra página. Redirect
  *    quebra o contexto de leitura e é a principal fonte de abandono.
  *
- * RE-SKIN v0.3 — o `compact` mudou de implementação, não de intenção.
+ * RE-SKIN v0.3 — de `compact: boolean` para `variant`, e por quê.
  *
- * Antes ele produzia `.cta-news--compact`, um modificador que só existia aqui:
- * na prática o bloco continuava com o cartão inteiro (fundo, borda, raio,
- * padding de 32px) e ficava pesado dentro de um artigo ou de uma sidebar de
- * 320px. O design já resolve esse caso com um COMPONENTE diferente,
- * `.cta-inline`: sem cartão, só dois filetes horizontais delimitando o bloco —
- * "não interrompe, não cobre texto, não muda o layout" (design §3).
+ * A versão anterior tinha `compact`, que produzia `.cta-news--compact` — um
+ * modificador que só existia neste arquivo. Depois virou `.cta-inline`, o que
+ * já era uma melhora, mas ainda escondia um problema: `compact` era usado em
+ * DOIS lugares com necessidades opostas.
  *
- * Ou seja: `compact` deixou de ser uma variante visual do cartão e passou a
- * escolher entre os dois componentes que o design system já tinha.
+ *   1. No meio do corpo do artigo, onde a largura é confortável e o design pede
+ *      `.cta-inline` (dois filetes horizontais, sem cartão, texto à esquerda e
+ *      formulário à direita a partir de 700px).
+ *   2. Na sidebar de 320px, onde `.cta-inline` vira duas colunas espremidas e
+ *      o campo de e-mail encolhe para caber ao lado do botão.
+ *
+ * A causa é sutil e vale registrar, porque vai acontecer de novo: as media
+ * queries do design (`.cta-inline` em 700px, `.form-inline` em 560px) medem a
+ * JANELA, não o contêiner. Um bloco de 320px dentro de uma tela de 1280px
+ * recebe o layout "largo" e quebra. O protótipo evita isso usando um markup
+ * diferente na sidebar (`.side-box` + `.stack-sm` + `.btn--block`) — e é
+ * exatamente esse markup que a variante `sidebar` passou a produzir.
+ *
+ * Um booleano não conseguia expressar três casos. `variant` consegue, e o nome
+ * de cada valor diz ONDE o bloco vive, que é o que de fato determina a forma.
  */
 
 import { useState } from 'react';
+
+/**
+ * `feature`  bloco de destaque (home): `.cta-news`, o cartão inteiro.
+ * `inline`   dentro do corpo do artigo: `.cta-inline`, sem cartão.
+ * `sidebar`  coluna de 320px: `.side-box`, com o formulário empilhado.
+ */
+export type NewsletterVariant = 'feature' | 'inline' | 'sidebar';
 
 interface NewsletterFormProps {
   title: string;
   description: string;
   /** De onde veio a inscrição — usado para medir o que converte melhor. */
   source: string;
-  compact?: boolean;
+  variant?: NewsletterVariant;
 }
+
+const BLOCK_CLASS: Record<NewsletterVariant, string> = {
+  feature: 'cta-news',
+  inline: 'cta-inline',
+  sidebar: 'side-box',
+};
 
 type Status = 'idle' | 'submitting' | 'success' | 'error';
 
-export function NewsletterForm({ title, description, source, compact = false }: NewsletterFormProps) {
+export function NewsletterForm({
+  title,
+  description,
+  source,
+  variant = 'feature',
+}: NewsletterFormProps) {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<Status>('idle');
   const [message, setMessage] = useState('');
@@ -75,9 +104,8 @@ export function NewsletterForm({ title, description, source, compact = false }: 
     }
   }
 
-  // `.cta-inline` na versão compacta (artigo/sidebar), `.cta-news` no bloco
-  // de destaque da home. Ver o comentário no topo do arquivo.
-  const blockClass = compact ? 'cta-inline' : 'cta-news';
+  const blockClass = BLOCK_CLASS[variant];
+  const isSidebar = variant === 'sidebar';
 
   // Sucesso substitui o formulário no mesmo lugar.
   if (status === 'success') {
@@ -102,7 +130,12 @@ export function NewsletterForm({ title, description, source, compact = false }: 
       <h2>{title}</h2>
       <p>{description}</p>
 
-      <form onSubmit={handleSubmit} className="form-inline">
+      {/* Na sidebar o formulário empilha (`.stack-sm`) e o botão ocupa a
+          largura toda (`.btn--block`). É o markup do protótipo para este ponto
+          — e não uma exceção nossa: `.form-inline` só funciona onde a JANELA
+          passa de 560px E o bloco é largo, e a segunda condição o CSS não tem
+          como verificar. */}
+      <form onSubmit={handleSubmit} className={isSidebar ? 'stack-sm' : 'form-inline'}>
         <label htmlFor={`email-${source}`} className="sr-only">
           Seu e-mail
         </label>
@@ -123,7 +156,11 @@ export function NewsletterForm({ title, description, source, compact = false }: 
           aria-describedby={status === 'error' ? `erro-${source}` : undefined}
           aria-invalid={status === 'error'}
         />
-        <button type="submit" className="btn btn--primary" disabled={status === 'submitting'}>
+        <button
+          type="submit"
+          className={`btn btn--primary${isSidebar ? ' btn--block' : ''}`}
+          disabled={status === 'submitting'}
+        >
           {status === 'submitting' ? 'Enviando...' : 'Quero receber'}
         </button>
       </form>

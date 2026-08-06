@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "//": [
+    "Configuração TypeScript compartilhada por todos os workspaces.",
+    "Cada pacote estende este arquivo e sobrescreve só o que for específico dele.",
+    "Isso evita o clássico 'cada pacote com um strict diferente', que é a origem",
+    "da maioria dos bugs de tipo que atravessam fronteiras de módulo."
+  ],
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": false,
+
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": false,
+
+    // Os pacotes internos NÃO são compilados isoladamente: são consumidos como
+    // TypeScript-fonte pelo Next (via `transpilePackages`) e pelo tsx (no
+    // curator e nos testes). Portanto o papel do `tsc` aqui é apenas VERIFICAR
+    // tipos, nunca emitir arquivos.
+    //
+    // Consequências práticas dessa escolha:
+    //  - `noEmit`: não geramos dist/ que ninguém consumiria (e que ficaria
+    //    obsoleto silenciosamente, causando o clássico "mudei o código e nada
+    //    aconteceu").
+    //  - `allowImportingTsExtensions`: permite `import './engine.ts'` nos
+    //    testes, que é como o runner nativo do Node resolve os módulos.
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "exclude": ["node_modules", "dist", ".next"]
+}

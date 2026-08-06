@@ -1,0 +1,56 @@
+# Dependências
+node_modules/
+.pnp
+.pnp.js
+
+# Build
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# Ambiente — NUNCA versionar segredos.
+# Só os arquivos *.example (com placeholders) vão para o repositório.
+#
+# CORREÇÃO DE SEGURANÇA: a lista anterior era `.env`, `.env.local` e
+# `.env.*.local`. Nenhum desses padrões casa com `.env.production` — o arquivo
+# que guarda a senha do banco, o ADMIN_ACCESS_TOKEN e as chaves de API do VPS.
+# Ou seja, ele podia ser commitado por acidente (um `git add -A` bastava), e
+# segredo que entra no histórico do Git não sai com um `rm` no commit seguinte:
+# precisa ser ROTACIONADO.
+#
+# `.env.*` cobre qualquer variante presente e futura (.env.production,
+# .env.staging, .env.hostinger), e as exceções liberam só os templates.
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# Prisma
+packages/db/prisma/*.db
+packages/db/prisma/*.db-journal
+packages/db/prisma/migrations/dev.db*
+
+# Logs e cache
+# `logs/` é criado pelo deploy.sh e é onde o PM2 escreve (ver ecosystem.config.js).
+logs/
+*.log
+npm-debug.log*
+.turbo/
+.cache/
+coverage/
+
+# Sistema operacional / editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Claude Code — config local da máquina (permissões, etc.), não é do projeto.
+.claude/settings.local.json
+
+# Backups/arquivos soltos que não deveriam entrar no histórico do Git.
+*.zip
+*.tar.gz

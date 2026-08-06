@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Em Alta — O Que Está Bombando no Universo Nerd | Ortus Pixel</title>
+<meta name="description" content="Ranking ao vivo do que está bombando agora: games, cinema, animes e tech, atualizado em tempo real. Sem número de score exposto, sem clickbait — só o que importa.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ortuspixel.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+
+<div class="protobar"><div class="container protobar__inner">
+  <span>Protótipo Ortus Pixel</span>
+  <a href="index.html">Home</a>
+  <a href="em-alta.html" aria-current="page">Em Alta</a>
+  <a href="categoria.html">Categoria</a>
+  <a href="categoria-hardware.html">Tech › Hardware</a>
+  <a href="hub-franquia.html">Hub de franquia</a>
+  <a href="artigo.html">Artigo (quente)</a>
+  <a href="artigo-review.html">Review + afiliados</a>
+  <a href="sistema.html">Design system</a>
+</div></div>
+
+<header class="header">
+  <div class="container header__bar">
+    <button class="icon-btn nav-toggle" aria-label="Abrir menu de editorias" aria-expanded="false"><svg class="ico"><use href="#i-menu"></use></svg></button>
+    <a class="logo" href="index.html"><span class="logo__dot" aria-hidden="true"></span>Ortus<b>Pixel</b></a>
+    <nav class="header__nav" aria-label="Editorias">
+      <a href="categoria.html">Games</a>
+      <a href="categoria.html">Cinema &amp; Séries</a>
+      <a href="categoria.html">Anime &amp; Mangá</a>
+      <a href="categoria.html">HQs</a>
+      <a href="categoria.html">Tech</a>
+      <a href="categoria.html">Eventos</a>
+    </nav>
+    <div class="header__actions">
+      <a class="btn-hot-nav" href="em-alta.html" aria-current="page"><svg class="ico"><use href="#i-flame"></use></svg> Em Alta</a>
+      <label class="icon-btn lbl-dark" for="th-dark"><svg class="ico"><use href="#i-moon"></use></svg><span class="sr-only">Ativar tema escuro</span></label>
+      <label class="icon-btn lbl-light" for="th-light"><svg class="ico"><use href="#i-sun"></use></svg><span class="sr-only">Ativar tema claro</span></label>
+      <button class="icon-btn" aria-label="Buscar na Ortus Pixel"><svg class="ico"><use href="#i-search"></use></svg></button>
+      <button class="icon-btn" aria-label="Notificações (3 novas)"><svg class="ico"><use href="#i-bell"></use></svg><span class="icon-btn__dot"></span></button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <div class="container">
+    <nav class="breadcrumb" aria-label="Você está em">
+      <a href="index.html">Home</a><svg class="ico"><use href="#i-chevron-right"></use></svg><span>Em alta agora</span>
+    </nav>
+  </div>
+
+  <!-- Cabeçalho da página + transparência do algoritmo -->
+  <section class="container" aria-labelledby="h-page">
+    <div class="hub-hero" style="background:radial-gradient(120% 140% at 15% 0%, var(--heat-hot-soft), transparent 60%), var(--surface-1); border-color:var(--heat-hot-line)">
+      <div class="card__head">
+        <span class="heat heat--hot heat--lg"><svg class="ico"><use href="#i-flame"></use></svg> Ao vivo</span>
+        <span class="meta"><svg class="ico" style="width:13px;height:13px"><use href="#i-refresh"></use></svg> atualizado há 3 min</span>
+      </div>
+      <h1 id="h-page" style="margin-top:12px">Em alta agora</h1>
+      <p class="hub-hero__desc">O que o universo nerd está buscando, comentando e compartilhando neste exato momento. Ordenado pelo nosso termômetro de popularidade, recalculado a cada 15 minutos.</p>
+      <div class="hub-stats">
+        <div><div class="hub-stat__num" style="color:var(--heat-hot-text)">2</div><div class="hub-stat__lbl">Urgentes agora</div></div>
+        <div><div class="hub-stat__num" style="color:var(--heat-rise-text)">9</div><div class="hub-stat__lbl">Em alta</div></div>
+        <div><div class="hub-stat__num">41</div><div class="hub-stat__lbl">Publicadas hoje</div></div>
+        <div><div class="hub-stat__num">15<span style="font-size:.8rem">min</span></div><div class="hub-stat__lbl">Ciclo de atualização</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container" aria-labelledby="h-rank">
+    <h2 class="sr-only" id="h-rank">Ranking</h2>
+
+    <!-- Filtros: temperatura + janela de tempo + editoria -->
+    <div class="filters" role="group" aria-label="Filtrar por temperatura" data-filter-group>
+      <button class="chip" data-filter="todos" aria-pressed="true">Todos <span class="chip__count">52</span></button>
+      <button class="chip chip--hot" data-filter="hot" aria-pressed="false"><svg class="ico"><use href="#i-flame"></use></svg> Quentes <span class="chip__count">2</span></button>
+      <button class="chip chip--rise" data-filter="rise" aria-pressed="false"><svg class="ico"><use href="#i-trending-up"></use></svg> Em alta <span class="chip__count">9</span></button>
+      <button class="chip" data-filter="base" aria-pressed="false">Relevantes <span class="chip__count">27</span></button>
+    </div>
+    <div class="filters" role="group" aria-label="Filtrar por janela de tempo">
+      <button class="chip" aria-pressed="true">Agora</button>
+      <button class="chip" aria-pressed="false">Últimas 24h</button>
+      <button class="chip" aria-pressed="false">7 dias</button>
+      <button class="chip" aria-pressed="false"><svg class="ico"><use href="#i-filter"></use></svg> Editoria</button>
+    </div>
+
+    <div class="layout-2col" style="margin-top:24px">
+      <div>
+        <!-- TOP 1 e 2: tratamento de pódio, card grande com imagem -->
+        <article class="hero" style="margin-bottom:16px">
+          <a href="artigo.html">
+            <div class="hero__media" style="aspect-ratio:16/9">
+              <div class="thumb" data-c="games"><span class="thumb__note">Capa</span></div>
+              <div class="hero__overlay"></div>
+              <span style="position:absolute;left:16px;top:16px;z-index:4;font-family:var(--font-mono);font-size:2.4rem;font-weight:700;color:#fff;text-shadow:0 2px 20px rgba(0,0,0,.7)">01</span>
+            </div>
+            <div class="hero__body" style="margin-top:-22%">
+              <div class="card__head">
+                <span class="heat heat--hot heat--lg"><svg class="ico"><use href="#i-flame"></use></svg> Urgente</span>
+                <span class="cat cat--games">Games</span>
+              </div>
+              <h3 class="hero__title" style="font-size:clamp(1.5rem,4.4vw,2.4rem)">Rockstar confirma data de GTA VI e libera trailer 3 sem aviso</h3>
+              <div class="hero__foot">
+                <span class="heatbar heatbar--hot" data-on="4" role="img" aria-label="Temperatura: urgente"><i></i><i></i><i></i><i></i></span>
+                <span class="trend trend--up"><svg class="ico"><use href="#i-trending-up"></use></svg> Disparando na última hora</span>
+                <span class="meta">há 12 min</span>
+              </div>
+            </div>
+          </a>
+        </article>
+
+        <div class="rank-list" style="gap:6px">
+          <a class="rank rank--hot" href="artigo.html" data-heat="hot">
+            <span class="rank__pos">02</span>
+            <span>
+              <span class="card__head"><span class="heat heat--hot"><svg class="ico"><use href="#i-flame"></use></svg> Quente</span></span>
+              <span class="rank__title" style="display:block;margin-top:6px;font-size:1.1rem">Elenco de "Vingadores: Guerras Secretas" é revelado em painel surpresa</span>
+              <span class="rank__meta meta"><span class="cat cat--cinema">Cinema &amp; Séries</span><span class="meta__sep"></span><span>há 41 min</span><span class="meta__sep"></span><span>1.2k compartilhamentos</span></span>
+            </span>
+            <span class="score score--hot">
+              <span class="heatbar heatbar--hot" data-on="4" role="img" aria-label="Temperatura: urgente"><i></i><i></i><i></i><i></i></span>
+              <span class="trend trend--up"><svg class="ico"><use href="#i-trending-up"></use></svg> Subindo</span>
+            </span>
+          </a>
+
+          <a class="rank rank--rise" href="artigo.html" data-heat="rise">
+            <span class="rank__pos">03</span>
+            <span>
+              <span class="card__head"><span class="heat heat--rise"><svg class="ico"><use href="#i-trending-up"></use></svg> Em alta</span></span>
+              <span class="rank__title" style="display:block;margin-top:6px">One Piece live-action T2 ganha teaser e data na Netflix</span>
+              <span class="rank__meta meta"><span class="cat cat--anime">Anime &amp; Mangá</span><span class="meta__sep"></span><span>há 2 h</span></span>
+            </span>
+            <span class="score score--rise">
+              <span class="heatbar heatbar--rise" data-on="3" role="img" aria-label="Temperatura: em alta"><i></i><i></i><i></i><i></i></span>
+              <span class="trend trend--up"><svg class="ico"><use href="#i-trending-up"></use></svg> Subindo</span>
+            </span>
+          </a>
+
+          <a class="rank rank--rise" href="artigo.html" data-heat="rise">
+            <span class="rank__pos">04</span>
+            <span>
+              <span class="card__head"><span class="heat heat--rise"><svg class="ico"><use href="#i-trending-up"></use></svg> Em alta</span></span>
+              <span class="rank__title" style="display:block;margin-top:6px">Nintendo anuncia Direct para quinta; rumores apontam novo Metroid</span>
+              <span class="rank__meta meta"><span class="cat cat--games">Games</span><span class="meta__sep"></span><span>há 3 h</span></span>
+            </span>
+            <span class="score score--rise">
+              <span class="heatbar heatbar--rise" data-on="3" role="img" aria-label="Temperatura: em alta"><i></i><i></i><i></i><i></i></span>
+              <span class="trend trend--new">Novo</span>
+            </span>
+          </a>
+
+          <a class="rank rank--rise" href="artigo.html" data-heat="rise">
+            <span class="rank__pos">05</span>
+            <span>
+              <span class="card__head"><span class="heat heat--rise"><svg class="ico"><use href="#i-trending-up"></use></svg> Em alta</span></span>
+              <span class="rank__title" style="display:block;margin-top:6px">Trailer de Duna: Parte 3 esconde 7 detalhes do livro</span>
+              <span class="rank__meta meta"><span class="cat cat--cinema">Cinema &amp; Séries</span><span class="meta__sep"></span><span>há 4 h</span></span>
+            </span>
+            <span class="score score--rise">
+              <span class="heatbar heatbar--rise" data-on="3" role="img" aria-label="Temperatura: em alta"><i></i><i></i><i></i><i></i></span>
+              <span class="trend trend--up"><svg class="ico"><use href="#i-trending-up"></use></svg> Subindo</span>
+            </span>
+          </a>
+
+          <a class="rank rank--rise" href="artigo.html" data-heat="rise">
+            <span class="rank__pos">06</span>
+            <span>
+              <span class="card__head"><span class="heat heat--rise"><svg class="ico"><use href="#i-trending-up"></use></svg> Em alta</span></span>
+              <span class="rank__title" style="display:block;margin-top:6px">CCXP 2026 abre venda de ingressos e derruba o site em 4 minutos</span>
+              <span class="rank__meta meta"><span class="cat cat--eventos">Eventos</span><span class="meta__sep"></span><span>há 5 h</span></span>
+            </span>
+            <span class="score score--rise">
+              <span class="heatbar heatbar--rise" data-on="3" role="img" aria-label="Temperatura: em alta"><i></i><i></i><i></i><i></i></span>
+              <span class="trend trend--up"><svg class="ico"><use href="#i-trending-up"></use></svg> Subindo</span>
+            </span>
+          </a>
+
+          <a class="rank rank--rise" href="artigo.html" data-heat="rise">
+            <span class="rank__pos">07</span>
+            <span>
+              <span class="card__head"><span class="heat heat--rise"><svg class="ico"><use href="#i-trending-up"></use></svg> Em alta</span></span>
+              <span class="rank__title" style="display:block;margin-top:6px">Calendário do outono 2026: os 12 animes que valem seu tempo</span>
+              <span class="rank__meta meta"><span class="cat cat--anime">Anime &amp; Mangá</span><span class="meta__sep"></span><span>há 6 h</span></span>
+            </span>
+            <span class="score score--rise">
+              <span class="heatbar heatbar--rise" data-on="3" role="img" aria-label="Temperatura: em alta"><i></i><i></i><i></i><i></i></span>
+              <span class="trend trend--down"><svg class="ico"><use href="#i-trending-down"></use></svg> Esfriando</span>
+            </span>
+          </a>
+
+          <a class="rank rank--rise" href="artigo.html" data-heat="rise">
+            <span class="rank__pos">08</span>
+            <span>
+              <span class="card__head"><span class="heat heat--rise"><svg class="ico"><use href="#i-trending-up"></use></svg> Em alta</span></span>
+              <span class="rank__title" style="display:block;margin-top:6px">Vazam specs do novo headset da Valve — e o preço assusta</span>
+              <span class="rank__meta meta"><span class="cat cat--tech">Tech</span><span class="meta__sep"></span><span>há 6 h</span></span>
+            </span>
+            <span class="score score--rise">
+              <span class="heatbar heatbar--rise" data-on="3" role="img" aria-label="Temperatura: em alta"><i></i><i></i><i></i><i></i></span>
+              <span class="trend trend--down"><svg class="ico"><use href="#i-trending-down"></use></svg> Esfriando</span>
+            </span>
+          </a>
+
+          <!-- Quebra visual entre "em alta" e "relevantes": o olho precisa perceber o degrau -->
+          <div style="display:flex;align-items:center;gap:12px;margin:20px 0 8px">
+            <span style="font-family:var(--font-mono);font-size:var(--fs-xxs);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)">Fim do "em alta" · fluxo normal</span>
+            <span style="flex:1;height:1px;background:var(--line-soft)"></span>
+          </div>
+
+          <a class="rank" href="artigo.html" data-heat="base">
+            <span class="rank__pos">09</span>
+            <span>
+              <span class="rank__title">Patch 1.4 de Baldur's Gate 3 adiciona cooperativo cross-play</span>
+              <span class="rank__meta meta"><span class="cat cat--games">Games</span><span class="meta__sep"></span><span>há 9 h</span></span>
+            </span>
+            <span class="score">
+              <span class="heatbar" data-on="2" role="img" aria-label="Temperatura: relevante"><i></i><i></i><i></i><i></i></span>
+            </span>
+          </a>
+          <a class="rank" href="artigo.html" data-heat="base">
+            <span class="rank__pos">10</span>
+            <span>
+              <span class="rank__title">Capítulo 1120 de One Piece confirma o que a comunidade suspeitava</span>
+              <span class="rank__meta meta"><span class="cat cat--anime">Anime &amp; Mangá</span><span class="meta__sep"></span><span>há 10 h</span></span>
+            </span>
+            <span class="score">
+              <span class="heatbar" data-on="2" role="img" aria-label="Temperatura: relevante"><i></i><i></i><i></i><i></i></span>
+            </span>
+          </a>
+          <a class="rank" href="artigo.html" data-heat="base">
+            <span class="rank__pos">11</span>
+            <span>
+              <span class="rank__title">DC relança Batman com numeração 1 e novo traço</span>
+              <span class="rank__meta meta"><span class="cat cat--hq">HQs</span><span class="meta__sep"></span><span>ontem</span></span>
+            </span>
+            <span class="score">
+              <span class="heatbar" data-on="2" role="img" aria-label="Temperatura: relevante"><i></i><i></i><i></i><i></i></span>
+            </span>
+          </a>
+          <a class="rank" href="artigo.html" data-heat="base">
+            <span class="rank__pos">12</span>
+            <span>
+              <span class="rank__title">PS Plus de setembro: os 4 jogos confirmados</span>
+              <span class="rank__meta meta"><span class="cat cat--games">Games</span><span class="meta__sep"></span><span>ontem</span></span>
+            </span>
+            <span class="score">
+              <span class="heatbar" data-on="2" role="img" aria-label="Temperatura: relevante"><i></i><i></i><i></i><i></i></span>
+            </span>
+          </a>
+        </div>
+
+        <div class="load-more">
+          <button class="btn btn--ghost">Ver posições 13–52</button>
+        </div>
+
+        <!-- REGRA: o fluxo do ranking é ZONA LIVRE DE ANÚNCIO.
+             Um bloco comercial entre as posições seria lido como "posição
+             comprada" e destruiria a credibilidade da página-manifesto.
+             Nesta página só existe 1 slot, na sidebar do desktop. -->
+        <p class="note" style="margin-top:20px">
+          Nenhum anúncio ou link de afiliado entra entre as posições do ranking — nem in-feed, nem ancorado.
+          A ordem aqui é 100% temperatura.
+        </p>
+      </div>
+
+      <!-- Sidebar: push + transparência do algoritmo + subindo rápido -->
+      <aside class="sidebar">
+        <div class="side-box side-sticky" style="border-color:var(--heat-hot-line);background:var(--heat-hot-soft)">
+          <h3><svg class="ico" style="width:18px;height:18px;color:var(--heat-hot)"><use href="#i-bell"></use></svg> Não perca o próximo urgente</h3>
+          <p style="font-size:var(--fs-sm);color:var(--ink-2);margin-bottom:12px">Avisamos no seu celular quando algo entrar na faixa <strong style="color:var(--ink)">Urgente</strong>. Em média, 3 alertas por semana — nunca mais que 2 por dia.</p>
+          <button class="btn btn--hot btn--block">Ativar alertas de urgente</button>
+          <p class="form-hint">Você escolhe os fandoms no próximo passo. Dá para desativar em 1 toque.</p>
+        </div>
+
+        <div class="side-box">
+          <h3>Subindo rápido</h3>
+          <div class="side-list">
+            <a class="card card--row" href="artigo.html" style="grid-template-columns:1fr auto;align-items:center">
+              <span><span class="rank__title" style="font-size:.95rem">Trailer de Metroid Prime 4 vaza antes da Direct</span>
+                <span class="meta" style="margin-top:4px"><span class="cat cat--games">Games</span></span></span>
+              <span class="trend trend--up"><svg class="ico"><use href="#i-trending-up"></use></svg> Disparando</span>
+            </a>
+            <a class="card card--row" href="artigo.html" style="grid-template-columns:1fr auto;align-items:center">
+              <span><span class="rank__title" style="font-size:.95rem">Cosplay de Frieren viraliza no TikTok</span>
+                <span class="meta" style="margin-top:4px"><span class="cat cat--anime">Anime</span></span></span>
+              <span class="trend trend--up"><svg class="ico"><use href="#i-trending-up"></use></svg> Subindo</span>
+            </a>
+            <a class="card card--row" href="artigo.html" style="grid-template-columns:1fr auto;align-items:center">
+              <span><span class="rank__title" style="font-size:.95rem">Sony marca State of Play para semana que vem</span>
+                <span class="meta" style="margin-top:4px"><span class="cat cat--games">Games</span></span></span>
+              <span class="trend trend--up"><svg class="ico"><use href="#i-trending-up"></use></svg> Subindo</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Transparência do score: credibilidade (E-E-A-T) + Nielsen #10 -->
+        <div class="side-box">
+          <h3>Como calculamos a temperatura</h3>
+          <ul style="list-style:none;padding:0;display:grid;gap:10px;font-size:var(--fs-sm);color:var(--ink-2)">
+            <li><strong style="color:var(--ink)">Volume de busca</strong> — quanta gente está procurando o tema agora.</li>
+            <li><strong style="color:var(--ink)">Velocidade de crescimento</strong> — o quão rápido o interesse subiu.</li>
+            <li><strong style="color:var(--ink)">Menções sociais</strong> — X, TikTok, Reddit e Discord.</li>
+            <li><strong style="color:var(--ink)">Fonte oficial</strong> — anúncio do estúdio pesa mais que rumor.</li>
+            <li><strong style="color:var(--ink)">Calendário</strong> — proximidade de lançamentos e eventos.</li>
+          </ul>
+          <p class="form-hint">O que <em>não</em> entra na conta: anúncio, link de afiliado e parceria comercial. Nunca.</p>
+          <a class="link-more" href="#" style="margin-top:12px;display:inline-flex">Metodologia completa <svg class="ico" style="width:13px;height:13px"><use href="#i-chevron-right"></use></svg></a>
+        </div>
+
+        <!-- Único slot da página, e mesmo assim no fim da sidebar (desktop) -->
+        <div class="ad ad--rect">
+          <span class="ad__label"><svg class="ico" style="width:12px;height:12px"><use href="#i-info"></use></svg> Publicidade</span>
+          <div class="ad__box">AdSense · 300×250 — altura reservada</div>
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <fieldset class="theme-field">
+      <legend>Aparência</legend>
+      <div class="theme-seg">
+        <input type="radio" name="theme" id="th-auto" checked>
+        <label for="th-auto"><svg class="ico"><use href="#i-auto"></use></svg> Sistema</label>
+        <input type="radio" name="theme" id="th-light">
+        <label for="th-light"><svg class="ico"><use href="#i-sun"></use></svg> Claro</label>
+        <input type="radio" name="theme" id="th-dark">
+        <label for="th-dark"><svg class="ico"><use href="#i-moon"></use></svg> Escuro</label>
+      </div>
+    </fieldset>
+    <p class="footer__legal">© 2026 Ortus Pixel · Ranking transparente, curadoria humana. Publicidade e afiliados não influenciam a ordem.</p>
+  </div>
+</footer>
+
+<nav class="bottom-nav" aria-label="Navegação principal (mobile)">
+  <a href="index.html"><svg class="ico"><use href="#i-home"></use></svg> Home</a>
+  <a href="em-alta.html" aria-current="page"><svg class="ico ico-hot"><use href="#i-flame"></use></svg> Em alta</a>
+  <a href="categoria.html"><svg class="ico"><use href="#i-grid"></use></svg> Editorias</a>
+  <a href="hub-franquia.html"><svg class="ico"><use href="#i-book"></use></svg> Meus hubs</a>
+  <a href="#"><svg class="ico"><use href="#i-user"></use></svg> Conta</a>
+</nav>
+
+<script src="assets/ortuspixel.js"></script>
+</body>
+</html>

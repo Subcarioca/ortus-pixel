@@ -1,0 +1,71 @@
+# =============================================================================
+# O que NÃO entra no contexto de build do Docker
+# =============================================================================
+#
+# Este arquivo tem duas funções, e a segunda é de segurança:
+#
+#   1. VELOCIDADE — tudo que está aqui deixa de ser enviado ao daemon do Docker.
+#      Sem a linha `node_modules`, cada `docker build` empacotaria centenas de
+#      MB só para descartá-los no primeiro `npm ci`.
+#
+#   2. SEGURANÇA — sem a linha `.env`, os segredos de produção entrariam no
+#      contexto e, em qualquer `COPY . .`, iriam parar DENTRO de uma camada da
+#      imagem. Camada é imutável: apagar o arquivo num passo seguinte não o
+#      remove do histórico, e quem tiver a imagem consegue extraí-lo. É assim
+#      que credencial vaza em registry.
+#
+# Regra prática: negar tudo que é gerado, local ou secreto.
+
+# --- Dependências e artefatos de build (recriados dentro da imagem) ---
+node_modules
+**/node_modules
+.next
+**/.next
+dist
+**/dist
+build
+out
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# --- SEGREDOS ---
+# Só o template versionado pode entrar.
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# --- Controle de versão e metadados ---
+.git
+.gitignore
+.github
+
+# --- Infra que não pertence à imagem da aplicação ---
+# O Dockerfile não se copia, e o compose/nginx são do host, não do container.
+Dockerfile
+.dockerignore
+docker-compose*.yml
+nginx
+ecosystem.config.js
+
+# --- Logs e caches locais ---
+logs
+*.log
+npm-debug.log*
+.turbo
+.cache
+coverage
+
+# --- Documentação e protótipos ---
+# `design/` é protótipo estático entregue pelo time de design: pesa e não é
+# consumido em runtime pelo app.
+design
+README.md
+*.md
+
+# --- Sistema operacional / editores ---
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+.claude

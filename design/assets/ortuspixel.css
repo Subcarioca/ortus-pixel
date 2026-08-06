@@ -1,0 +1,1206 @@
+/* ==========================================================================
+   Ortus Pixel — Design System v0.2 (protótipo de alta fidelidade)
+   Mobile-first. Tema CLARO por padrão + tema ESCURO por escolha (toggle).
+   Marca: PRETO + CINZA + VERMELHO. Hierarquia editorial por "temperatura".
+   Autor: UI/UX — entrega para o time de front-end/pipeline.
+
+   MUDANÇAS DA v0.1 → v0.2
+   1. Paleta: violeta removido. Marca = carmim escuro (--brand). Vermelho vivo
+      (--heat-hot) segue 100% exclusivo da sinalização de urgência.
+      → Ver "REGRA DOS DOIS VERMELHOS" abaixo.
+   2. Tema claro/escuro com light-dark() + color-scheme (sem framework JS).
+   3. Score numérico não aparece mais em público: badge textual + .heatbar.
+   4. Comentários com Discord OU Google (.auth-grid).
+   5. Camada de monetização (seção 16): anúncios com altura reservada,
+      afiliados com disclosure textual obrigatória, tudo em cinza/grafite.
+
+   MUDANÇAS DA v0.2 → v0.3 (só cor — nenhum componente, layout ou regra mudou)
+   Benchmark real de 17 portais do nicho (README §10). Família preto/cinza/
+   vermelho CONFIRMADA pela pesquisa, com três correções de tom:
+   a) --brand clareou de #8C1C28 (8.3:1) para #A81729 (6.8:1). O tom antigo era
+      mais escuro que IGN, CBR, Kotaku e Den of Geek — lia como vinho, não
+      como vermelho de marca.
+   b) --brand no tema ESCURO era #B93340: 2.98:1 sobre .surface-1, ou seja
+      FALHAVA no mínimo de 3:1 do WCAG 1.4.11 para filete/borda. Corrigido.
+   c) --heat-hot no tema ESCURO era #FF3050: 3.63:1 com o texto branco da
+      pílula "URGENTE". FALHAVA em AA no badge mais importante do site.
+      Corrigido para 4.66:1.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. TOKENS
+   Um token, dois valores: light-dark(claro, escuro).
+   O tema é trocado só por `color-scheme` — nada de duplicar a paleta.
+   -------------------------------------------------------------------------- */
+:root {
+  color-scheme: light dark;          /* padrão: segue o sistema, começando no claro */
+
+  /* --- Superfícies (preto/cinza) --- */
+  --bg:            light-dark(#F5F5F7, #131317);
+  --surface-1:     light-dark(#FFFFFF, #1A1A1F);
+  --surface-2:     light-dark(#EFEFF2, #232329);
+  --surface-3:     light-dark(#E3E3E8, #2D2D34);
+  --line:          light-dark(#D4D4DB, #383840);
+  --line-soft:     light-dark(#E7E7EC, #26262C);
+
+  /* --- Texto --- */
+  --ink:           light-dark(#16161A, #F4F4F6);   /* 15.9:1 no claro / 15.1:1 no escuro */
+  --ink-2:         light-dark(#4B4B55, #C0C0C8);   /* 7.9:1 / 10.6:1 */
+  --ink-3:         light-dark(#6C6C78, #8C8C98);   /* 4.7:1 / 5.8:1 — só ≥14px */
+  --ink-invert:    light-dark(#FFFFFF, #16161A);   /* texto sobre fundo --ink */
+
+  /* --- MARCA: carmim escuro e dessaturado -------------------------------
+     REGRA DOS DOIS VERMELHOS
+     --brand  (carmim #A81729 / #CA414F): logotipo, filete de nav ativa,
+              botão primário, foco, bordas de bloco editorial.
+              PROIBIDO em pílula/badge, proibido pulsar, proibido em selo.
+     --heat-hot (vermelho vivo): SÓ temperatura/urgência. Sempre em pílula
+              mono/caixa-alta com ícone e ponto pulsante. Nunca em anúncio,
+              nunca em afiliado, nunca em botão que não seja de alerta.
+     A diferença é de tom (escuro/dessaturado x vivo), de FORMA (acento x
+     pílula preenchida) e de MOVIMENTO (estático x pulsante).
+     Distância perceptual medida (ΔE76) entre marca e sinal: 22.8 no tema
+     claro, 25.6 no escuro. O design system da Valnet (CBR/Polygon/Collider/
+     ScreenRant) opera a mesma separação com ΔE 19.2 em produção — ou seja,
+     mesmo depois de clarear a marca na v0.3 ainda sobra margem sobre o que
+     o mercado prova ser suficiente.                                     */
+  /* v0.3 — calibrado contra o benchmark real do nicho (ver README §10):
+     IGN #BF1313 (5.8:1) · CBR #C61327 (5.5:1) · Kotaku #DC3232 (4.6:1).
+     O carmim da v0.2 (#8C1C28, 8.3:1) era mais escuro que TODOS eles e lia
+     como vinho/marrom em tela pequena. Subiu para 6.8:1: entra na faixa de
+     mercado, mas fica de propósito um degrau mais escuro que IGN/CBR porque
+     aqui o vermelho de urgência é o produto e precisa de folga.        */
+  --brand:         light-dark(#A81729, #CA414F);   /* 6.84:1 claro · 3.87:1 escuro (filete) */
+  --brand-600:     light-dark(#8C1424, #B4313F);   /* hover/pressed */
+  --brand-ink:     light-dark(#8C1424, #E9AEB4);   /* marca como TEXTO — AAA nos dois temas */
+  --brand-soft:    light-dark(rgba(168,23,41,.07), rgba(202,65,79,.16));
+  --brand-line:    light-dark(rgba(168,23,41,.34), rgba(202,65,79,.45));
+  --on-brand:      #FFFFFF;                        /* 7.45:1 claro · 4.79:1 escuro */
+
+  /* --- ESCALA DE TEMPERATURA (uso exclusivo: sinalização de popularidade) --- */
+  /* v0.3 — CORREÇÃO DE ACESSIBILIDADE, não estética.
+     O #FF3050 do tema escuro dava apenas 3.63:1 com o texto branco da pílula
+     "URGENTE" (mono, caixa-alta, ~11px = texto pequeno, exige 4.5:1): falhava
+     em AA justamente no badge mais importante do site. Escurecido para
+     #E51733 → 4.66:1 com branco e ainda 3.97:1 contra o fundo escuro.
+     No claro, #E5102F passava raspando (4.72:1); #DE0E2D dá 4.99:1.       */
+  --heat-hot:      light-dark(#DE0E2D, #E51733);   /* 80-100 URGENTE */
+  --heat-hot-deep: light-dark(#A80B22, #B00C22);
+  --heat-hot-ink:  #FFFFFF;                        /* 4.99:1 claro · 4.66:1 escuro */
+  --heat-hot-text: light-dark(#C20D27, #FF7C8D);   /* 5.70:1 · 7.52:1 */
+  --heat-hot-soft: light-dark(rgba(222,14,45,.09), rgba(229,23,51,.15));
+  --heat-hot-line: light-dark(rgba(222,14,45,.32), rgba(229,23,51,.38));
+
+  --heat-rise:     light-dark(#F08A16, #FF9A1F);   /* 60-79 EM ALTA */
+  --heat-rise-ink: #1A1000;                        /* texto escuro nos dois temas */
+  --heat-rise-text:light-dark(#8C4E00, #FFB454);
+  --heat-rise-soft:light-dark(rgba(240,138,22,.12), rgba(255,154,31,.12));
+
+  --heat-base:     light-dark(#5E6B85, #6E7A94);   /* 40-59 RELEVANTE */
+  --heat-base-soft:light-dark(rgba(94,107,133,.12), rgba(110,122,148,.16));
+  --heat-base-text:light-dark(#4C566B, #A8B2C6);
+
+  --heat-ever:     light-dark(#127A5E, #2ED3A7);   /* <40 GUIA/EVERGREEN */
+  --heat-ever-soft:light-dark(rgba(18,122,94,.09), rgba(46,211,167,.12));
+  --heat-ever-text:light-dark(#0F6B52, #2ED3A7);
+
+  /* --- Editorias (filete/rótulo, nunca pílula preenchida) --- */
+  --cat-games:     light-dark(#00795C, #00E0A4);
+  --cat-cinema:    light-dark(#2B5FD9, #4E8CFF);
+  --cat-anime:     light-dark(#C2247F, #FF5CC8);
+  --cat-hq:        light-dark(#8A6800, #F0C64A);
+  --cat-tech:      light-dark(#0A6E96, #00C2FF);
+  --cat-eventos:   light-dark(#6E3AC4, #B36BFF);
+
+  /* --- Semânticos --- */
+  --spoiler:       light-dark(#B4460F, #FF6B35);
+  --spoiler-soft:  light-dark(rgba(180,70,15,.07), rgba(255,107,53,.07));
+  --spoiler-line:  light-dark(rgba(180,70,15,.35), rgba(255,107,53,.4));
+  --ok:            light-dark(#0F7A54, #2ED3A7);
+
+  /* --- MONETIZAÇÃO: cinza e grafite. Nenhum tom quente, por regra. --- */
+  --ad-bg:         light-dark(#EDEDF1, #1C1C21);
+  --ad-line:       light-dark(#DCDCE3, #2E2E36);
+  --ad-label:      light-dark(#75757F, #85858F);
+  --aff-bg:        light-dark(#FFFFFF, #1C1C22);
+  --aff-line:      light-dark(#DADAE1, #34343C);
+  --deal-line:     light-dark(#A9A9B4, #55555F);
+
+  /* --- Chrome translúcido / mídia --- */
+  --header-bg:     light-dark(rgba(245,245,247,.88), rgba(19,19,23,.86));
+  --nav-bg:        light-dark(rgba(255,255,255,.96), rgba(26,26,31,.96));
+  --protobar-bg:   light-dark(#E8E8ED, #0E0E12);
+  /* Scrim do hero: a foto continua escura nos dois temas, então o degradê é
+     que muda de cor. No claro ele fecha em branco (texto escuro legível);
+     no escuro, em preto (texto claro legível). Mesma hierarquia, dois temas. */
+  --scrim-0:       light-dark(rgba(245,245,247,.22), rgba(19,19,23,.15));
+  --scrim-1:       light-dark(rgba(245,245,247,.80), rgba(19,19,23,.55));
+  --scrim-2:       light-dark(rgba(245,245,247,.99), rgba(19,19,23,.97));
+
+  /* Tipografia */
+  --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --font-text:    "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+
+  /* Escala tipográfica fluida (mobile → desktop) */
+  --fs-hero:  clamp(1.75rem, 6.2vw, 3.75rem);
+  --fs-h1:    clamp(1.6rem, 5vw, 3rem);
+  --fs-h2:    clamp(1.3rem, 3.4vw, 2rem);
+  --fs-h3:    clamp(1.05rem, 2.4vw, 1.35rem);
+  --fs-lead:  clamp(1rem, 2.1vw, 1.25rem);
+  --fs-body:  1.0625rem;   /* 17px mobile — conforto de leitura */
+  --fs-sm:    0.875rem;
+  --fs-xs:    0.75rem;
+  --fs-xxs:   0.6875rem;
+
+  /* Espaçamento (base 4) */
+  --s-1: 4px;  --s-2: 8px;  --s-3: 12px; --s-4: 16px;
+  --s-5: 24px; --s-6: 32px; --s-7: 48px; --s-8: 64px; --s-9: 96px;
+
+  /* Raio / sombra / motion */
+  --r-sm: 6px; --r-md: 10px; --r-lg: 16px; --r-xl: 24px; --r-pill: 999px;
+  /* light-dark() só aceita COR — por isso a sombra é composta com uma cor-token */
+  --sh-color:   light-dark(rgba(20,20,25,.10), rgba(0,0,0,.40));
+  --sh-color-2: light-dark(rgba(20,20,25,.13), rgba(0,0,0,.45));
+  --sh-hot-color: light-dark(rgba(222,14,45,.16), rgba(229,23,51,.22));
+  --sh-1: 0 1px 2px var(--sh-color);
+  --sh-2: 0 8px 24px var(--sh-color-2);
+  --sh-hot: 0 0 0 1px var(--heat-hot-line), 0 12px 36px var(--sh-hot-color);
+  --ease: cubic-bezier(.2,.7,.3,1);
+
+  --header-h: 56px;
+  --maxw: 1280px;
+}
+
+@media (min-width: 768px) {
+  :root { --fs-body: 1.125rem; --header-h: 64px; }
+}
+
+/* --------------------------------------------------------------------------
+   1b. TROCA DE TEMA — CSS puro
+   Três estados: sistema (padrão) · claro · escuro.
+   - `data-theme` no <html> = o que o front-end real vai gravar (localStorage).
+   - `:has(#th-*)` = o mesmo estado alcançado só com rádio + CSS, sem JS.
+   Só uma propriedade muda: color-scheme. Os tokens se viram sozinhos.
+   -------------------------------------------------------------------------- */
+:root[data-theme="light"],
+:root:has(#th-light:checked) { color-scheme: light; }
+
+:root[data-theme="dark"],
+:root:has(#th-dark:checked)  { color-scheme: dark; }
+
+/* --------------------------------------------------------------------------
+   2. RESET / BASE
+   -------------------------------------------------------------------------- */
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-text);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 64px; /* espaço da bottom-nav mobile */
+}
+@media (min-width: 768px) { body { padding-bottom: 0; } }
+/* Anúncio ancorado no mobile: reserva o espaço dele também (sem CLS) */
+@media (max-width: 767px) { body:has(.ad-anchor) { padding-bottom: 152px; } }
+
+img, svg, video { display: block; max-width: 100%; }
+.ico { width: 16px; height: 16px; flex: none; }
+a { color: inherit; text-decoration: none; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+label { cursor: pointer; }
+h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 800; line-height: 1.08; letter-spacing: -.02em; }
+
+/* Acessibilidade: foco sempre visível (Nielsen #3 controle, WCAG 2.4.7) */
+:focus-visible {
+  outline: 3px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+.skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 999;
+  background: var(--brand); color: #fff; padding: 12px 20px; border-radius: 0 0 var(--r-md) 0;
+}
+.skip-link:focus { left: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+  html { scroll-behavior: auto; }
+}
+
+/* --------------------------------------------------------------------------
+   3. LAYOUT
+   -------------------------------------------------------------------------- */
+.container { width: 100%; max-width: var(--maxw); margin-inline: auto; padding-inline: var(--s-4); }
+@media (min-width: 768px) { .container { padding-inline: var(--s-5); } }
+
+.section { padding-block: var(--s-6); }
+.section + .section { border-top: 1px solid var(--line-soft); }
+@media (min-width: 768px) { .section { padding-block: var(--s-7); } }
+
+.section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--s-3); margin-bottom: var(--s-4);
+}
+.section-title {
+  font-size: var(--fs-h2); text-transform: uppercase; letter-spacing: -.01em;
+  display: flex; align-items: center; gap: var(--s-2);
+}
+.section-title .ico { width: 1em; height: 1em; }
+.section-sub { color: var(--ink-3); font-size: var(--fs-sm); margin-top: 2px; }
+.link-more {
+  font-size: var(--fs-sm); font-weight: 600; color: var(--ink-2);
+  display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;
+  border-bottom: 1px solid transparent; padding-bottom: 2px;
+}
+.link-more:hover { color: var(--ink); border-color: var(--brand); }
+
+.grid { display: grid; gap: var(--s-4); }
+@media (min-width: 640px)  { .g-sm-2 { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 900px)  { .g-md-3 { grid-template-columns: repeat(3, 1fr); }
+                             .g-md-2 { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1100px) { .g-lg-4 { grid-template-columns: repeat(4, 1fr); } }
+
+.layout-2col { display: grid; gap: var(--s-6); }
+@media (min-width: 1024px) { .layout-2col { grid-template-columns: minmax(0,1fr) 320px; gap: var(--s-7); } }
+
+/* --------------------------------------------------------------------------
+   4. HEADER + TICKER + NAV + TOGGLE DE TEMA
+   -------------------------------------------------------------------------- */
+.header {
+  position: sticky; top: 0; z-index: 60;
+  background: var(--header-bg);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--line-soft);
+}
+.header__bar {
+  height: var(--header-h);
+  display: flex; align-items: center; gap: var(--s-3);
+}
+.logo {
+  font-family: var(--font-display); font-weight: 900; font-size: 1.25rem;
+  letter-spacing: -.045em; text-transform: uppercase; display: flex; align-items: center; gap: 6px;
+}
+.logo b { color: var(--brand-ink); }
+/* O ponto do logo é o único uso animado do carmim de marca (não é o vermelho
+   de urgência): sinal de "site vivo", nunca de conteúdo quente. */
+.logo__dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--brand);
+  animation: pulse-brand 2.4s infinite;
+}
+@keyframes pulse-brand {
+  0%   { box-shadow: 0 0 0 0 var(--brand-line); }
+  70%  { box-shadow: 0 0 0 10px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 var(--heat-hot-line); }
+  70%  { box-shadow: 0 0 0 10px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.header__nav { display: none; }
+@media (min-width: 1024px) {
+  .header__nav { display: flex; gap: var(--s-4); margin-left: var(--s-5); flex: 1; }
+  .header__nav a {
+    font-size: var(--fs-sm); font-weight: 600; color: var(--ink-2);
+    padding: 6px 0; border-bottom: 2px solid transparent; white-space: nowrap;
+  }
+  .header__nav a:hover { color: var(--ink); }
+  .header__nav a[aria-current="page"] { color: var(--ink); border-color: var(--brand); }
+}
+.header__actions { display: flex; align-items: center; gap: var(--s-2); margin-left: auto; }
+@media (min-width: 1024px) { .nav-toggle { display: none; } }
+.icon-btn {
+  width: 40px; height: 40px; display: grid; place-items: center;
+  border-radius: var(--r-md); color: var(--ink-2); position: relative;
+}
+.icon-btn:hover { background: var(--surface-2); color: var(--ink); }
+.icon-btn .ico { width: 20px; height: 20px; }
+.icon-btn__dot {
+  position: absolute; top: 8px; right: 9px; width: 7px; height: 7px;
+  border-radius: 50%; background: var(--brand); border: 2px solid var(--bg);
+}
+.btn-hot-nav {
+  display: none; align-items: center; gap: 6px; font-size: var(--fs-sm); font-weight: 700;
+  color: var(--heat-hot-text); border: 1px solid var(--heat-hot-line); background: var(--heat-hot-soft);
+  padding: 7px 12px; border-radius: var(--r-pill);
+}
+@media (min-width: 560px) { .btn-hot-nav { display: inline-flex; } }
+.btn-hot-nav .ico { width: 14px; height: 14px; }
+
+/* --- Controle de tema ------------------------------------------------------
+   Os RÁDIOS ficam em um lugar só (rodapé). O botão do header é só um <label>
+   que aponta para eles — por isso o toggle funciona sem uma linha de JS.
+   O botão mostra sempre a AÇÃO (ir para escuro / ir para claro), não o estado,
+   porque o estado já está óbvio na tela inteira. (Nielsen #1 e #4.)          */
+.theme-inputs { position: absolute; width: 1px; height: 1px; overflow: hidden; }
+.theme-field { border: 0; padding: 0; margin: 0; min-width: 0; }
+.theme-field legend {
+  padding: 0; margin-bottom: var(--s-2); font-size: var(--fs-xs);
+  text-transform: uppercase; letter-spacing: .12em; color: var(--ink-3);
+}
+.theme-seg {
+  display: inline-flex; background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: var(--r-pill); padding: 3px; gap: 2px; flex-wrap: wrap;
+}
+.theme-seg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.theme-seg label {
+  display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; min-height: 38px;
+  border-radius: var(--r-pill); font-size: var(--fs-xs); font-weight: 700; color: var(--ink-2);
+}
+.theme-seg label:hover { color: var(--ink); }
+.theme-seg input:checked + label { background: var(--ink); color: var(--ink-invert); }
+.theme-seg input:focus-visible + label { outline: 3px solid var(--brand); outline-offset: 2px; }
+.theme-seg .ico { width: 15px; height: 15px; }
+
+/* Botão único do header: alterna para o tema oposto ao vigente */
+.lbl-light { display: none; }
+.lbl-dark  { display: grid; }
+@media (prefers-color-scheme: dark) {
+  html:not(:has(#th-light:checked)) .lbl-light { display: grid; }
+  html:not(:has(#th-light:checked)) .lbl-dark  { display: none; }
+}
+html:has(#th-dark:checked)  .lbl-light,
+html[data-theme="dark"]     .lbl-light { display: grid; }
+html:has(#th-dark:checked)  .lbl-dark,
+html[data-theme="dark"]     .lbl-dark  { display: none; }
+html:has(#th-light:checked) .lbl-dark,
+html[data-theme="light"]    .lbl-dark  { display: grid; }
+html:has(#th-light:checked) .lbl-light,
+html[data-theme="light"]    .lbl-light { display: none; }
+html:has(#th-light:focus-visible) .lbl-light,
+html:has(#th-dark:focus-visible)  .lbl-dark { outline: 3px solid var(--brand); outline-offset: 2px; }
+
+/* Faixa "ao vivo" — só aparece quando existe notícia score >= 90 */
+.ticker {
+  background: linear-gradient(90deg, var(--heat-hot) 0%, var(--heat-hot-deep) 100%);
+  color: #fff; font-size: var(--fs-xs); font-weight: 600;
+}
+.ticker__inner { display: flex; align-items: center; gap: var(--s-3); height: 34px; overflow: hidden; }
+.ticker__label {
+  display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono);
+  font-size: var(--fs-xxs); letter-spacing: .12em; text-transform: uppercase;
+  background: rgba(0,0,0,.28); padding: 3px 8px; border-radius: var(--r-sm); flex: none;
+}
+.ticker__dot { width: 6px; height: 6px; border-radius: 50%; background: #fff; animation: blink 1.4s infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+.ticker__text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Barra de progresso de leitura — Nielsen #1. Usa a MARCA, não a temperatura. */
+.progress {
+  position: fixed; top: 0; left: 0; height: 3px; width: 100%; z-index: 70;
+  background: transparent;
+}
+.progress__bar { height: 100%; width: 38%; background: var(--brand); }
+
+/* Bottom nav mobile — alcance do polegar. NADA compete com ela. */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; z-index: 65;
+  display: grid; grid-template-columns: repeat(5, 1fr);
+  background: var(--nav-bg); backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.bottom-nav a {
+  display: grid; justify-items: center; gap: 3px; padding: 9px 0 10px;
+  font-size: var(--fs-xxs); color: var(--ink-3); font-weight: 600;
+}
+.bottom-nav a[aria-current="page"] { color: var(--ink); }
+.bottom-nav a[aria-current="page"] .ico { color: var(--brand-ink); }
+.bottom-nav .ico { width: 21px; height: 21px; }
+.bottom-nav .ico-hot { color: var(--heat-hot); }
+@media (min-width: 768px) { .bottom-nav { display: none; } }
+
+/* --------------------------------------------------------------------------
+   5. BADGES DE TEMPERATURA  (cor + ícone + rótulo — NUNCA número em público)
+   -------------------------------------------------------------------------- */
+.heat {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-mono); font-size: var(--fs-xxs); font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase;
+  padding: 4px 9px; border-radius: var(--r-sm); white-space: nowrap;
+}
+.heat .ico { width: 12px; height: 12px; }
+
+.heat--hot   { background: var(--heat-hot); color: var(--heat-hot-ink); }
+.heat--hot::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%; background: #fff;
+  animation: blink 1.3s infinite;
+}
+.heat--rise  { background: var(--heat-rise); color: var(--heat-rise-ink); }
+.heat--base  { background: var(--heat-base-soft); color: var(--heat-base-text); }
+.heat--ever  { background: var(--heat-ever-soft); color: var(--heat-ever-text); border: 1px solid var(--heat-ever-soft); }
+.heat--lg    { font-size: var(--fs-xs); padding: 6px 12px; }
+
+/* Termômetro sem número: 4 blocos = 4 faixas. O número 0-100 vive só no /admin. */
+.heatbar { display: inline-flex; gap: 3px; align-items: center; --h: var(--heat-base); }
+.heatbar i { display: block; width: 16px; height: 6px; border-radius: 2px; background: var(--surface-3); }
+.heatbar[data-on="1"] i:nth-child(-n+1),
+.heatbar[data-on="2"] i:nth-child(-n+2),
+.heatbar[data-on="3"] i:nth-child(-n+3),
+.heatbar[data-on="4"] i:nth-child(-n+4) { background: var(--h); }
+.heatbar--hot  { --h: var(--heat-hot); }
+.heatbar--rise { --h: var(--heat-rise); }
+.heatbar--ever { --h: var(--heat-ever); }
+.heatbar--sm i { width: 11px; height: 5px; }
+
+/* Rótulo de editoria: filete + texto (subordinado ao badge de temperatura) */
+.cat {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: var(--fs-xxs); font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--ink-2);
+}
+.cat::before { content: ""; width: 14px; height: 3px; border-radius: 2px; background: var(--c, var(--ink-3)); }
+.cat--games   { --c: var(--cat-games); }
+.cat--cinema  { --c: var(--cat-cinema); }
+.cat--anime   { --c: var(--cat-anime); }
+.cat--hq      { --c: var(--cat-hq); }
+.cat--tech    { --c: var(--cat-tech); }
+.cat--eventos { --c: var(--cat-eventos); }
+
+.meta {
+  display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap;
+  font-size: var(--fs-xs); color: var(--ink-3);
+}
+.meta__sep { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-3); opacity: .6; }
+.meta--live { color: var(--heat-hot-text); font-weight: 600; }
+
+/* --------------------------------------------------------------------------
+   6. THUMBS (placeholders de imagem do protótipo — simulam foto: não mudam
+      com o tema, porque foto não muda com o tema)
+   -------------------------------------------------------------------------- */
+.thumb {
+  position: relative; aspect-ratio: 16/9; overflow: hidden;
+  background: linear-gradient(135deg, #2A2A3A, #15151E);
+  border-radius: var(--r-md);
+}
+.thumb::after {
+  content: ""; position: absolute; inset: 0;
+  background:
+    radial-gradient(120% 80% at 20% 10%, rgba(255,255,255,.10), transparent 60%),
+    repeating-linear-gradient(115deg, rgba(255,255,255,.045) 0 2px, transparent 2px 9px);
+}
+.thumb[data-c="games"]   { background: linear-gradient(140deg, #0B3B32, #10202E 55%, #0A0A12 100%); }
+.thumb[data-c="cinema"]  { background: linear-gradient(140deg, #16264F, #1B1636 55%, #0A0A12 100%); }
+.thumb[data-c="anime"]   { background: linear-gradient(140deg, #47143A, #251440 55%, #0A0A12 100%); }
+.thumb[data-c="hq"]      { background: linear-gradient(140deg, #4A3410, #2A1B22 55%, #0A0A12 100%); }
+.thumb[data-c="tech"]    { background: linear-gradient(140deg, #0B3550, #131A38 55%, #0A0A12 100%); }
+.thumb[data-c="eventos"] { background: linear-gradient(140deg, #35194F, #1A1633 55%, #0A0A12 100%); }
+.thumb__tag { position: absolute; left: 10px; top: 10px; z-index: 2; }
+.thumb__note {
+  position: absolute; right: 10px; bottom: 8px; z-index: 2;
+  font-family: var(--font-mono); font-size: var(--fs-xxs); color: rgba(255,255,255,.42);
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.thumb__play {
+  position: absolute; inset: 0; margin: auto; width: 54px; height: 54px; z-index: 2;
+  border-radius: 50%; background: rgba(10,10,15,.6); border: 1.5px solid rgba(255,255,255,.6);
+  display: grid; place-items: center; color: #fff;
+}
+.thumb__dur {
+  position: absolute; right: 10px; bottom: 10px; z-index: 2;
+  background: rgba(0,0,0,.75); color: #fff; font-family: var(--font-mono);
+  font-size: var(--fs-xxs); padding: 2px 6px; border-radius: 4px;
+}
+
+/* --------------------------------------------------------------------------
+   7. CARDS
+   -------------------------------------------------------------------------- */
+.card { display: block; position: relative; }
+.card__title { font-size: var(--fs-h3); margin: var(--s-2) 0 var(--s-2); }
+.card:hover .card__title { text-decoration: underline; text-decoration-color: var(--brand); text-underline-offset: 3px; }
+.card__dek { color: var(--ink-2); font-size: var(--fs-sm); margin-bottom: var(--s-2); }
+.card__head { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
+
+/* HERO — faixa QUENTE. Ocupa a dobra inteira no mobile. */
+.hero {
+  position: relative; border-radius: var(--r-lg); overflow: hidden;
+  border: 1px solid var(--heat-hot-line); box-shadow: var(--sh-hot);
+  background: var(--surface-1);
+}
+.hero__media { position: relative; aspect-ratio: 4/3; }
+@media (min-width: 768px) { .hero__media { aspect-ratio: 21/9; } }
+.hero__media .thumb { border-radius: 0; aspect-ratio: auto; height: 100%; }
+.hero__overlay {
+  position: absolute; inset: 0; z-index: 3;
+  background: linear-gradient(180deg, var(--scrim-0) 0%, var(--scrim-1) 45%, var(--scrim-2) 100%);
+}
+.hero__body {
+  position: relative; z-index: 4; margin-top: -38%; padding: var(--s-4) var(--s-4) var(--s-5);
+}
+@media (min-width: 768px) {
+  .hero__body { margin-top: -26%; padding: var(--s-6); max-width: 46rem; }
+}
+.hero__title { font-size: var(--fs-hero); font-weight: 900; margin: var(--s-3) 0; text-wrap: balance; }
+.hero__dek { font-size: var(--fs-lead); color: var(--ink-2); margin-bottom: var(--s-4); }
+.hero__foot { display: flex; align-items: center; gap: var(--s-3); flex-wrap: wrap; }
+
+.card--lead .card__title { font-size: clamp(1.15rem, 3vw, 1.6rem); }
+
+.card--row { display: grid; grid-template-columns: 96px 1fr; gap: var(--s-3); align-items: start; }
+.card--row .thumb { border-radius: var(--r-sm); }
+.card--row .card__title { font-size: 1rem; margin-top: 4px; line-height: 1.25; }
+@media (min-width: 768px) { .card--row { grid-template-columns: 124px 1fr; } }
+
+.card--grid { background: var(--surface-1); border: 1px solid var(--line-soft); border-radius: var(--r-md); overflow: hidden; box-shadow: var(--sh-1); }
+.card--grid .thumb { border-radius: 0; }
+.card--grid .card__body { padding: var(--s-3) var(--s-3) var(--s-4); }
+.card--grid:hover { border-color: var(--line); background: var(--surface-2); }
+
+.card--rise { border: 1px solid var(--heat-rise-soft); background: linear-gradient(180deg, var(--heat-rise-soft), transparent 45%); }
+
+.card--ever {
+  border: 1px solid var(--line-soft); border-left: 3px solid var(--heat-ever);
+  background: var(--surface-1); border-radius: var(--r-sm);
+  padding: var(--s-3) var(--s-4);
+}
+.card--ever .card__title { font-size: 1rem; margin: 6px 0 4px; }
+
+/* --------------------------------------------------------------------------
+   8. RANKING / TEMPERATURA (página Em Alta + módulo da home)
+   -------------------------------------------------------------------------- */
+.rank-list { display: grid; gap: 2px; }
+.rank {
+  display: grid; grid-template-columns: 34px 1fr auto; gap: var(--s-3);
+  align-items: center; padding: var(--s-3) var(--s-2);
+  border-radius: var(--r-md); background: var(--surface-1);
+  border: 1px solid transparent;
+}
+.rank:hover { background: var(--surface-2); border-color: var(--line); }
+.rank__pos {
+  font-family: var(--font-mono); font-size: 1.05rem; font-weight: 700;
+  color: var(--ink-3); text-align: center;
+}
+.rank--hot  .rank__pos { color: var(--heat-hot-text); }
+.rank--rise .rank__pos { color: var(--heat-rise-text); }
+.rank__title { font-family: var(--font-display); font-weight: 700; font-size: 1rem; line-height: 1.25; }
+.rank__meta { margin-top: 5px; }
+.rank__right { display: grid; justify-items: end; gap: 5px; }
+
+/* .score: agrupador do termômetro. O NÚMERO (.score__num) é uso interno /admin. */
+.score { display: grid; justify-items: end; gap: 5px; min-width: 92px; }
+.score__num { font-family: var(--font-mono); font-size: var(--fs-sm); font-weight: 700; }
+.score__num small { color: var(--ink-3); font-weight: 400; }
+.score--hot  .score__num { color: var(--heat-hot-text); }
+.score--rise .score__num { color: var(--heat-rise-text); }
+.score--ever .score__num { color: var(--heat-ever-text); }
+.score--admin { outline: 1px dashed var(--line); border-radius: var(--r-sm); padding: 4px 6px; }
+
+/* Tendência qualitativa: substitui o "+38" numérico no público */
+.trend { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono);
+         font-size: var(--fs-xxs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.trend--up   { color: var(--heat-rise-text); }
+.trend--down { color: var(--ink-3); }
+.trend--new  { color: var(--brand-ink); }
+.trend .ico { width: 11px; height: 11px; }
+
+/* Rail horizontal com scroll-snap (mobile) */
+.rail {
+  display: grid; grid-auto-flow: column; grid-auto-columns: 78%;
+  gap: var(--s-3); overflow-x: auto; scroll-snap-type: x mandatory;
+  padding-bottom: var(--s-3); margin-inline: calc(var(--s-4) * -1); padding-inline: var(--s-4);
+  scrollbar-width: thin;
+}
+.rail > * { scroll-snap-align: start; }
+@media (min-width: 768px) {
+  .rail {
+    grid-auto-flow: row; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    overflow: visible; margin-inline: 0; padding-inline: 0;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   9. FILTROS / CHIPS
+   -------------------------------------------------------------------------- */
+.filters {
+  display: flex; gap: var(--s-2); overflow-x: auto; padding-block: var(--s-2);
+  margin-inline: calc(var(--s-4) * -1); padding-inline: var(--s-4);
+  scrollbar-width: none;
+}
+.filters::-webkit-scrollbar { display: none; }
+@media (min-width: 768px) { .filters { margin-inline: 0; padding-inline: 0; flex-wrap: wrap; overflow: visible; } }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  padding: 8px 14px; border-radius: var(--r-pill); font-size: var(--fs-sm); font-weight: 600;
+  background: var(--surface-2); border: 1px solid var(--line); color: var(--ink-2);
+  min-height: 40px; /* alvo de toque */
+}
+.chip:hover { color: var(--ink); border-color: var(--ink-3); }
+.chip[aria-pressed="true"], .chip[aria-current="true"] { background: var(--ink); color: var(--ink-invert); border-color: var(--ink); }
+.chip--hot[aria-pressed="true"]  { background: var(--heat-hot); color: #fff; border-color: var(--heat-hot); }
+.chip--rise[aria-pressed="true"] { background: var(--heat-rise); color: var(--heat-rise-ink); border-color: var(--heat-rise); }
+.chip .ico { width: 14px; height: 14px; }
+.chip__count { font-family: var(--font-mono); font-size: var(--fs-xxs); opacity: .7; }
+
+/* --------------------------------------------------------------------------
+   10. BOTÕES
+   -------------------------------------------------------------------------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 12px 22px; border-radius: var(--r-pill);
+  font-weight: 700; font-size: var(--fs-sm); letter-spacing: .01em;
+  transition: transform .15s var(--ease), background .15s var(--ease);
+}
+.btn:active { transform: translateY(1px); }
+.btn .ico { width: 18px; height: 18px; }
+.btn--primary { background: var(--brand); color: var(--on-brand); }
+.btn--primary:hover { background: var(--brand-600); }
+.btn--hot { background: var(--heat-hot); color: #fff; }          /* só alertas de urgência */
+.btn--ghost { border: 1px solid var(--line); color: var(--ink); background: var(--surface-1); }
+.btn--ghost:hover { border-color: var(--ink-3); }
+.btn--discord { background: #5865F2; color: #fff; }
+.btn--google {
+  background: light-dark(#FFFFFF, #131314); color: light-dark(#1F1F1F, #E3E3E3);
+  border: 1px solid light-dark(#DADCE0, #8E918F);
+}
+/* CTA comercial: grafite. Nunca vermelho — nem o de marca, nem o de temperatura. */
+.btn--buy { background: var(--ink); color: var(--ink-invert); border: 1px solid var(--ink); }
+.btn--buy:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.btn--block { width: 100%; }
+.btn--sm { min-height: 40px; padding: 9px 16px; font-size: var(--fs-xs); }
+
+/* --------------------------------------------------------------------------
+   11. BLOCOS DE CONVERSÃO
+   -------------------------------------------------------------------------- */
+.cta-news {
+  background:
+    radial-gradient(90% 120% at 100% 0%, var(--brand-soft), transparent 60%),
+    var(--surface-1);
+  border: 1px solid var(--line); border-radius: var(--r-lg);
+  padding: var(--s-5) var(--s-4);
+}
+@media (min-width: 768px) { .cta-news { padding: var(--s-6); } }
+.cta-news__kicker {
+  font-family: var(--font-mono); font-size: var(--fs-xxs); letter-spacing: .16em;
+  text-transform: uppercase; color: var(--brand-ink); margin-bottom: var(--s-2);
+}
+.cta-news h3 { font-size: var(--fs-h2); margin-bottom: var(--s-2); }
+.cta-news p { color: var(--ink-2); font-size: var(--fs-sm); margin-bottom: var(--s-4); }
+.form-inline { display: grid; gap: var(--s-2); }
+@media (min-width: 560px) { .form-inline { grid-template-columns: 1fr auto; } }
+.input {
+  min-height: 48px; padding: 12px 16px; border-radius: var(--r-pill);
+  background: var(--surface-2); border: 1px solid var(--line); color: var(--ink);
+  font-size: 1rem; width: 100%;
+}
+.input::placeholder { color: var(--ink-3); }
+.input:focus { border-color: var(--brand); background: var(--surface-1); }
+.form-hint { font-size: var(--fs-xs); color: var(--ink-3); margin-top: var(--s-2); }
+.social-proof {
+  display: flex; align-items: center; gap: var(--s-2); font-size: var(--fs-xs);
+  color: var(--ink-2); margin-top: var(--s-3);
+}
+.avatars { display: flex; }
+.avatars span {
+  width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--surface-1);
+  margin-left: -8px; background: linear-gradient(135deg, var(--brand), var(--ink-3));
+}
+.avatars span:first-child { margin-left: 0; }
+
+.cta-inline {
+  border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  padding: var(--s-4) 0; margin: var(--s-6) 0;
+  display: grid; gap: var(--s-3);
+}
+@media (min-width: 700px) { .cta-inline { grid-template-columns: 1fr auto; align-items: center; } }
+.cta-inline h4 { font-size: 1.15rem; }
+.cta-inline p { font-size: var(--fs-sm); color: var(--ink-2); }
+
+.push-prompt {
+  border: 1px solid var(--heat-hot-line); background: var(--heat-hot-soft);
+  border-radius: var(--r-lg); padding: var(--s-4);
+  display: grid; gap: var(--s-3); margin: var(--s-6) 0;
+}
+.push-prompt__top { display: flex; align-items: flex-start; gap: var(--s-3); }
+.push-prompt__ico {
+  width: 42px; height: 42px; flex: none; border-radius: var(--r-md);
+  background: var(--heat-hot); color: #fff; display: grid; place-items: center;
+}
+.push-prompt h4 { font-size: 1.15rem; margin-bottom: 4px; }
+.push-prompt p { font-size: var(--fs-sm); color: var(--ink-2); }
+.push-prompt__actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+
+.community {
+  border-radius: var(--r-lg); padding: var(--s-5) var(--s-4);
+  background: radial-gradient(100% 140% at 0% 0%, rgba(88,101,242,.22), transparent 62%), var(--surface-1);
+  border: 1px solid rgba(88,101,242,.3);
+  display: grid; gap: var(--s-3);
+}
+.community__top { display: flex; align-items: center; gap: var(--s-3); }
+.community__logo { width: 44px; height: 44px; border-radius: var(--r-md); background: #5865F2; display: grid; place-items: center; color: #fff; flex: none; }
+.community h4 { font-size: 1.2rem; }
+.community p { font-size: var(--fs-sm); color: var(--ink-2); }
+.online { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); color: var(--ink-2); }
+.online::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
+
+/* Login de comentário: Discord OU Google, mesmo peso visual (Nielsen #3 e #4) */
+.auth-grid { display: grid; gap: var(--s-2); }
+@media (min-width: 520px) { .auth-grid { grid-template-columns: 1fr 1fr; } }
+.auth-grid .btn { width: 100%; }
+.auth-note { font-size: var(--fs-xs); color: var(--ink-3); margin-top: var(--s-3); }
+
+/* Sticky bar mobile / exit-intent desktop (frequency-capped).
+   PRIORIDADE 1 da faixa inferior: se ela existe, o anúncio ancorado não entra. */
+.sticky-bar {
+  position: fixed; left: 0; right: 0; bottom: 64px; z-index: 64;
+  background: var(--surface-2); border-top: 1px solid var(--line);
+  padding: var(--s-3) var(--s-4); display: flex; align-items: center; gap: var(--s-3);
+  box-shadow: 0 -8px 24px light-dark(rgba(20,20,25,.14), rgba(0,0,0,.4));
+}
+.sticky-bar p { font-size: var(--fs-xs); color: var(--ink-2); flex: 1; }
+.sticky-bar strong { color: var(--ink); display: block; font-size: var(--fs-sm); }
+@media (min-width: 768px) { .sticky-bar { display: none; } }
+
+.modal-demo {
+  border: 1px dashed var(--line); border-radius: var(--r-lg);
+  padding: var(--s-5); background: var(--surface-1);
+}
+
+/* Compartilhamento */
+.share { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; }
+.share__btn {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 10px 14px;
+  border-radius: var(--r-pill); font-size: var(--fs-sm); font-weight: 700;
+  border: 1px solid var(--line); background: var(--surface-1);
+}
+.share__btn .ico { width: 17px; height: 17px; }
+.share__btn--wa { background: #25D366; color: #06301A; border-color: #25D366; }
+.share__btn--x  { background: light-dark(#000, #fff); color: light-dark(#fff, #000); border-color: light-dark(#000, #fff); }
+.share__btn--ig { background: linear-gradient(135deg,#F58529,#DD2A7B,#8134AF); color: #fff; border: 0; }
+.share__btn--tt { background: #000; color: #fff; border-color: #000; }
+.share__count { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-3); }
+
+.share-rail { display: none; }
+@media (min-width: 1180px) {
+  .share-rail {
+    display: grid; gap: var(--s-2); position: sticky; top: calc(var(--header-h) + 24px);
+    justify-items: center; height: max-content;
+  }
+  .share-rail .share__btn { width: 48px; height: 48px; padding: 0; justify-content: center; border-radius: 50%; }
+  .share-rail .share__btn span { display: none; }
+}
+
+/* --------------------------------------------------------------------------
+   12. ARTIGO
+   -------------------------------------------------------------------------- */
+.article { max-width: 44rem; }
+.article__kicker { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; margin-bottom: var(--s-3); }
+.article__title { font-size: var(--fs-h1); font-weight: 900; text-wrap: balance; margin-bottom: var(--s-3); }
+.article__dek { font-size: var(--fs-lead); color: var(--ink-2); margin-bottom: var(--s-4); }
+.byline { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-3) 0; border-block: 1px solid var(--line-soft); }
+.byline__avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, var(--brand), var(--surface-3)); flex: none; }
+.byline__name { font-size: var(--fs-sm); font-weight: 700; }
+.byline__name a { border-bottom: 1px solid var(--line); }
+.byline__meta { font-size: var(--fs-xs); color: var(--ink-3); }
+
+.prose { font-size: var(--fs-body); line-height: 1.75; }
+.prose > * + * { margin-top: var(--s-4); }
+.prose p { color: var(--ink); }
+.prose h2 { font-size: var(--fs-h2); margin-top: var(--s-6); }
+.prose h3 { font-size: var(--fs-h3); margin-top: var(--s-5); }
+/* Link editorial: cor do texto + sublinhado de marca. Assim nenhum link do
+   corpo compete com o vermelho vivo da temperatura. */
+.prose a { color: var(--ink); border-bottom: 2px solid var(--brand-line); font-weight: 600; }
+.prose a:hover { border-color: var(--brand); background: var(--brand-soft); }
+.prose ul, .prose ol { padding-left: 1.25rem; color: var(--ink); }
+.prose li + li { margin-top: var(--s-2); }
+.prose figure figcaption { font-size: var(--fs-xs); color: var(--ink-3); margin-top: var(--s-2); }
+.prose blockquote {
+  border-left: 3px solid var(--brand); padding-left: var(--s-4);
+  font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; line-height: 1.35;
+}
+
+.tldr {
+  background: var(--surface-1); border: 1px solid var(--line);
+  border-left: 4px solid var(--brand); border-radius: var(--r-md);
+  padding: var(--s-4); margin: var(--s-5) 0;
+}
+.tldr__label {
+  font-family: var(--font-mono); font-size: var(--fs-xxs); letter-spacing: .14em;
+  text-transform: uppercase; color: var(--brand-ink); margin-bottom: var(--s-2);
+}
+.tldr ul { list-style: none; padding: 0; display: grid; gap: var(--s-2); }
+.tldr li { display: grid; grid-template-columns: 16px 1fr; gap: var(--s-2); font-size: var(--fs-sm); color: var(--ink); }
+.tldr li::before { content: ""; width: 7px; height: 7px; margin-top: 8px; border-radius: 2px; background: var(--brand); }
+
+.verdict {
+  display: grid; gap: var(--s-4); align-items: center;
+  background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-lg);
+  padding: var(--s-4); margin: var(--s-5) 0;
+}
+@media (min-width: 620px) { .verdict { grid-template-columns: 108px 1fr; } }
+.verdict__score {
+  display: grid; place-items: center; aspect-ratio: 1; border-radius: var(--r-md);
+  background: conic-gradient(var(--ok) 0 86%, var(--surface-3) 86% 100%);
+  position: relative; max-width: 108px;
+}
+.verdict__score span {
+  position: absolute; inset: 6px; border-radius: var(--r-sm); background: var(--surface-1);
+  display: grid; place-items: center; font-family: var(--font-mono); font-size: 2rem; font-weight: 700;
+}
+.verdict h4 { font-size: 1.2rem; margin-bottom: 6px; }
+.pros-cons { display: grid; gap: var(--s-3); margin-top: var(--s-3); }
+@media (min-width: 620px) { .pros-cons { grid-template-columns: 1fr 1fr; } }
+.pros-cons ul { list-style: none; padding: 0; font-size: var(--fs-sm); display: grid; gap: 6px; }
+.pros-cons h5 { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .1em; color: var(--ink-3); margin-bottom: 6px; }
+.pros li::before { content: "+ "; color: var(--ok); font-weight: 700; }
+.cons li::before { content: "− "; color: var(--ink-2); font-weight: 700; }
+
+.spoiler {
+  border: 1px solid var(--spoiler-line); border-radius: var(--r-md);
+  background: var(--spoiler-soft); padding: var(--s-4); margin: var(--s-5) 0;
+}
+.spoiler__label {
+  display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono);
+  font-size: var(--fs-xxs); letter-spacing: .12em; text-transform: uppercase;
+  color: var(--spoiler); font-weight: 700; margin-bottom: var(--s-2);
+}
+.spoiler__body { position: relative; }
+.spoiler__body[data-hidden="true"] > p { filter: blur(6px); user-select: none; }
+.spoiler__reveal { margin-top: var(--s-3); }
+
+.toc {
+  background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-md);
+  padding: var(--s-4); margin: var(--s-5) 0;
+}
+.toc__label { font-family: var(--font-mono); font-size: var(--fs-xxs); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: var(--s-3); }
+.toc ol { margin: 0; padding-left: 1.1rem; display: grid; gap: var(--s-2); font-size: var(--fs-sm); }
+.toc a { color: var(--ink-2); }
+.toc a:hover { color: var(--ink); }
+
+.timeline { display: grid; gap: 0; margin: var(--s-5) 0; }
+.tl-item { display: grid; grid-template-columns: 74px 1fr; gap: var(--s-3); padding-bottom: var(--s-5); position: relative; }
+.tl-item::before { content: ""; position: absolute; left: 78px; top: 22px; bottom: 0; width: 1px; background: var(--line); }
+.tl-item:last-child::before { display: none; }
+.tl-time { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-3); text-align: right; padding-top: 3px; }
+.tl-body { position: relative; padding-left: var(--s-4); }
+.tl-body::before {
+  content: ""; position: absolute; left: -4.5px; top: 6px; width: 9px; height: 9px;
+  border-radius: 50%; background: var(--ink-3); border: 2px solid var(--bg);
+}
+.tl-item--new .tl-body::before { background: var(--heat-hot); box-shadow: 0 0 0 4px var(--heat-hot-soft); }
+.tl-item--new .tl-time { color: var(--heat-hot-text); }
+.tl-body h4 { font-size: 1.05rem; margin-bottom: 4px; }
+.tl-body p { font-size: var(--fs-sm); color: var(--ink-2); }
+
+/* Tabela comparativa */
+.table-wrap { overflow-x: auto; margin: var(--s-5) 0; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--surface-1); }
+table.cmp { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); min-width: 520px; }
+table.cmp th, table.cmp td { padding: var(--s-3); text-align: left; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+table.cmp thead th { background: var(--surface-2); font-family: var(--font-display); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .08em; }
+table.cmp tbody th { color: var(--ink-2); font-weight: 600; }
+table.cmp .win { color: var(--ok); font-weight: 700; }
+table.cmp .price { font-family: var(--font-mono); font-weight: 700; white-space: nowrap; color: var(--ink); }
+table.cmp .price small { display: block; font-family: var(--font-text); font-weight: 400; color: var(--ink-3); font-size: var(--fs-xxs); }
+table.cmp td.buy { white-space: nowrap; }
+table.cmp tr.is-deal { background: var(--surface-2); }
+
+/* --------------------------------------------------------------------------
+   13. HUB DE FRANQUIA / EDITORIA
+   -------------------------------------------------------------------------- */
+.hub-hero {
+  position: relative; border-radius: var(--r-lg); overflow: hidden;
+  border: 1px solid var(--line); padding: var(--s-5) var(--s-4) var(--s-4);
+  background: radial-gradient(120% 140% at 15% 0%, var(--brand-soft), transparent 60%), var(--surface-1);
+}
+.hub-hero__row { display: flex; align-items: center; gap: var(--s-4); flex-wrap: wrap; }
+.hub-hero__logo {
+  width: 68px; height: 68px; border-radius: var(--r-md); flex: none;
+  background: var(--surface-2);
+  border: 1px solid var(--line); display: grid; place-items: center;
+  font-family: var(--font-display); font-weight: 900; font-size: 1.2rem; letter-spacing: -.03em;
+}
+.hub-hero h1 { font-size: var(--fs-h1); }
+.hub-hero__desc { color: var(--ink-2); font-size: var(--fs-sm); margin-top: var(--s-2); max-width: 46rem; }
+.hub-stats { display: flex; gap: var(--s-5); flex-wrap: wrap; margin-top: var(--s-4); padding-top: var(--s-4); border-top: 1px solid var(--line-soft); }
+.hub-stat__num { font-family: var(--font-mono); font-size: 1.25rem; font-weight: 700; }
+.hub-stat__lbl { font-size: var(--fs-xxs); text-transform: uppercase; letter-spacing: .1em; color: var(--ink-3); }
+.hub-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; margin-top: var(--s-4); }
+
+.countdown { display: flex; gap: var(--s-2); }
+.cd-box {
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-sm);
+  padding: 8px 10px; text-align: center; min-width: 56px;
+}
+.cd-box b { display: block; font-family: var(--font-mono); font-size: 1.1rem; }
+.cd-box span { font-size: var(--fs-xxs); color: var(--ink-3); text-transform: uppercase; letter-spacing: .08em; }
+
+.tabs { display: flex; gap: var(--s-4); overflow-x: auto; border-bottom: 1px solid var(--line); margin-bottom: var(--s-4); scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs a {
+  padding: var(--s-3) 2px; font-size: var(--fs-sm); font-weight: 700; color: var(--ink-3);
+  border-bottom: 2px solid transparent; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.tabs a:hover { color: var(--ink-2); }
+.tabs a[aria-current="page"] { color: var(--ink); border-color: var(--brand); }
+.tabs .ico { width: 14px; height: 14px; }
+
+.sidebar { display: grid; gap: var(--s-5); align-content: start; }
+.side-box { background: var(--surface-1); border: 1px solid var(--line-soft); border-radius: var(--r-md); padding: var(--s-4); }
+.side-box h3 { font-size: 1.05rem; text-transform: uppercase; letter-spacing: .02em; margin-bottom: var(--s-3); display: flex; align-items: center; gap: 8px; }
+.side-list { display: grid; gap: var(--s-3); }
+.side-sticky { position: sticky; top: calc(var(--header-h) + 16px); }
+
+.fandoms { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+.fandom {
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px 8px 8px;
+  border-radius: var(--r-pill); background: var(--surface-2); border: 1px solid var(--line);
+  font-size: var(--fs-sm); font-weight: 600; min-height: 44px;
+}
+.fandom:hover { border-color: var(--brand); }
+.fandom__ico {
+  width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+  font-family: var(--font-display); font-size: .7rem; font-weight: 900;
+  /* No tema claro as cores de editoria são escuras → texto branco; no escuro
+     elas são neon → texto quase preto. Contraste garantido nos dois. */
+  color: light-dark(#FFFFFF, #0A0A0F);
+  background: var(--f, var(--ink-2));
+}
+.fandom__n { font-family: var(--font-mono); font-size: var(--fs-xxs); color: var(--ink-3); }
+
+/* --------------------------------------------------------------------------
+   14. ESTADOS / DIVERSOS
+   -------------------------------------------------------------------------- */
+.updated-flag {
+  display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs);
+  color: var(--heat-hot-text); font-weight: 600;
+}
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--heat-hot); animation: blink 1.3s infinite; }
+.divider { height: 1px; background: var(--line-soft); margin-block: var(--s-5); }
+.note {
+  font-size: var(--fs-xs); color: var(--ink-3); background: var(--surface-1);
+  border: 1px dashed var(--line); border-radius: var(--r-sm); padding: var(--s-3);
+}
+.load-more { display: grid; place-items: center; margin-top: var(--s-5); gap: var(--s-2); }
+.load-more small { color: var(--ink-3); font-size: var(--fs-xs); }
+
+.footer { border-top: 1px solid var(--line); margin-top: var(--s-7); padding-block: var(--s-6) var(--s-7); background: var(--surface-1); }
+.footer__grid { display: grid; gap: var(--s-5); }
+@media (min-width: 700px) { .footer__grid { grid-template-columns: 1.4fr 1fr 1fr 1fr; } }
+.footer h4 { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .12em; color: var(--ink-3); margin-bottom: var(--s-3); }
+.footer ul { list-style: none; padding: 0; display: grid; gap: var(--s-2); font-size: var(--fs-sm); }
+.footer a { color: var(--ink-2); }
+.footer a:hover { color: var(--ink); }
+.footer__legal { margin-top: var(--s-6); padding-top: var(--s-4); border-top: 1px solid var(--line-soft); font-size: var(--fs-xs); color: var(--ink-3); }
+.footer__bottom { display: flex; gap: var(--s-4); align-items: flex-start; justify-content: space-between; flex-wrap: wrap; margin-top: var(--s-5); }
+
+/* Utilitários de layout usados nas páginas */
+.stack { display: grid; gap: var(--s-4); }
+.stack-sm { display: grid; gap: var(--s-3); }
+.stack-lg { display: grid; gap: var(--s-5); }
+.hero-layout { display: grid; gap: var(--s-4); }
+@media (min-width: 1024px) { .hero-layout { grid-template-columns: minmax(0, 1.62fr) minmax(0, 1fr); gap: var(--s-5); } }
+.article-layout { display: grid; gap: var(--s-5); }
+@media (min-width: 1024px) { .article-layout { grid-template-columns: minmax(0, 1fr) 320px; gap: var(--s-7); } }
+@media (min-width: 1180px) { .article-layout { grid-template-columns: 56px minmax(0, 1fr) 320px; gap: var(--s-5) var(--s-6); } }
+.editoria { display: grid; gap: var(--s-4); }
+@media (min-width: 900px) { .editoria { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--s-5); } }
+@media (max-width: 767px) { .only-desk { display: none !important; } }
+@media (min-width: 768px) { .only-mobile { display: none !important; } }
+.breadcrumb { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--ink-3); padding-block: var(--s-3); flex-wrap: wrap; }
+.breadcrumb a:hover { color: var(--ink); }
+.breadcrumb .ico { width: 12px; height: 12px; }
+
+/* Faixa de navegação do protótipo (só existe no protótipo, não no produto) */
+.protobar {
+  background: var(--protobar-bg); border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono); font-size: var(--fs-xxs);
+}
+.protobar__inner { display: flex; gap: var(--s-3); align-items: center; padding-block: 8px; overflow-x: auto; }
+.protobar span { color: var(--ink-3); letter-spacing: .1em; text-transform: uppercase; flex: none; }
+.protobar a { color: var(--ink-2); border: 1px solid var(--line); padding: 4px 9px; border-radius: var(--r-pill); white-space: nowrap; }
+.protobar a[aria-current="page"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+/* ==========================================================================
+   16. MONETIZAÇÃO — AdSense + afiliados
+   Três regras estruturais estão codificadas AQUI, não na boa vontade de quem
+   escreve o HTML:
+   (a) todo slot nasce com altura reservada (--ad-h) → CLS zero;
+   (b) nenhuma cor quente entra: a paleta comercial é cinza/grafite;
+   (c) o anúncio ancorado só existe se a sticky-bar não existir (`:has`).
+   ========================================================================== */
+
+/* --- Slot de anúncio -------------------------------------------------- */
+.ad { --ad-h: 250px; display: grid; gap: 6px; margin: var(--s-5) 0; justify-items: stretch; }
+.ad__label {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: var(--fs-xxs); letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ad-label);
+}
+.ad__box {
+  height: var(--ad-h);                 /* reserva fixa: o anúncio nunca empurra texto */
+  background: var(--ad-bg); border: 1px solid var(--ad-line); border-radius: var(--r-md);
+  display: grid; place-items: center; overflow: hidden;
+  color: var(--ad-label); font-family: var(--font-mono); font-size: var(--fs-xxs);
+  text-align: center; padding: var(--s-2);
+}
+.ad--leader { --ad-h: 100px; }
+@media (min-width: 768px) { .ad--leader { --ad-h: 90px; } }
+.ad--rect   { --ad-h: 250px; }
+@media (min-width: 768px) { .ad--rect { --ad-h: 280px; } }
+.ad--rail   { --ad-h: 600px; }
+.ad--feed   { --ad-h: 250px; margin: 0; }
+.ad--rail .ad__box, .ad--rect .ad__box { max-width: 336px; margin-inline: auto; }
+.ad--sticky { position: sticky; top: calc(var(--header-h) + 16px); }
+
+/* Anúncio ancorado no mobile — entra na MESMA máquina de estados da sticky-bar.
+   Nunca cobre a bottom-nav (fica acima dela) e some se a sticky-bar existir. */
+.ad-anchor {
+  position: fixed; left: 0; right: 0; bottom: 64px; z-index: 63;
+  background: var(--surface-2); border-top: 1px solid var(--line);
+  padding: 6px var(--s-4) 8px;
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--s-2);
+}
+.ad-anchor .ad { margin: 0; --ad-h: 50px; }
+.ad-anchor .ad__box { width: 320px; max-width: 100%; margin-inline: auto; }
+.ad-anchor .ad__label { justify-content: center; }
+@media (min-width: 768px) { .ad-anchor { display: none; } }
+body:has(.sticky-bar) .ad-anchor { display: none; }          /* exclusividade mútua */
+body:has(.push-prompt[data-open="true"]) .ad-anchor { display: none; }
+
+/* --- Disclosure de afiliado (obrigatória ANTES do clique) ------------- */
+.disclosure {
+  display: flex; gap: var(--s-2); align-items: flex-start;
+  border: 1px solid var(--aff-line); border-left: 3px solid var(--ink-3);
+  background: var(--surface-2); border-radius: var(--r-sm);
+  padding: var(--s-3); margin: var(--s-4) 0;
+  font-size: var(--fs-xs); color: var(--ink-2); line-height: 1.5;
+}
+.disclosure b { color: var(--ink); }
+.disclosure .ico { color: var(--ink-3); width: 15px; height: 15px; margin-top: 2px; }
+.disclosure a { border-bottom: 1px solid var(--line); color: var(--ink); }
+.disclosure--mini {
+  border: 0; border-left: 0; background: none; padding: 0; margin: var(--s-2) 0 0;
+  font-size: var(--fs-xxs); color: var(--ink-3);
+}
+.disclosure--mini .ico { width: 12px; height: 12px; margin-top: 1px; }
+/* Extensão futura: publieditorial pago. Mais forte, mesmo componente. */
+.disclosure--sponsored { border-left-color: var(--ink); background: var(--surface-3); }
+.disclosure--sponsored .disclosure__tag {
+  display: inline-block; background: var(--ink); color: var(--ink-invert);
+  font-family: var(--font-mono); font-size: var(--fs-xxs); letter-spacing: .12em;
+  text-transform: uppercase; padding: 2px 7px; border-radius: 4px; margin-right: 6px;
+}
+
+/* --- Link de afiliado contextual (inline no corpo) --------------------- */
+.aff-link {
+  color: var(--ink); font-weight: 600;
+  border-bottom: 1px dashed var(--ink-3);
+}
+.aff-link:hover { border-bottom-style: solid; background: var(--surface-2); }
+.aff-tag {
+  font-family: var(--font-mono); font-size: .625rem; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-3); border: 1px solid var(--line); border-radius: 3px;
+  padding: 0 4px; margin-left: 5px; white-space: nowrap; vertical-align: 1px;
+}
+
+/* --- Selo "melhor custo-benefício" -----------------------------------
+   De propósito NÃO parece um badge de temperatura: sem preenchimento,
+   sem caixa-alta mono, sem ponto pulsante. Contorno + ícone + frase. */
+.deal-seal {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-text); font-size: var(--fs-xxs); font-weight: 700;
+  color: var(--ink-2); background: transparent;
+  border: 1px solid var(--deal-line); border-radius: var(--r-sm);
+  padding: 3px 9px; white-space: nowrap; letter-spacing: 0; text-transform: none;
+}
+.deal-seal .ico { width: 13px; height: 13px; }
+
+/* --- Box "Onde comprar" (estende .verdict, não substitui) -------------- */
+.buybox {
+  border: 1px solid var(--aff-line); background: var(--aff-bg);
+  border-radius: var(--r-lg); padding: var(--s-4);
+  margin: calc(var(--s-5) * -1 + var(--s-2)) 0 var(--s-5);   /* cola no .verdict acima */
+}
+.buybox__head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-3); flex-wrap: wrap; }
+.buybox h4 { font-size: 1.05rem; }
+.buybox__stamp { font-family: var(--font-mono); font-size: var(--fs-xxs); color: var(--ink-3); }
+.buybox__list { display: grid; margin-top: var(--s-3); }
+.store {
+  display: grid; grid-template-columns: 1fr auto; align-items: center;
+  gap: var(--s-2) var(--s-3); padding: var(--s-3) 0; border-top: 1px solid var(--line-soft);
+}
+.store:first-child { border-top: 0; }
+.store__main { min-width: 0; display: grid; gap: 4px; }
+.store__name { font-weight: 700; font-size: var(--fs-sm); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.store__logo {
+  width: 30px; height: 30px; border-radius: var(--r-sm); flex: none;
+  background: var(--surface-3); color: var(--ink-2);
+  display: grid; place-items: center; font-family: var(--font-mono); font-size: var(--fs-xxs); font-weight: 700;
+}
+.store__note { font-size: var(--fs-xxs); color: var(--ink-3); }
+.store__buy { display: flex; align-items: center; gap: var(--s-3); }
+.store__price { font-family: var(--font-mono); font-weight: 700; font-size: 1rem; white-space: nowrap; }
+.store__price s { color: var(--ink-3); font-weight: 400; font-size: var(--fs-xs); display: block; }
+@media (max-width: 479px) {
+  .store { grid-template-columns: 1fr; }
+  .store__buy { justify-content: space-between; }
+}
+
+/* --- Card de produto (hardware, colecionáveis, jogos) ------------------ */
+.prod {
+  display: grid; grid-template-columns: 92px 1fr; gap: var(--s-3);
+  border: 1px solid var(--aff-line); background: var(--aff-bg);
+  border-radius: var(--r-md); padding: var(--s-3);
+}
+.prod__img {
+  aspect-ratio: 1; border-radius: var(--r-sm); background: var(--surface-3);
+  display: grid; place-items: center; color: var(--ink-3);
+  font-family: var(--font-mono); font-size: var(--fs-xxs);
+}
+.prod__body { min-width: 0; display: grid; align-content: start; gap: 4px; }
+.prod__name { font-family: var(--font-display); font-weight: 800; font-size: 1rem; line-height: 1.2; }
+.prod__spec { font-size: var(--fs-xs); color: var(--ink-3); }
+.prod__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); flex-wrap: wrap; margin-top: 6px; }
+.prod__price { font-family: var(--font-mono); font-weight: 700; }
+.prod__price small { display: block; font-family: var(--font-text); font-weight: 400; font-size: var(--fs-xxs); color: var(--ink-3); }
+.prod--stack { grid-template-columns: 1fr; }
+.prod--stack .prod__img { aspect-ratio: 16/9; }
+
+/* --- Bloco de loja (hub de franquia / fim de guia) --------------------- */
+.shop {
+  border: 1px solid var(--aff-line); background: var(--surface-1);
+  border-radius: var(--r-lg); padding: var(--s-4); margin-top: var(--s-4);
+}
+.shop__head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap; margin-bottom: var(--s-2); }
+.shop__head h3, .shop__head h4 { font-size: 1.05rem; display: flex; align-items: center; gap: 8px; }
+.shop__head .ico { width: 18px; height: 18px; color: var(--ink-3); }
+.shop__grid { display: grid; gap: var(--s-3); margin-top: var(--s-3); }
+@media (min-width: 640px) { .shop__grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1024px) { .shop__grid--3 { grid-template-columns: repeat(3, 1fr); } }
+
+/* --- Resumo "produtos citados" (fim de guia/listicle) ------------------ */
+.aff-summary {
+  border-top: 2px solid var(--line); padding-top: var(--s-4); margin-top: var(--s-6);
+}
+.aff-summary h3 { font-size: var(--fs-h3); display: flex; align-items: center; gap: 8px; }
+.aff-summary__list { display: grid; gap: var(--s-2); margin-top: var(--s-3); }
+.aff-summary .prod { padding: var(--s-2); grid-template-columns: 64px 1fr; }
+
+/* --- Faixa de ofertas de hardware (sub-seção com maior densidade) ------ */
+.deal-strip {
+  display: grid; gap: var(--s-3); border: 1px solid var(--aff-line);
+  background: var(--surface-1); border-radius: var(--r-lg); padding: var(--s-4);
+}
+.deal-strip__top { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); flex-wrap: wrap; }
+.deal-strip__top h2, .deal-strip__top h3 { font-size: var(--fs-h3); }
+.deal-strip__list { display: grid; gap: var(--s-2); }
+@media (min-width: 900px) { .deal-strip__list { grid-template-columns: repeat(2, 1fr); } }
+
+/* Tabela de densidade (documentação no design system) */
+.dens { width: 100%; border-collapse: collapse; font-size: var(--fs-xs); min-width: 720px; }
+.dens th, .dens td { border-bottom: 1px solid var(--line-soft); padding: 10px var(--s-3); text-align: left; vertical-align: top; }
+.dens thead th { background: var(--surface-2); font-family: var(--font-display); text-transform: uppercase; letter-spacing: .08em; }
+.dens tbody th { color: var(--ink); font-weight: 700; white-space: nowrap; }
+.dens .no { color: var(--ink-3); font-family: var(--font-mono); }
+.dens .yes { color: var(--ink); font-family: var(--font-mono); }

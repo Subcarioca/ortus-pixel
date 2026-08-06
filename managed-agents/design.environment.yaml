@@ -1,0 +1,9 @@
+name: design-env
+description: >
+  Ambiente compartilhado pelos agentes de design (Android e Web). Acesso
+  irrestrito à internet, necessário para pesquisar referências em
+  Pinterest, Google Imagens, Canva, Dribbble, Behance e sites de design.
+config:
+  type: cloud
+  networking:
+    type: unrestricted

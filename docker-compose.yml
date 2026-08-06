@@ -1,0 +1,57 @@
+# =============================================================================
+# Infraestrutura local de desenvolvimento
+# =============================================================================
+#
+# Sobe Postgres e Redis. Nada de aplicação aqui: o Next e o curator rodam
+# direto no host, com hot reload — colocá-los em contêiner só adicionaria uma
+# camada entre o desenvolvedor e o feedback rápido, sem ganho real.
+#
+#   docker compose up -d
+#
+# Se você não usa Docker, basta ter um Postgres 16+ acessível e ajustar a
+# DATABASE_URL no .env. O Redis é OPCIONAL no MVP (ver README > Dependências).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: canalnerd-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: canalnerd
+      POSTGRES_PASSWORD: canalnerd
+      POSTGRES_DB: canalnerd
+      # Locale pt-BR para que ORDER BY respeite acentuação corretamente —
+      # relevante num site em português com nomes de franquias acentuados.
+      LANG: pt_BR.utf8
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # Sem healthcheck, `docker compose up -d` retorna antes de o banco estar
+      # pronto, e o primeiro `prisma db push` falha com "connection refused".
+      test: ['CMD-SHELL', 'pg_isready -U canalnerd -d canalnerd']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: canalnerd-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    # `appendonly` mantém a fila do pipeline entre reinicializações. Em dev não
+    # é crítico, mas evita a surpresa de "sumiram os jobs agendados".
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_data:
+  redis_data:

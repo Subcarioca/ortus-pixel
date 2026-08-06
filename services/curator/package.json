@@ -1,0 +1,23 @@
+{
+  "name": "@canalnerd/curator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Serviço de curadoria automática: coleta sinais, calcula scores e aciona a redação.",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "once": "tsx src/main.ts --once",
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test src/**/*.test.ts"
+  },
+  "dependencies": {
+    "@canalnerd/core": "*",
+    "@canalnerd/db": "*",
+    "@canalnerd/scoring": "*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}

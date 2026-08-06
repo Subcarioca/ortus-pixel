@@ -1,0 +1,23 @@
+{
+    "env_id":  "env_01Mzvo6vZWfED9HQJRQwWsUm",
+    "android_agent_id":  [
+                             "{",
+                             "  \"type\": \"error\",",
+                             "  \"error\": {",
+                             "    \"type\": \"invalid_request_error\",",
+                             "    \"message\": \"Your credit balance is too low to access the Anthropic API. Please go to Plans \\u0026 Billing to upgrade or purchase credits.\"",
+                             "  },",
+                             "  \"request_id\": \"req_011CdbSkCLo9qEr4wUvLJCAu\"",
+                             "}"
+                         ],
+    "web_agent_id":  [
+                         "{",
+                         "  \"type\": \"error\",",
+                         "  \"error\": {",
+                         "    \"type\": \"invalid_request_error\",",
+                         "    \"message\": \"Your credit balance is too low to access the Anthropic API. Please go to Plans \\u0026 Billing to upgrade or purchase credits.\"",
+                         "  },",
+                         "  \"request_id\": \"req_011CdbSkDRHfPutHYHUmDPg9\"",
+                         "}"
+                     ]
+}

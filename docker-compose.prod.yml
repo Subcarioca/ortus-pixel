@@ -1,0 +1,313 @@
+# =============================================================================
+# Ortus Pixel — orquestração de PRODUÇÃO (caminho B)
+# =============================================================================
+#
+# ATENÇÃO: ESTE É O CAMINHO B. O caminho escolhido para o lançamento é o PM2
+# (ver README > Deploy em produção). Este arquivo é mantido como alternativa
+# documentada, para homologação e para quando houver necessidade de escalar.
+#
+# COMO SUBIR (a partir da raiz do projeto, no VPS):
+#
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+#
+# Isso sobe SOMENTE `web` e `curator`, apontando para o Postgres GERENCIADO que
+# está na DATABASE_URL do `.env.production`. O serviço `postgres` deste arquivo
+# fica num perfil desativado de propósito — ver o comentário sobre ele abaixo.
+#
+# O `--env-file .env.production` NÃO É OPCIONAL e é a pegadinha número um deste
+# arquivo. Por padrão o Compose interpola `${VAR}` a partir de um arquivo
+# chamado exatamente `.env` na pasta atual — que aqui é o arquivo de
+# DESENVOLVIMENTO. Sem a flag, o site de produção subiria apontando para
+# `localhost:3000` e para o banco de dev, silenciosamente.
+#
+# Perfis opcionais (nenhum deles é usado em produção hoje):
+#   --profile local-db   sobe um Postgres em container (homologação)
+#   --profile redis      sobe o Redis (ver README > Dependências opcionais)
+#
+# ORDEM DAS MIGRATIONS: este arquivo NÃO aplica migrations. Rode-as a partir da
+# máquina de deploy, apontando para o banco gerenciado, ANTES de subir a stack:
+#   npx prisma migrate deploy --schema=packages/db/prisma/schema.prisma
+#
+# -----------------------------------------------------------------------------
+# ESTE ARQUIVO NÃO SUBSTITUI O `docker-compose.yml`
+# -----------------------------------------------------------------------------
+# O `docker-compose.yml` da raiz é de DESENVOLVIMENTO: sobe só Postgres e Redis,
+# com portas expostas no host, para que o Next e o curator rodem nativamente com
+# hot reload. Este aqui sobe a stack inteira em container e NÃO expõe o banco.
+# São arquivos separados de propósito — um `docker-compose.override.yml` faria a
+# configuração de produção herdar acidentalmente qualquer descuido do dev.
+
+services:
+  # ===========================================================================
+  # BANCO DE DADOS — NÃO SOBE POR PADRÃO (perfil `local-db`)
+  # ===========================================================================
+  #
+  # DECISÃO DE ARQUITETURA: em produção o Postgres é GERENCIADO (Hostinger ou
+  # outro provedor), fora do VPS. Este serviço existe para homologação e para
+  # quem quiser uma stack autocontida — nunca para o ambiente de produção.
+  #
+  # Por isso ele está sob `profiles:`. O efeito é que
+  #   docker compose ... up -d
+  # sobe APENAS `web` e `curator`, apontando para o banco gerenciado que está na
+  # DATABASE_URL do `.env.production`. Para subir o banco local, é preciso pedir
+  # explicitamente:
+  #   docker compose ... --profile local-db up -d
+  #
+  # Isto é uma trava de segurança, não organização. Com o container subindo por
+  # padrão, o VPS teria DOIS bancos ao mesmo tempo, e a chance de a aplicação
+  # gravar no errado — perdendo dados de produção num banco efêmero, sem erro
+  # aparente — é alta demais para se apoiar em disciplina de quem digita.
+  postgres:
+    image: postgres:16-alpine
+    container_name: ortuspixel-postgres
+    profiles: ['local-db']
+
+    # `unless-stopped` e não `always`: se um operador parar o container de
+    # propósito para uma manutenção, um reboot do VPS não deve ressuscitá-lo
+    # no meio do trabalho. `always` faria exatamente isso.
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?defina POSTGRES_USER no .env.production}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env.production}
+      POSTGRES_DB: ${POSTGRES_DB:?defina POSTGRES_DB no .env.production}
+      LANG: pt_BR.utf8
+      # `--data-checksums` detecta corrupção silenciosa de disco. Só pode ser
+      # ligado na CRIAÇÃO do cluster: depois de inicializado, mudar exige dump
+      # e restore. É por isso que está aqui desde o primeiro dia.
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+
+    # NENHUM `ports:` AQUI — decisão de segurança deliberada.
+    # Publicar 5432 no host expõe o banco à internet inteira (o Docker escreve
+    # regras de iptables que ATRAVESSAM o ufw — causa clássica de "eu fechei a
+    # porta no firewall e mesmo assim invadiram"). O site e o curator alcançam
+    # o Postgres pela rede interna do Compose, pelo nome `postgres`.
+    # Para inspecionar de fora, use um túnel SSH:
+    #   ssh -L 5432:localhost:5432 usuario@vps  +  docker compose exec postgres psql
+    expose:
+      - '5432'
+
+    volumes:
+      # Volume nomeado: os dados sobrevivem a `down`, `up` e troca de imagem.
+      # Um bind mount daria mais controle, mas herdaria as permissões do host —
+      # fonte recorrente de "Permission denied" no initdb.
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      # `pg_isready` distingue "container de pé" de "banco aceitando conexões",
+      # que no Postgres são momentos separados por vários segundos. Nenhum
+      # serviço depende deste healthcheck hoje (o banco de produção é externo),
+      # mas ele é o que torna possível reintroduzir `depends_on:
+      # condition: service_healthy` se alguém adotar o perfil `local-db`.
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+    networks:
+      - internal
+
+  # ===========================================================================
+  # REDIS — OPCIONAL (perfil `redis`)
+  # ===========================================================================
+  #
+  # Está sob `profiles` para que NÃO suba por padrão. O README é explícito: no
+  # MVP o Redis não é necessário (rate limit e orçamento de API vivem em
+  # memória, e há uma instância só de cada processo). Ele passa a ser
+  # obrigatório quando houver múltiplas réplicas — aí o rate limit "5 por 15
+  # min" vira N x 5 e a trava deixa de valer.
+  #
+  # Deixá-lo declarado, porém desligado, documenta o caminho de crescimento sem
+  # cobrar 100 MB de RAM de quem ainda não precisa.
+  redis:
+    image: redis:7-alpine
+    container_name: ortuspixel-redis
+    restart: unless-stopped
+    profiles: ['redis']
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:?defina REDIS_PASSWORD ao habilitar o perfil redis}
+    expose:
+      - '6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      # A senha precisa ir no healthcheck também: com `requirepass`, um PING
+      # sem autenticação responde NOAUTH e o container ficaria eternamente
+      # unhealthy — travando quem depende dele.
+      test: ['CMD-SHELL', 'redis-cli -a "$$REDIS_PASSWORD" ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    networks:
+      - internal
+
+  # ===========================================================================
+  # SITE (Next.js)
+  # ===========================================================================
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: web
+      # As `NEXT_PUBLIC_*` são congeladas no bundle durante o build (ver o
+      # comentário longo no Dockerfile). Por isso viajam como ARGS, e não
+      # apenas como variáveis de runtime.
+      #
+      # CONSEQUÊNCIA OPERACIONAL: mudar qualquer uma delas exige `up -d --build`.
+      # Um `restart` não muda uma vírgula do HTML servido.
+      args:
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?defina NEXT_PUBLIC_SITE_URL}
+        NEXT_PUBLIC_SITE_NAME: ${NEXT_PUBLIC_SITE_NAME:-Ortus Pixel}
+        NEXT_PUBLIC_ADSENSE_CLIENT_ID: ${NEXT_PUBLIC_ADSENSE_CLIENT_ID:-}
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY:-}
+
+    image: ortuspixel-web:latest
+    container_name: ortuspixel-web
+    restart: unless-stopped
+
+    # Carrega TODOS os segredos de runtime de uma vez. Preferido a listar
+    # variável por variável em `environment:`: uma chave nova no
+    # `.env.production` passa a valer sem editar este arquivo, e nenhum segredo
+    # fica escrito num arquivo versionado.
+    env_file:
+      - .env.production
+
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+      #
+      # `DATABASE_URL` NÃO É SOBRESCRITA AQUI — de propósito.
+      #
+      # Ela vem do `env_file` e deve apontar para o banco GERENCIADO, com
+      # `sslmode=require`. Uma versão anterior deste arquivo forçava
+      # `@postgres:5432` nesta linha, o que era um erro grave no cenário
+      # escolhido: `environment:` tem precedência sobre `env_file`, então a
+      # aplicação ignoraria silenciosamente o banco de produção e passaria a
+      # gravar no container — sem nenhum erro visível, até alguém notar que os
+      # dados sumiram no primeiro `docker compose down -v`.
+      #
+      # Se você QUISER usar o Postgres em container (perfil `local-db`), ajuste
+      # a DATABASE_URL no próprio `.env.production`:
+      #   DATABASE_URL="postgresql://ortuspixel:SENHA@postgres:5432/ortuspixel?schema=public"
+      # O host é o NOME DO SERVIÇO (`postgres`), não `localhost`.
+
+    ports:
+      # AMARRADO AO LOOPBACK. `- '3000:3000'` (sem o 127.0.0.1) publicaria a
+      # aplicação direto na internet, permitindo acessar o site por
+      # http://IP-DO-VPS:3000 — sem HTTPS, sem os limites do Nginx e servindo
+      # conteúdo por um host que não é o canônico (conteúdo duplicado para o
+      # Google). Quem fala com o mundo é o Nginx do host.
+      - '127.0.0.1:3000:3000'
+
+    # SEM `depends_on: postgres` — o banco de produção é gerenciado e externo,
+    # então não há nada local para esperar. Declarar a dependência aqui também
+    # quebraria o `up` padrão, já que o serviço `postgres` vive num perfil
+    # desativado.
+    #
+    # Com o perfil `local-db` ativo, o container do banco leva alguns segundos a
+    # mais para aceitar conexões e o `web` pode falhar no primeiro boot. Isso é
+    # aceitável e se resolve sozinho: o `restart: unless-stopped` reergue o
+    # processo, e o healthcheck do Postgres continua existindo para quem quiser
+    # reintroduzir a espera nesse cenário.
+
+    networks:
+      - internal
+
+    # Limite de log. Sem isto, o driver `json-file` cresce sem teto e um laço
+    # de erro barulhento enche o disco do VPS — e disco cheio derruba o
+    # Postgres junto, transformando um incidente pequeno em queda total.
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
+
+  # ===========================================================================
+  # CURADORIA (pipeline)
+  # ===========================================================================
+  curator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: curator
+    image: ortuspixel-curator:latest
+    container_name: ortuspixel-curator
+    restart: unless-stopped
+
+    env_file:
+      - .env.production
+
+    environment:
+      NODE_ENV: production
+      #
+      # `DATABASE_URL` vem do `env_file` (banco gerenciado). Mesmo motivo
+      # explicado no serviço `web`: sobrescrevê-la aqui faria o curator gravar
+      # num banco diferente do que o site lê — e os dois só divergiriam de forma
+      # visível dias depois.
+      #
+      # SOBRE A REVALIDAÇÃO DE CACHE, e por que NÃO há uma variável de URL
+      # interna aqui: o curator monta a chamada a `/api/revalidate` a partir de
+      # `NEXT_PUBLIC_SITE_URL` (verificado em
+      # `services/curator/src/actions/revalidate.ts`), que virá do `env_file`
+      # como `https://ortuspixel.com`. Ou seja, o pedido sai para a internet,
+      # volta pelo Nginx e paga TLS — para dois containers vizinhos.
+      #
+      # Funciona, e por isso não foi alterado aqui: inventar um
+      # `INTERNAL_WEB_URL` neste arquivo criaria uma variável que NENHUMA linha
+      # do código lê — configuração que parece ativa e não faz nada é pior que
+      # configuração ausente. A otimização real (usar `http://web:3000` na rede
+      # interna) exige uma mudança de código no curator e está registrada como
+      # sugestão de próximo passo no README.
+
+    # EXATAMENTE UMA RÉPLICA — não é preferência, é correção.
+    # O agendador vive no processo e não tem trava distribuída. Duas réplicas
+    # rodariam dois ciclos de descoberta simultâneos: orçamento de API gasto em
+    # dobro e deduplicação furada (dois ciclos criam o mesmo tópico antes de um
+    # enxergar o outro). Multi-instância só depois de BullMQ + Redis (Fase 2).
+    scale: 1
+
+    depends_on:
+      web:
+        # Só `service_started`: esperar o site ficar `healthy` atrasaria o
+        # curator sem necessidade. Ele tolera a revalidação falhar — a página
+        # apenas fica velha até o `revalidate` natural (o código já trata isso).
+        #
+        # (Sem `postgres` aqui: banco gerenciado e externo — ver o comentário
+        # equivalente no serviço `web`.)
+        condition: service_started
+
+    networks:
+      - internal
+
+    logging:
+      driver: json-file
+      options:
+        max-size: '10m'
+        max-file: '5'
+
+# =============================================================================
+# REDE
+# =============================================================================
+networks:
+  internal:
+    driver: bridge
+    # Rede dedicada em vez da `default`: só quem está declarado aqui alcança o
+    # Postgres. Se amanhã outro projeto subir no mesmo VPS, ele não enxerga
+    # este banco por acidente.
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+volumes:
+  postgres_data:
+    # ATENÇÃO: `docker compose down -v` APAGA este volume e, com ele, o banco
+    # inteiro. Em produção use `down` sem `-v`. O backup regular do Postgres
+    # está no checklist de pré-lançamento do README.
+  redis_data:

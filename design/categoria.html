@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Games — Notícias, Trailers e Análises | Ortus Pixel</title>
+<meta name="description" content="Notícias, análises e guias de games: lançamentos, patches, rumores e o que está bombando agora. Atualizado em tempo real.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ortuspixel.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+
+<div class="protobar"><div class="container protobar__inner">
+  <span>Protótipo Ortus Pixel</span>
+  <a href="index.html">Home</a>
+  <a href="em-alta.html">Em Alta</a>
+  <a href="categoria.html" aria-current="page">Categoria</a>
+  <a href="categoria-hardware.html">Tech › Hardware</a>
+  <a href="hub-franquia.html">Hub de franquia</a>
+  <a href="artigo.html">Artigo (quente)</a>
+  <a href="artigo-review.html">Review + afiliados</a>
+  <a href="sistema.html">Design system</a>
+</div></div>
+
+<header class="header">
+  <div class="container header__bar">
+    <button class="icon-btn nav-toggle" aria-label="Abrir menu de editorias" aria-expanded="false"><svg class="ico"><use href="#i-menu"></use></svg></button>
+    <a class="logo" href="index.html"><span class="logo__dot" aria-hidden="true"></span>Ortus<b>Pixel</b></a>
+    <nav class="header__nav" aria-label="Editorias">
+      <a href="categoria.html" aria-current="page">Games</a>
+      <a href="categoria.html">Cinema &amp; Séries</a>
+      <a href="categoria.html">Anime &amp; Mangá</a>
+      <a href="categoria.html">HQs</a>
+      <a href="categoria-hardware.html">Tech</a>
+      <a href="categoria.html">Eventos</a>
+    </nav>
+    <div class="header__actions">
+      <a class="btn-hot-nav" href="em-alta.html"><svg class="ico"><use href="#i-flame"></use></svg> Em Alta</a>
+      <label class="icon-btn lbl-dark" for="th-dark"><svg class="ico"><use href="#i-moon"></use></svg><span class="sr-only">Ativar tema escuro</span></label>
+      <label class="icon-btn lbl-light" for="th-light"><svg class="ico"><use href="#i-sun"></use></svg><span class="sr-only">Ativar tema claro</span></label>
+      <button class="icon-btn" aria-label="Buscar na Ortus Pixel"><svg class="ico"><use href="#i-search"></use></svg></button>
+      <button class="icon-btn" aria-label="Notificações (3 novas)"><svg class="ico"><use href="#i-bell"></use></svg><span class="icon-btn__dot"></span></button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <div class="container">
+    <nav class="breadcrumb" aria-label="Você está em">
+      <a href="index.html">Home</a><svg class="ico"><use href="#i-chevron-right"></use></svg><span>Games</span>
+    </nav>
+
+    <!-- Cabeçalho da editoria -->
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-bottom:16px;border-bottom:3px solid var(--cat-games)">
+      <div>
+        <h1 style="font-size:var(--fs-h1)">Games</h1>
+        <p style="color:var(--ink-2);font-size:var(--fs-sm);margin-top:6px;max-width:52ch">Lançamentos, patches, rumores, análises e o que a comunidade está jogando agora.</p>
+      </div>
+      <button class="btn btn--ghost btn--sm"><svg class="ico"><use href="#i-plus"></use></svg> Seguir Games</button>
+    </div>
+
+    <!-- Sub-navegação por formato de conteúdo -->
+    <nav class="tabs" aria-label="Seções de Games" style="margin-top:8px">
+      <a href="#" aria-current="page">Tudo</a>
+      <a href="#">Notícias</a>
+      <a href="#">Análises</a>
+      <a href="#">Trailers</a>
+      <a href="#">Guias</a>
+      <a href="#">Lançamentos</a>
+    </nav>
+  </div>
+
+  <section class="container" aria-labelledby="h-topo">
+    <h2 class="sr-only" id="h-topo">Destaque da editoria</h2>
+    <!-- Destaque da categoria: o item mais quente de Games -->
+    <article class="hero">
+      <a href="artigo.html">
+        <div class="hero__media" style="aspect-ratio:16/9">
+          <div class="thumb" data-c="games"><span class="thumb__note">Capa 16:9</span></div>
+          <div class="hero__overlay"></div>
+        </div>
+        <div class="hero__body" style="margin-top:-26%">
+          <div class="card__head">
+            <span class="heat heat--hot heat--lg"><svg class="ico"><use href="#i-flame"></use></svg> Urgente</span>
+            <span class="meta meta--live"><span class="live-dot"></span> ao vivo</span>
+          </div>
+          <h3 class="hero__title" style="font-size:clamp(1.5rem,4.4vw,2.6rem)">GTA VI tem data confirmada e Rockstar libera trailer 3 sem aviso</h3>
+          <p class="hero__dek">26 de novembro no PS5 e Xbox Series. PC fica para 2027.</p>
+          <div class="hero__foot">
+            <span class="meta">há 12 min · 4 min de leitura</span>
+            <span class="heatbar heatbar--hot" data-on="4" role="img" aria-label="Temperatura: urgente"><i></i><i></i><i></i><i></i></span>
+          </div>
+        </div>
+      </a>
+    </article>
+  </section>
+
+  <section class="section container">
+    <div class="layout-2col">
+      <div>
+        <!-- Filtro por temperatura: o mesmo padrão da página Em Alta (consistência) -->
+        <div class="section-head" style="align-items:flex-end">
+          <h2 class="section-title" style="font-size:var(--fs-h3)">Todas as notícias de Games</h2>
+          <span class="meta">312 publicações</span>
+        </div>
+        <div class="filters" role="group" aria-label="Filtrar por temperatura" data-filter-group>
+          <button class="chip" data-filter="todos" aria-pressed="true">Todos</button>
+          <button class="chip chip--hot" data-filter="hot" aria-pressed="false"><svg class="ico"><use href="#i-flame"></use></svg> Quentes</button>
+          <button class="chip chip--rise" data-filter="rise" aria-pressed="false"><svg class="ico"><use href="#i-trending-up"></use></svg> Em alta</button>
+          <button class="chip" data-filter="base" aria-pressed="false">Relevantes</button>
+          <button class="chip" data-filter="ever" aria-pressed="false"><svg class="ico"><use href="#i-book"></use></svg> Guias</button>
+        </div>
+
+        <!-- Grade cronológica. A temperatura muda o peso do card, não a ordem. -->
+        <div class="grid g-sm-2" style="margin-top:20px">
+
+          <article class="card card--grid card--rise" data-heat="rise">
+            <a href="artigo.html">
+              <div class="thumb" data-c="games"><span class="thumb__tag heat heat--rise"><svg class="ico"><use href="#i-trending-up"></use></svg> Em alta</span></div>
+              <div class="card__body">
+                <span class="cat cat--games">Nintendo</span>
+                <h3 class="card__title">Nintendo anuncia Direct para quinta-feira; rumores apontam novo Metroid</h3>
+                <p class="card__dek">Apresentação de 40 minutos deve fechar o line-up do fim de ano.</p>
+                <div class="meta"><span>há 3 h</span><span class="meta__sep"></span><span class="trend trend--up">Subindo</span></div>
+              </div>
+            </a>
+          </article>
+
+          <article class="card card--grid card--rise" data-heat="rise">
+            <a href="artigo.html">
+              <div class="thumb" data-c="games">
+                <span class="thumb__tag heat heat--rise"><svg class="ico"><use href="#i-trending-up"></use></svg> Em alta</span>
+                <span class="thumb__play"><svg class="ico" style="width:18px;height:18px"><use href="#i-play"></use></svg></span>
+                <span class="thumb__dur">1:48</span>
+              </div>
+              <div class="card__body">
+                <span class="cat cat--games">Trailer</span>
+                <h3 class="card__title">Trailer de Metroid Prime 4 vaza antes da Direct e Nintendo corre para apagar</h3>
+                <p class="card__dek">O vídeo circulou 40 minutos no Reddit. Nós assistimos e descrevemos tudo.</p>
+                <div class="meta"><span>há 4 h</span><span class="meta__sep"></span><span class="trend trend--up">Subindo</span></div>
+              </div>
+            </a>
+          </article>
+
+          <article class="card card--grid" data-heat="base">
+            <a href="artigo.html">
+              <div class="thumb" data-c="games"></div>
+              <div class="card__body">
+                <span class="cat cat--games">Análise</span>
+                <h3 class="card__title">Análise: Hollow Knight Silksong valeu cada ano de espera</h3>
+                <div class="meta"><span class="heat heat--base"><svg class="ico"><use href="#i-dot"></use></svg> Relevante</span><span class="meta__sep"></span><span>há 8 h</span></div>
+              </div>
+            </a>
+          </article>
+
+          <article class="card card--grid" data-heat="base">
+            <a href="artigo.html">
+              <div class="thumb" data-c="games"></div>
+              <div class="card__body">
+                <span class="cat cat--games">Atualização</span>
+                <h3 class="card__title">Patch 1.4 de Baldur's Gate 3 adiciona cooperativo cross-play</h3>
+                <div class="meta"><span class="heat heat--base"><svg class="ico"><use href="#i-dot"></use></svg> Relevante</span><span class="meta__sep"></span><span>há 9 h</span></div>
+              </div>
+            </a>
+          </article>
+
+          <article class="card card--grid" data-heat="base">
+            <a href="artigo.html">
+              <div class="thumb" data-c="games"></div>
+              <div class="card__body">
+                <span class="cat cat--games">PlayStation</span>
+                <h3 class="card__title">PS Plus de setembro: os 4 jogos confirmados e um clássico esquecido</h3>
+                <div class="meta"><span class="heat heat--base"><svg class="ico"><use href="#i-dot"></use></svg> Relevante</span><span class="meta__sep"></span><span>ontem</span></div>
+              </div>
+            </a>
+          </article>
+
+          <article class="card card--grid" data-heat="base">
+            <a href="artigo.html">
+              <div class="thumb" data-c="games"></div>
+              <div class="card__body">
+                <span class="cat cat--games">PC</span>
+                <h3 class="card__title">Steam bate recorde de jogadores simultâneos no fim de semana</h3>
+                <div class="meta"><span class="heat heat--base"><svg class="ico"><use href="#i-dot"></use></svg> Relevante</span><span class="meta__sep"></span><span>ontem</span></div>
+              </div>
+            </a>
+          </article>
+        </div>
+
+        <!-- ANÚNCIO in-feed: 1 a cada 6 cards, sempre DEPOIS de uma linha
+             completa da grade e nunca colado no destaque quente do topo.
+             Altura reservada (250/280px) e rótulo "Publicidade" sempre visível. -->
+        <div class="ad ad--rect">
+          <span class="ad__label"><svg class="ico" style="width:12px;height:12px"><use href="#i-info"></use></svg> Publicidade</span>
+          <div class="ad__box">AdSense in-feed · 300×250 / 336×280 — altura reservada</div>
+        </div>
+
+        <!-- CTA de newsletter segmentada por editoria, no meio da rolagem -->
+        <div class="cta-news" style="margin-top:24px">
+          <p class="cta-news__kicker">Newsletter de Games · toda quinta</p>
+          <h3 style="font-size:var(--fs-h3)">Só o que importa de Games, uma vez por semana</h3>
+          <p>Lançamentos, patches grandes e as análises da semana. Sem trailer requentado.</p>
+          <form class="form-inline" data-demo>
+            <label class="sr-only" for="email-cat">Seu e-mail</label>
+            <input class="input" id="email-cat" type="email" autocomplete="email" placeholder="seu@email.com" required>
+            <button class="btn btn--primary" type="submit">Assinar</button>
+          </form>
+        </div>
+
+        <!-- Evergreen da editoria: bloco calmo no fim da grade -->
+        <div class="section-head" style="margin-top:32px">
+          <h2 class="section-title" style="font-size:var(--fs-h3)"><svg class="ico" style="color:var(--heat-ever)"><use href="#i-book"></use></svg> Guias de Games</h2>
+        </div>
+        <div class="grid g-sm-2" data-heat="ever">
+          <a class="card card--ever" href="artigo.html">
+            <span class="heat heat--ever"><svg class="ico"><use href="#i-book"></use></svg> Guia</span>
+            <h3 class="card__title">Todos os jogos de GTA em ordem cronológica da história</h3>
+            <div class="meta"><span>14 min de leitura</span></div>
+          </a>
+          <a class="card card--ever" href="artigo.html">
+            <span class="heat heat--ever"><svg class="ico"><use href="#i-book"></use></svg> Comparativo</span>
+            <h3 class="card__title">PS5 Pro x Xbox Series X x PC de entrada: qual compensa em 2026</h3>
+            <div class="meta"><span>9 min de leitura</span></div>
+          </a>
+        </div>
+
+        <div class="load-more">
+          <button class="btn btn--ghost">Carregar mais 12</button>
+          <small>Página 1 de 26</small>
+        </div>
+      </div>
+
+      <aside class="sidebar">
+        <div class="side-box side-sticky">
+          <h3><svg class="ico" style="width:18px;height:18px;color:var(--heat-rise)"><use href="#i-trending-up"></use></svg> Em alta em Games</h3>
+          <div class="side-list">
+            <a class="rank" href="artigo.html" style="padding:8px 0;background:none">
+              <span class="rank__pos rank--hot" style="color:var(--heat-hot-text)">01</span>
+              <span><span class="rank__title" style="font-size:.95rem">GTA VI tem data confirmada</span></span>
+              <span class="heatbar heatbar--hot heatbar--sm" data-on="4" role="img" aria-label="Temperatura: urgente"><i></i><i></i><i></i><i></i></span>
+            </a>
+            <a class="rank" href="artigo.html" style="padding:8px 0;background:none">
+              <span class="rank__pos" style="color:var(--heat-rise)">02</span>
+              <span><span class="rank__title" style="font-size:.95rem">Nintendo Direct marcada para quinta</span></span>
+              <span class="heatbar heatbar--rise heatbar--sm" data-on="3" role="img" aria-label="Temperatura: em alta"><i></i><i></i><i></i><i></i></span>
+            </a>
+            <a class="rank" href="artigo.html" style="padding:8px 0;background:none">
+              <span class="rank__pos" style="color:var(--heat-rise)">03</span>
+              <span><span class="rank__title" style="font-size:.95rem">Trailer de Metroid Prime 4 vaza</span></span>
+              <span class="heatbar heatbar--rise heatbar--sm" data-on="3" role="img" aria-label="Temperatura: em alta"><i></i><i></i><i></i><i></i></span>
+            </a>
+          </div>
+          <a class="link-more" href="em-alta.html" style="margin-top:12px;display:inline-flex">Ranking geral <svg class="ico" style="width:13px;height:13px"><use href="#i-chevron-right"></use></svg></a>
+        </div>
+
+        <div class="side-box">
+          <h3>Franquias em Games</h3>
+          <div class="fandoms">
+            <a class="fandom" href="hub-franquia.html"><span class="fandom__ico" style="--f:var(--cat-games)">GTA</span> GTA VI</a>
+            <a class="fandom" href="hub-franquia.html"><span class="fandom__ico" style="--f:var(--cat-games)">ZLD</span> Zelda</a>
+            <a class="fandom" href="hub-franquia.html"><span class="fandom__ico" style="--f:var(--cat-games)">SLK</span> Silksong</a>
+            <a class="fandom" href="hub-franquia.html"><span class="fandom__ico" style="--f:var(--cat-games)">BG3</span> Baldur's Gate</a>
+          </div>
+        </div>
+
+        <div class="side-box">
+          <h3><svg class="ico" style="width:18px;height:18px"><use href="#i-calendar"></use></svg> Próximos lançamentos</h3>
+          <ul style="list-style:none;padding:0;display:grid;gap:12px;font-size:var(--fs-sm)">
+            <li style="display:flex;justify-content:space-between;gap:12px"><span>Metroid Prime 4</span><span style="font-family:var(--font-mono);color:var(--ink-3)">12 set</span></li>
+            <li style="display:flex;justify-content:space-between;gap:12px"><span>Fable</span><span style="font-family:var(--font-mono);color:var(--ink-3)">03 out</span></li>
+            <li style="display:flex;justify-content:space-between;gap:12px"><span>GTA VI</span><span style="font-family:var(--font-mono);color:var(--ink)">26 nov</span></li>
+          </ul>
+        </div>
+
+        <div class="ad ad--rect ad--sticky">
+          <span class="ad__label"><svg class="ico" style="width:12px;height:12px"><use href="#i-info"></use></svg> Publicidade</span>
+          <div class="ad__box">AdSense · 300×250 — altura reservada</div>
+        </div>
+      </aside>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <fieldset class="theme-field">
+      <legend>Aparência</legend>
+      <div class="theme-seg">
+        <input type="radio" name="theme" id="th-auto" checked>
+        <label for="th-auto"><svg class="ico"><use href="#i-auto"></use></svg> Sistema</label>
+        <input type="radio" name="theme" id="th-light">
+        <label for="th-light"><svg class="ico"><use href="#i-sun"></use></svg> Claro</label>
+        <input type="radio" name="theme" id="th-dark">
+        <label for="th-dark"><svg class="ico"><use href="#i-moon"></use></svg> Escuro</label>
+      </div>
+    </fieldset>
+    <p class="footer__legal">© 2026 Ortus Pixel</p>
+  </div>
+</footer>
+
+<nav class="bottom-nav" aria-label="Navegação principal (mobile)">
+  <a href="index.html"><svg class="ico"><use href="#i-home"></use></svg> Home</a>
+  <a href="em-alta.html"><svg class="ico ico-hot"><use href="#i-flame"></use></svg> Em alta</a>
+  <a href="categoria.html" aria-current="page"><svg class="ico"><use href="#i-grid"></use></svg> Editorias</a>
+  <a href="hub-franquia.html"><svg class="ico"><use href="#i-book"></use></svg> Meus hubs</a>
+  <a href="#"><svg class="ico"><use href="#i-user"></use></svg> Conta</a>
+</nav>
+
+<script src="assets/ortuspixel.js"></script>
+</body>
+</html>

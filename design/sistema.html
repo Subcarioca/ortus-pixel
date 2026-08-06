@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Design System — Ortus Pixel</title>
+<meta name="description" content="Tokens, componentes, escala de temperatura e formatos editoriais da Ortus Pixel.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ortuspixel.css">
+<style>
+  .swatch { border-radius: var(--r-md); padding: 14px; min-height: 88px; display: flex; flex-direction: column; justify-content: flex-end; border: 1px solid var(--line); }
+  .swatch b { font-size: .9rem; }
+  .swatch code { font-family: var(--font-mono); font-size: var(--fs-xxs); opacity: .8; }
+  .spec { border: 1px solid var(--line); border-radius: var(--r-md); padding: 16px; background: var(--surface-1); }
+  .spec h4 { font-size: 1rem; margin-bottom: 8px; }
+  .spec p { font-size: var(--fs-sm); color: var(--ink-2); }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+
+<div class="protobar"><div class="container protobar__inner">
+  <span>Protótipo Ortus Pixel</span>
+  <a href="index.html">Home</a>
+  <a href="em-alta.html">Em Alta</a>
+  <a href="categoria.html">Categoria</a>
+  <a href="categoria-hardware.html">Tech › Hardware</a>
+  <a href="hub-franquia.html">Hub de franquia</a>
+  <a href="artigo.html">Artigo (quente)</a>
+  <a href="artigo-review.html">Review + afiliados</a>
+  <a href="sistema.html" aria-current="page">Design system</a>
+</div></div>
+
+<header class="header">
+  <div class="container header__bar">
+    <a class="logo" href="index.html"><span class="logo__dot" aria-hidden="true"></span>Ortus<b>Pixel</b></a>
+    <div class="header__actions">
+      <span class="meta only-desk">Design System v0.2</span>
+      <label class="icon-btn lbl-dark" for="th-dark"><svg class="ico"><use href="#i-moon"></use></svg><span class="sr-only">Ativar tema escuro</span></label>
+      <label class="icon-btn lbl-light" for="th-light"><svg class="ico"><use href="#i-sun"></use></svg><span class="sr-only">Ativar tema claro</span></label>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="container">
+
+  <section class="section">
+    <h1 style="font-size:var(--fs-h1)">Design System &amp; formatos editoriais</h1>
+    <p style="color:var(--ink-2);max-width:60ch;margin-top:12px">Referência para o time de front-end. Tudo aqui já está implementado em <code style="font-family:var(--font-mono)">assets/ortuspixel.css</code> — o produto final deve consumir os mesmos tokens.</p>
+    <div class="grid g-sm-2 g-md-3" style="margin-top:20px">
+      <div class="spec"><h4>v0.2 · Paleta</h4><p>Violeta fora. Marca = preto, cinza e <strong>carmim</strong>. O vermelho vivo segue reservado à temperatura — ver a regra dos dois vermelhos abaixo.</p></div>
+      <div class="spec"><h4>v0.2 · Tema</h4><p>Claro (padrão) + escuro por escolha, com <code style="font-family:var(--font-mono)">light-dark()</code>. Um token, dois valores.</p></div>
+      <div class="spec"><h4>v0.2 · Score</h4><p>O número 0–100 sumiu do público. Sobrou faixa + termômetro de 4 blocos. O número segue vivo só no /admin.</p></div>
+    </div>
+  </section>
+
+  <!-- ============ TEMA CLARO / ESCURO ============ -->
+  <section class="section" aria-labelledby="s-tema">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title" id="s-tema">0. Tema claro e escuro</h2>
+        <p class="section-sub">Padrão = tema do sistema operacional. A escolha do leitor sempre vence.</p>
+      </div>
+    </div>
+    <div class="grid g-md-2">
+      <div class="spec">
+        <h4>Como está implementado</h4>
+        <p>Cada token declara os dois valores de uma vez:</p>
+        <p style="font-family:var(--font-mono);font-size:var(--fs-xs);margin-top:8px;color:var(--ink)">--bg: light-dark(#F5F5F7, #131317);</p>
+        <p style="margin-top:8px">Trocar de tema muda <strong>uma única propriedade</strong>: <code style="font-family:var(--font-mono)">color-scheme</code> no <code style="font-family:var(--font-mono)">:root</code>. Sem duplicar paleta, sem classe em cada componente, sem framework.</p>
+      </div>
+      <div class="spec">
+        <h4>Três estados, dois gatilhos</h4>
+        <p><strong>Sistema</strong> (padrão) · <strong>Claro</strong> · <strong>Escuro</strong>. O CSS aceita os dois caminhos:</p>
+        <p style="font-family:var(--font-mono);font-size:var(--fs-xs);margin-top:8px;color:var(--ink)">:root[data-theme="dark"],<br>:root:has(#th-dark:checked) { color-scheme: dark }</p>
+        <p style="margin-top:8px"><code style="font-family:var(--font-mono)">data-theme</code> é o que o front-end real grava (localStorage, script inline no <code style="font-family:var(--font-mono)">&lt;head&gt;</code> para não piscar). O <code style="font-family:var(--font-mono)">:has()</code> faz o protótipo funcionar sem uma linha de JS.</p>
+      </div>
+      <div class="spec">
+        <h4>Onde fica o controle</h4>
+        <p>No header, um botão de 40px que mostra sempre a <em>ação</em> (ir para escuro / ir para claro), nunca o estado — o estado já ocupa a tela inteira. No rodapé, o controle completo de 3 estados, único lugar onde ficam os <code style="font-family:var(--font-mono)">&lt;input type="radio"&gt;</code>.</p>
+      </div>
+      <div class="spec">
+        <h4>O que NÃO muda com o tema</h4>
+        <p>Fotos e thumbs (foto não tem tema), as cores de temperatura (só ajustam luminância para manter 4.5:1) e a paleta comercial, que é cinza nos dois temas. A hierarquia é idêntica no claro e no escuro.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ESCALA DE TEMPERATURA ============ -->
+  <section class="section" aria-labelledby="s-heat">
+    <div class="section-head"><h2 class="section-title" id="s-heat">1. Escala de temperatura</h2></div>
+    <p style="color:var(--ink-2);max-width:70ch;margin-bottom:12px">Regra de ouro: <strong>as quatro cores de temperatura são reservadas à sinalização de popularidade</strong>. Nenhum outro elemento da interface — inclusive nenhum elemento comercial — pode usar vermelho-vivo ou laranja-em-alta. Cor sempre acompanhada de ícone e rótulo (WCAG 1.4.1).</p>
+    <p class="note" style="margin-bottom:20px">
+      <strong style="color:var(--ink-2)">v0.2 — o número saiu da tela.</strong> As faixas abaixo continuam existindo no back-end e no /admin,
+      mas o público vê só o <strong>rótulo</strong> (Urgente / Em alta / Relevante / Guia), a cor, o ícone e o termômetro de 4 blocos.
+      Os números nesta página são documentação interna.
+    </p>
+
+    <div class="grid g-sm-2 g-lg-4">
+      <div class="spec" style="border-color:var(--heat-hot-line)">
+        <span class="heat heat--hot heat--lg"><svg class="ico"><use href="#i-flame"></use></svg> Urgente</span>
+        <h4 style="margin-top:12px">Faixa 80–100 · QUENTE</h4>
+        <p>Hero full-width acima da dobra, badge pulsante, faixa de ticker no topo do site, candidato a push. Máx. 3 simultâneos na home. <strong>Zero anúncio e zero afiliado acima da dobra.</strong></p>
+        <div class="heatbar heatbar--hot" data-on="4" style="margin-top:10px" role="img" aria-label="Termômetro: 4 de 4"><i></i><i></i><i></i><i></i></div>
+        <p style="margin-top:8px;font-family:var(--font-mono);font-size:var(--fs-xxs);color:var(--ink-3)">--heat-hot #DE0E2D / #E51733</p>
+      </div>
+      <div class="spec" style="border-color:var(--heat-rise)">
+        <span class="heat heat--rise heat--lg"><svg class="ico"><use href="#i-trending-up"></use></svg> Em alta</span>
+        <h4 style="margin-top:12px">Faixa 60–79 · EM ALTA</h4>
+        <p>Seção "Em alta agora" logo abaixo do hero, card médio com seta de tendência <strong>qualitativa</strong> ("Subindo", "Esfriando" — nunca "+38"). Sem animação.</p>
+        <div class="heatbar heatbar--rise" data-on="3" style="margin-top:10px" role="img" aria-label="Termômetro: 3 de 4"><i></i><i></i><i></i><i></i></div>
+        <p style="margin-top:8px;font-family:var(--font-mono);font-size:var(--fs-xxs);color:var(--ink-3)">--heat-rise #F08A16 / #FF9A1F</p>
+      </div>
+      <div class="spec">
+        <span class="heat heat--base heat--lg"><svg class="ico"><use href="#i-dot"></use></svg> Relevante</span>
+        <h4 style="margin-top:12px">Faixa 40–59 · RELEVANTE</h4>
+        <p>Grade cronológica normal. Badge neutro, cinza. Nenhum destaque de posição, tamanho ou cor.</p>
+        <div class="heatbar" data-on="2" style="margin-top:10px" role="img" aria-label="Termômetro: 2 de 4"><i></i><i></i><i></i><i></i></div>
+        <p style="margin-top:8px;font-family:var(--font-mono);font-size:var(--fs-xxs);color:var(--ink-3)">--heat-base #5E6B85 / #6E7A94</p>
+      </div>
+      <div class="spec" style="border-color:var(--heat-ever)">
+        <span class="heat heat--ever heat--lg"><svg class="ico"><use href="#i-book"></use></svg> Guia</span>
+        <h4 style="margin-top:12px">Faixa &lt; 40 · EVERGREEN</h4>
+        <p>Blocos "Leia também", guias e hubs. Card sem imagem grande, filete verde à esquerda, tempo de leitura em vez de horário. É onde o afiliado pode respirar.</p>
+        <div class="heatbar heatbar--ever" data-on="1" style="margin-top:10px" role="img" aria-label="Termômetro: 1 de 4"><i></i><i></i><i></i><i></i></div>
+        <p style="margin-top:8px;font-family:var(--font-mono);font-size:var(--fs-xxs);color:var(--ink-3)">--heat-ever #127A5E / #2ED3A7</p>
+      </div>
+    </div>
+
+    <h3 style="font-size:var(--fs-h3);margin:32px 0 12px">Massa visual comparada (a mesma manchete em 4 temperaturas)</h3>
+    <div class="grid g-md-2">
+      <article class="hero">
+        <div class="hero__media" style="aspect-ratio:16/9"><div class="thumb" data-c="games"></div><div class="hero__overlay"></div></div>
+        <div class="hero__body" style="margin-top:-24%">
+          <span class="heat heat--hot heat--lg"><svg class="ico"><use href="#i-flame"></use></svg> Urgente</span>
+          <h3 class="hero__title" style="font-size:1.6rem">Rockstar confirma data de GTA VI</h3>
+        </div>
+      </article>
+      <div class="stack">
+        <article class="card card--grid card--rise">
+          <div class="thumb" data-c="games"><span class="thumb__tag heat heat--rise"><svg class="ico"><use href="#i-trending-up"></use></svg> Em alta</span></div>
+          <div class="card__body"><h3 class="card__title">Rockstar confirma data de GTA VI</h3><div class="meta"><span class="trend trend--up">Subindo</span></div></div>
+        </article>
+        <article class="card card--row">
+          <div class="thumb" data-c="games"></div>
+          <div><span class="heat heat--base"><svg class="ico"><use href="#i-dot"></use></svg> Relevante</span>
+            <h3 class="card__title">Rockstar confirma data de GTA VI</h3></div>
+        </article>
+        <div class="card card--ever">
+          <span class="heat heat--ever"><svg class="ico"><use href="#i-book"></use></svg> Guia</span>
+          <h3 class="card__title">Rockstar confirma data de GTA VI</h3>
+          <div class="meta"><span>14 min de leitura</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CORES ============ -->
+  <section class="section" aria-labelledby="s-cor">
+    <div class="section-head"><h2 class="section-title" id="s-cor">2. Paleta</h2></div>
+
+    <!-- A decisão mais delicada da v0.2 -->
+    <div class="spec" style="border-color:var(--brand-line);margin-bottom:24px">
+      <h4 style="font-size:1.15rem">A regra dos dois vermelhos</h4>
+      <p style="margin-top:6px">O vermelho virou cor de marca <em>e</em> continua sendo o sinal de urgência. Para os dois conviverem sem se anular, eles são separados em <strong>três dimensões ao mesmo tempo</strong> — não só no tom:</p>
+      <div class="grid g-md-2" style="margin-top:16px">
+        <div style="border:1px solid var(--brand-line);border-radius:var(--r-md);padding:14px">
+          <p style="font-family:var(--font-mono);font-size:var(--fs-xxs);letter-spacing:.14em;text-transform:uppercase;color:var(--brand-ink)">Carmim de marca</p>
+          <div style="height:44px;border-radius:var(--r-sm);background:var(--brand);margin:10px 0"></div>
+          <p><strong>Tom:</strong> escuro e dessaturado.<br>
+             <strong>Forma:</strong> acento — filete, borda, sublinhado, botão primário, logo.<br>
+             <strong>Movimento:</strong> estático (única exceção: o ponto do logo).<br>
+             <strong>Proibido:</strong> pílula/badge, selo, qualquer coisa que sugira "isso está pegando fogo".</p>
+          <p style="margin-top:8px;font-family:var(--font-mono);font-size:var(--fs-xxs);color:var(--ink-3)">--brand #A81729 / #CA414F</p>
+        </div>
+        <div style="border:1px solid var(--heat-hot-line);border-radius:var(--r-md);padding:14px">
+          <p style="font-family:var(--font-mono);font-size:var(--fs-xxs);letter-spacing:.14em;text-transform:uppercase;color:var(--heat-hot-text)">Vermelho de sinal</p>
+          <div style="height:44px;border-radius:var(--r-sm);background:var(--heat-hot);margin:10px 0"></div>
+          <p><strong>Tom:</strong> vivo e saturado.<br>
+             <strong>Forma:</strong> pílula preenchida, mono, caixa-alta, com ícone de chama.<br>
+             <strong>Movimento:</strong> ponto pulsante.<br>
+             <strong>Exclusivo de:</strong> badge Urgente, ticker, live dot, alerta de push. Nunca em anúncio, afiliado ou selo comercial.</p>
+          <p style="margin-top:8px;font-family:var(--font-mono);font-size:var(--fs-xxs);color:var(--ink-3)">--heat-hot #DE0E2D / #E51733</p>
+        </div>
+      </div>
+      <p style="margin-top:14px">Teste rápido para o coder: <em>se o elemento pode existir em uma página sem nenhuma notícia quente, ele não pode ser vermelho vivo.</em> Botão de compartilhar, dot de notificação e barra de progresso migraram para o carmim justamente por isso.</p>
+    </div>
+
+    <h3 style="font-size:var(--fs-h3);margin-bottom:12px">Superfícies e texto <span style="font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--ink-3)">(troque o tema no header para ver os dois valores)</span></h3>
+    <div class="grid g-sm-2 g-lg-4">
+      <div class="swatch" style="background:var(--bg)"><b>Fundo</b><code>--bg #F5F5F7 / #131317</code></div>
+      <div class="swatch" style="background:var(--surface-1)"><b>Superfície 1</b><code>--surface-1 #FFFFFF / #1A1A1F</code></div>
+      <div class="swatch" style="background:var(--surface-2)"><b>Superfície 2</b><code>--surface-2 #EFEFF2 / #232329</code></div>
+      <div class="swatch" style="background:var(--surface-3)"><b>Superfície 3</b><code>--surface-3 #E3E3E8 / #2D2D34</code></div>
+      <div class="swatch" style="background:var(--ink);color:var(--ink-invert)"><b>Texto principal</b><code>--ink · 15.9:1 / 15.1:1</code></div>
+      <div class="swatch" style="background:var(--ink-2);color:var(--ink-invert)"><b>Texto secundário</b><code>--ink-2 · 7.9:1 / 10.6:1</code></div>
+      <div class="swatch" style="background:var(--ink-3);color:var(--ink-invert)"><b>Texto terciário</b><code>--ink-3 · 4.7:1 (só ≥14px)</code></div>
+      <div class="swatch" style="background:var(--brand);color:#fff"><b>Marca / ação</b><code>--brand · 9.1:1 com branco</code></div>
+    </div>
+    <h3 style="font-size:var(--fs-h3);margin:28px 0 12px">Editorias (uso restrito a filete e rótulo)</h3>
+    <div class="fandoms">
+      <span class="cat cat--games">Games</span><span class="cat cat--cinema">Cinema &amp; Séries</span>
+      <span class="cat cat--anime">Anime &amp; Mangá</span><span class="cat cat--hq">HQs</span>
+      <span class="cat cat--tech">Tech</span><span class="cat cat--eventos">Eventos</span>
+    </div>
+  </section>
+
+  <!-- ============ TIPOGRAFIA ============ -->
+  <section class="section" aria-labelledby="s-tipo">
+    <div class="section-head"><h2 class="section-title" id="s-tipo">3. Tipografia</h2></div>
+    <div class="grid g-md-2">
+      <div class="spec">
+        <p style="font-family:var(--font-display);font-size:var(--fs-hero);font-weight:900;line-height:1">Archivo 900</p>
+        <p>Manchetes e títulos. Condensada o suficiente para caber manchete longa em 360px sem quebrar em 5 linhas.</p>
+      </div>
+      <div class="spec">
+        <p style="font-size:var(--fs-body);line-height:1.75">Inter 400/600 — corpo de texto a 17px no mobile e 18px no desktop, altura de linha 1.75 e medida máxima de 44rem (cerca de 68 caracteres) para leitura longa confortável.</p>
+      </div>
+      <div class="spec">
+        <p style="font-family:var(--font-mono);font-size:1.4rem">09:42 · 113 dias · R$ 2.199</p>
+        <p>JetBrains Mono para horários, contagens regressivas, preços e rótulos de sistema ("Publicidade", "Urgente"): reforça a leitura de "dado ao vivo" e alinha dígitos em coluna. O score 0–100 usava esta fonte — agora ele só existe no /admin.</p>
+      </div>
+      <div class="spec">
+        <h4>Escala fluida</h4>
+        <p>Hero <code style="font-family:var(--font-mono)">clamp(1.75rem, 6.2vw, 3.75rem)</code> · H1 <code style="font-family:var(--font-mono)">clamp(1.6rem, 5vw, 3rem)</code>. Sem breakpoints manuais de tipografia.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FORMATOS EDITORIAIS ============ -->
+  <section class="section" aria-labelledby="s-form">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title" id="s-form">4. Os 8 formatos suportados</h2>
+        <p class="section-sub">Todo formato compartilha o mesmo cabeçalho (badge + manchete + linha fina + assinatura) e muda só o miolo</p>
+      </div>
+    </div>
+
+    <div class="grid g-md-2">
+      <div>
+        <h3 style="font-size:var(--fs-h3);margin-bottom:8px">3. Review com veredito no topo</h3>
+        <div class="verdict">
+          <div class="verdict__score"><span>9,4</span></div>
+          <div>
+            <h4>Silksong valeu cada ano de espera</h4>
+            <p style="font-size:var(--fs-sm);color:var(--ink-2)">Maior, mais difícil e mais bonito que o original — e ainda cabe num Switch.</p>
+            <div class="pros-cons">
+              <div class="pros"><h5>Pontos altos</h5><ul><li>Trilha sonora impecável</li><li>Mapa 3x maior</li></ul></div>
+              <div class="cons"><h5>Pontos baixos</h5><ul><li>Curva de dificuldade dura</li><li>Mapa confuso no início</li></ul></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 style="font-size:var(--fs-h3);margin-bottom:8px">7. Guia evergreen com índice</h3>
+        <div class="toc">
+          <p class="toc__label">Neste guia</p>
+          <ol>
+            <li><a href="#">Ordem de lançamento x ordem cronológica</a></li>
+            <li><a href="#">A Alta República</a></li>
+            <li><a href="#">Trilogia prequela e Clone Wars</a></li>
+            <li><a href="#">Onde encaixar Andor e Rogue One</a></li>
+            <li><a href="#">O que dá para pular sem prejuízo</a></li>
+          </ol>
+        </div>
+        <p class="note">O índice fixa no topo em telas grandes e marca a seção atual conforme a rolagem — principal alavanca de scroll depth em conteúdo longo.</p>
+      </div>
+
+      <div>
+        <h3 style="font-size:var(--fs-h3);margin-bottom:8px">5. Teoria/explicador com spoiler</h3>
+        <div class="spoiler">
+          <p class="spoiler__label"><svg class="ico" style="width:13px;height:13px"><use href="#i-alert"></use></svg> Spoiler do episódio 6</p>
+          <div class="spoiler__body" data-hidden="true"><p>O personagem que aparece no reflexo da janela aos 38 minutos confirma a teoria que circula desde a estreia.</p></div>
+          <button class="btn btn--ghost btn--sm spoiler__reveal" data-reveal><svg class="ico"><use href="#i-eye"></use></svg> Mostrar mesmo assim</button>
+        </div>
+      </div>
+
+      <div>
+        <h3 style="font-size:var(--fs-h3);margin-bottom:8px">6. Comparativo</h3>
+        <div class="table-wrap">
+          <table class="cmp">
+            <thead><tr><th scope="col">Console</th><th scope="col">Preço</th><th scope="col">4K/60</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">PS5 Pro</th><td>R$ 5.499</td><td class="win">Sim</td></tr>
+              <tr><th scope="row">Xbox Series X</th><td class="win">R$ 3.999</td><td class="win">Sim</td></tr>
+              <tr><th scope="row">PC entrada</th><td>R$ 4.800</td><td>Parcial</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">Rolagem horizontal com sombra de borda no mobile; primeira coluna fixa quando houver mais de 4 colunas.</p>
+      </div>
+
+      <div>
+        <h3 style="font-size:var(--fs-h3);margin-bottom:8px">1 e 8. Breaking / cobertura ao vivo</h3>
+        <div class="timeline">
+          <div class="tl-item tl-item--new">
+            <div class="tl-time">09:42</div>
+            <div class="tl-body"><span class="heat heat--hot"><svg class="ico"><use href="#i-flame"></use></svg> Novo</span><h4 style="margin-top:6px">CEO confirma que não há novo adiamento</h4><p>Atualização automática a cada 30s durante eventos.</p></div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-time">09:30</div>
+            <div class="tl-body"><h4>Trailer 3 vai ao ar</h4><p>4 milhões de views na primeira hora.</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3 style="font-size:var(--fs-h3);margin-bottom:8px">2 e 4. Trailer/reação e listicle</h3>
+        <figure>
+          <div class="thumb" data-c="cinema">
+            <span class="thumb__play"><svg class="ico" style="width:18px;height:18px"><use href="#i-play"></use></svg></span>
+            <span class="thumb__dur">3:02</span>
+          </div>
+          <figcaption>Embed com clique-para-carregar: nada de iframe pesado bloqueando o LCP.</figcaption>
+        </figure>
+        <div class="tldr" style="margin-top:16px">
+          <p class="tldr__label">Listicle · navegação por itens</p>
+          <ul><li>Cada item vira âncora e recebe imagem própria</li><li>Numeração persistente no scroll (1 de 10)</li><li>Sem paginação: 1 item por página mata o tempo de sessão</li></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CONVERSÃO ============ -->
+  <section class="section" aria-labelledby="s-conv">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title" id="s-conv">5. Componentes de conversão</h2>
+        <p class="section-sub">Cada etapa do funil tem um componente e uma regra de exibição</p>
+      </div>
+    </div>
+
+    <div class="stack-lg">
+      <div class="cta-inline">
+        <div>
+          <h4>CTA no meio do corpo (leitor engajado → inscrito)</h4>
+          <p>Aparece depois do 3º parágrafo ou a 45% da rolagem, o que vier primeiro. Nunca cobre o texto.</p>
+        </div>
+        <form class="form-inline" data-demo>
+          <label class="sr-only" for="e1">E-mail</label>
+          <input class="input" id="e1" type="email" placeholder="seu@email.com" required>
+          <button class="btn btn--primary" type="submit">Avise-me</button>
+        </form>
+      </div>
+
+      <div class="push-prompt">
+        <div class="push-prompt__top">
+          <span class="push-prompt__ico"><svg class="ico" style="width:20px;height:20px"><use href="#i-bell"></use></svg></span>
+          <div>
+            <h4>Opt-in de push (inscrito → recorrente)</h4>
+            <p>Regra: só depois de 60% de leitura de um artigo com score ≥ 60. Nunca no primeiro pageview da sessão. Novo pedido só após 30 dias se recusado.</p>
+          </div>
+        </div>
+        <div class="push-prompt__actions">
+          <button class="btn btn--hot">Ativar alertas</button>
+          <button class="btn btn--ghost">Agora não</button>
+        </div>
+      </div>
+
+      <div class="modal-demo">
+        <p class="cta-news__kicker">Exit-intent · desktop</p>
+        <h3 style="font-size:var(--fs-h3);margin-bottom:8px">Espera — leva o resumo com você</h3>
+        <p style="color:var(--ink-2);font-size:var(--fs-sm);margin-bottom:16px">Dispara quando o cursor sai pela borda superior. Máximo 1x a cada 7 dias, nunca para quem já é inscrito, nunca em sessão vinda de push. No mobile é substituído pela sticky bar (nunca as duas).</p>
+        <form class="form-inline" data-demo>
+          <label class="sr-only" for="e2">E-mail</label>
+          <input class="input" id="e2" type="email" placeholder="seu@email.com" required>
+          <button class="btn btn--primary" type="submit">Assinar</button>
+        </form>
+      </div>
+
+      <div class="community">
+        <div class="community__top">
+          <span class="community__logo"><svg class="ico" style="width:24px;height:24px"><use href="#i-discord"></use></svg></span>
+          <div><h4>Bloco de comunidade (inscrito → membro)</h4><span class="online">O canal citado muda conforme o fandom do artigo</span></div>
+        </div>
+        <p>Se o artigo tem a tag "Star Wars", o convite é para #star-wars. Sem fandom identificado, cai no convite genérico do servidor.</p>
+        <a class="btn btn--discord" href="#"><svg class="ico"><use href="#i-discord"></use></svg> Entrar no canal</a>
+      </div>
+
+      <div class="side-box">
+        <h3 style="font-size:1.05rem;text-transform:none;letter-spacing:-.01em">Login de comentário (leitor → participante)</h3>
+        <p style="font-size:var(--fs-sm);color:var(--ink-2);margin-bottom:14px">Dois provedores, mesmo peso visual, mesma largura, mesma altura — nenhum é "o certo". Discord aqui é <strong>login</strong>; o convite para o canal da franquia é outro componente (<code style="font-family:var(--font-mono)">.community</code>) e vive em outro ponto da página.</p>
+        <div class="auth-grid">
+          <button class="btn btn--discord"><svg class="ico"><use href="#i-discord"></use></svg> Comentar com Discord</button>
+          <button class="btn btn--google"><svg class="ico"><use href="#i-google"></use></svg> Comentar com Google</button>
+        </div>
+        <p class="auth-note">Escopo mínimo (nome público + foto), apelido editável e exclusão de comentários pelo próprio leitor. Nielsen #3: controle e liberdade.</p>
+      </div>
+
+      <div>
+        <h4 style="font-size:1.1rem;margin-bottom:12px">Compartilhamento (membro → advocate)</h4>
+        <div class="share">
+          <a class="share__btn share__btn--wa" href="#"><svg class="ico"><use href="#i-whatsapp"></use></svg> WhatsApp</a>
+          <a class="share__btn share__btn--x" href="#"><svg class="ico"><use href="#i-xcom"></use></svg> X</a>
+          <a class="share__btn share__btn--ig" href="#"><svg class="ico"><use href="#i-instagram"></use></svg> Stories</a>
+          <a class="share__btn share__btn--tt" href="#"><svg class="ico"><use href="#i-tiktok"></use></svg> TikTok</a>
+          <button class="share__btn"><svg class="ico"><use href="#i-link"></use></svg> Copiar link</button>
+        </div>
+        <p class="note" style="margin-top:12px">WhatsApp primeiro no Brasil. Instagram Stories e TikTok geram card 9:16 com a manchete e o badge de temperatura — o mesmo selo que a pessoa viu no site aparece no story.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MONETIZAÇÃO ============ -->
+  <section class="section" aria-labelledby="s-money">
+    <div class="section-head">
+      <div>
+        <h2 class="section-title" id="s-money">6. Monetização</h2>
+        <p class="section-sub">AdSense + afiliados, sem contaminar a hierarquia de temperatura</p>
+      </div>
+    </div>
+
+    <div class="grid g-sm-2 g-lg-4" style="margin-bottom:28px">
+      <div class="spec"><h4>1. Cor</h4><p>A paleta comercial é <strong>cinza e grafite</strong> nos dois temas. Vermelho vivo e laranja são proibidos em anúncio, bloco de afiliado e selo de disclosure.</p></div>
+      <div class="spec"><h4>2. Conteúdo quente</h4><p>Score na faixa Urgente: <strong>zero</strong> comercial acima da dobra. Hero e TL;DR nunca descem por causa de um slot.</p></div>
+      <div class="spec"><h4>3. CLS</h4><p>Todo slot nasce com <code style="font-family:var(--font-mono)">--ad-h</code> reservado no CSS, igual ao <code style="font-family:var(--font-mono)">aspect-ratio</code> do vídeo. Se o anúncio não carregar, o buraco cinza fica — o texto não pula.</p></div>
+      <div class="spec"><h4>4. Faixa inferior</h4><p>Uma barra fixa por vez. A bottom-nav de 5 itens é intocável; sticky-bar tem prioridade sobre o anúncio ancorado.</p></div>
+    </div>
+
+    <!-- Máquina de estados da faixa inferior -->
+    <div class="spec" style="margin-bottom:28px">
+      <h4>Máquina de estados da faixa inferior do mobile (nunca dois ao mesmo tempo)</h4>
+      <div class="grid g-md-2" style="margin-top:12px">
+        <div>
+          <p style="font-size:var(--fs-sm)"><strong>Ordem de prioridade</strong></p>
+          <ol style="font-size:var(--fs-sm);color:var(--ink-2);padding-left:1.1rem;display:grid;gap:6px;margin-top:8px">
+            <li><strong style="color:var(--ink)">bottom-nav</strong> — sempre, sem exceção, sem sobreposição.</li>
+            <li><strong style="color:var(--ink)">sticky-bar de newsletter</strong> — máx. 1x a cada 7 dias, nunca para inscrito, nunca vindo de push.</li>
+            <li><strong style="color:var(--ink)">anúncio ancorado</strong> — só se (2) não está na tela, só depois de 50% de rolagem, nunca em conteúdo Urgente enquanto hero/TL;DR estiverem visíveis.</li>
+          </ol>
+        </div>
+        <div>
+          <p style="font-size:var(--fs-sm)"><strong>Como isso vive no CSS</strong></p>
+          <p style="font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--ink);background:var(--surface-2);border:1px solid var(--line);border-radius:var(--r-sm);padding:12px;margin-top:8px">body:has(.sticky-bar)&nbsp;.ad-anchor&nbsp;{ display:none }<br>.ad-anchor { bottom: 64px }&nbsp;/* acima da nav */</p>
+          <p class="note" style="margin-top:10px">A exclusividade não depende de o time lembrar da regra: ela está no seletor.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------- TABELA DE DENSIDADE ---------- -->
+    <h3 style="font-size:var(--fs-h3);margin-bottom:6px">6.1 Densidade por formato × temperatura</h3>
+    <p style="color:var(--ink-2);font-size:var(--fs-sm);max-width:70ch;margin-bottom:14px">Quanto mais quente e mais factual o conteúdo, menos comercial ele suporta. Quanto mais evergreen e mais "intenção de compra", mais tolerância. Posições sempre ancoradas em componentes que já existem.</p>
+    <div class="table-wrap">
+      <table class="dens">
+        <caption class="sr-only">Densidade de anúncios e afiliados por formato editorial</caption>
+        <thead>
+          <tr>
+            <th scope="col">Formato</th><th scope="col">Faixa típica</th>
+            <th scope="col">Acima da dobra</th><th scope="col">Slots no corpo (posição exata)</th>
+            <th scope="col">Sidebar ≥1024</th><th scope="col">Ancorado mobile</th><th scope="col">Afiliado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Breaking</th><td>Urgente</td>
+            <td class="no">Nenhum</td>
+            <td><strong>1</strong> · leaderboard 320×100 / 728×90, depois do <em>último</em> parágrafo do corpo</td>
+            <td>1 · 300×600 como último box</td>
+            <td class="no">Bloqueado enquanto hero/TL;DR visíveis</td>
+            <td class="no">Proibido</td>
+          </tr>
+          <tr>
+            <th scope="row">Cobertura ao vivo</th><td>Urgente</td>
+            <td class="no">Nenhum</td>
+            <td><strong>1</strong> · depois da <code>.timeline</code>, nunca entre atualizações</td>
+            <td>1 · 300×600</td>
+            <td class="no">Não</td>
+            <td class="no">Proibido</td>
+          </tr>
+          <tr>
+            <th scope="row">Notícia</th><td>Em alta / Relevante</td>
+            <td class="no">Nenhum</td>
+            <td><strong>2</strong> · após o 3º parágrafo (300×250) e após o corpo (728×90)</td>
+            <td>1 · 300×600</td>
+            <td>1 · após 50% de rolagem</td>
+            <td>Só link contextual, se natural</td>
+          </tr>
+          <tr>
+            <th scope="row">Trailer / reação</th><td>Em alta</td>
+            <td class="no">Nenhum</td>
+            <td><strong>1</strong> · abaixo do embed, nunca acima</td>
+            <td>1 · 300×600</td>
+            <td>1</td>
+            <td>1 link (pré-venda) com disclosure mini</td>
+          </tr>
+          <tr>
+            <th scope="row">Review</th><td>Relevante / Guia</td>
+            <td class="no">Nenhum</td>
+            <td><strong>2</strong> · abaixo do <code>.buybox</code> (que vem logo após <code>.verdict</code>) e antes das relacionadas</td>
+            <td>1 · 300×600</td>
+            <td>1</td>
+            <td class="yes">Alta: <code>.buybox</code> + resumo</td>
+          </tr>
+          <tr>
+            <th scope="row">Comparativo</th><td>Relevante / Guia</td>
+            <td class="no">Nenhum</td>
+            <td><strong>2</strong> · abaixo da <code>.cmp</code> e no fim</td>
+            <td>1 · 300×600</td>
+            <td>1</td>
+            <td class="yes">Alta: coluna de preço na <code>.cmp</code> + selo</td>
+          </tr>
+          <tr>
+            <th scope="row">Guia / Explicador</th><td>Guia</td>
+            <td class="no">Nunca antes do <code>.toc</code></td>
+            <td><strong>2–3</strong> · a cada ~4 blocos <code>h2</code>, jamais dentro do <code>.toc</code></td>
+            <td>1 · 300×600</td>
+            <td>1</td>
+            <td class="yes">Alta: links inline + <code>.aff-summary</code></td>
+          </tr>
+          <tr>
+            <th scope="row">Listicle</th><td>Guia</td>
+            <td class="no">Nenhum</td>
+            <td><strong>máx. 4</strong> · 1 a cada 3 itens</td>
+            <td>1 · 300×600</td>
+            <td>1</td>
+            <td class="yes">1 link por item + <code>.aff-summary</code></td>
+          </tr>
+          <tr class="is-deal">
+            <th scope="row">Hardware (Tech)</th><td>Relevante / Guia</td>
+            <td class="no">Nenhum</td>
+            <td><strong>2</strong> · entre blocos de produto, nunca dentro de um <code>.prod</code></td>
+            <td>1 · 300×600 + caixa de ofertas</td>
+            <td>1</td>
+            <td class="yes">Máxima do site: <code>.buybox</code>, <code>.deal-strip</code>, tabela e resumo</td>
+          </tr>
+          <tr>
+            <th scope="row">Home</th><td>—</td>
+            <td class="no">Nenhum (hero é intocável)</td>
+            <td><strong>2</strong> · leaderboard depois do ranking e retângulo no fim da grade</td>
+            <td>—</td>
+            <td class="no">Não</td>
+            <td class="no">Nenhum</td>
+          </tr>
+          <tr>
+            <th scope="row">Categoria</th><td>—</td>
+            <td class="no">Nenhum</td>
+            <td><strong>máx. 2</strong> · in-feed a cada 6 cards, sempre após linha completa</td>
+            <td>1 · 300×250 sticky</td>
+            <td>1</td>
+            <td>Só na sub-seção Hardware</td>
+          </tr>
+          <tr>
+            <th scope="row">Em Alta</th><td>—</td>
+            <td class="no">Nenhum</td>
+            <td class="no"><strong>0</strong> — o fluxo do ranking é zona livre</td>
+            <td>1 · 300×250, no fim da sidebar</td>
+            <td class="no">Não</td>
+            <td class="no">Proibido</td>
+          </tr>
+          <tr>
+            <th scope="row">Hub de franquia</th><td>—</td>
+            <td class="no">Nenhum (topo é retenção)</td>
+            <td><strong>0</strong> no fluxo; bloco <code>.shop</code> dentro de "Essencial"</td>
+            <td>1 · 300×250</td>
+            <td class="no">Não</td>
+            <td class="yes">Bloco "Loja [Franquia]"</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note" style="margin-top:12px">Tamanhos de reserva: leaderboard 100px (mobile) / 90px (desktop) · retângulo 250px (mobile) / 280px (desktop) · sidebar 600px · in-feed 250px · ancorado 50px + 14px de moldura. Todos definidos por <code style="font-family:var(--font-mono)">--ad-h</code>.</p>
+
+    <!-- ---------- COMPONENTES ---------- -->
+    <h3 style="font-size:var(--fs-h3);margin:32px 0 12px">6.2 Slots de anúncio</h3>
+    <div class="grid g-md-2">
+      <div>
+        <div class="ad ad--leader" style="margin-top:0">
+          <span class="ad__label"><svg class="ico" style="width:12px;height:12px"><use href="#i-info"></use></svg> Publicidade</span>
+          <div class="ad__box">Leaderboard · 320×100 / 728×90</div>
+        </div>
+        <p class="note">Rótulo "Publicidade" fora da caixa, sempre visível, em mono cinza. Nunca dentro do criativo, nunca só um ícone.</p>
+      </div>
+      <div>
+        <div class="ad ad--rect" style="margin-top:0">
+          <span class="ad__label"><svg class="ico" style="width:12px;height:12px"><use href="#i-info"></use></svg> Publicidade</span>
+          <div class="ad__box">Retângulo in-feed · 300×250 / 336×280</div>
+        </div>
+        <p class="note">Em grade, ocupa o lugar de um card mas <strong>não imita</strong> um card: sem thumb, sem manchete, sem badge.</p>
+      </div>
+    </div>
+
+    <h3 style="font-size:var(--fs-h3);margin:32px 0 12px">6.3 Disclosure (obrigatória antes do clique)</h3>
+    <div class="grid g-md-2">
+      <div>
+        <p class="disclosure" style="margin-top:0">
+          <svg class="ico"><use href="#i-tag"></use></svg>
+          <span><b>Este post contém links de afiliado.</b> Se você comprar por eles, a Ortus Pixel pode receber uma comissão — sem custo extra para você. Isso nunca influencia a nota da análise nem a posição no ranking.</span>
+        </p>
+        <p class="note">Versão completa: topo do artigo (ou colada ao primeiro bloco comercial, em conteúdo quente). Texto, não só ícone.</p>
+      </div>
+      <div>
+        <p class="disclosure disclosure--mini" style="margin-top:0">
+          <svg class="ico"><use href="#i-tag"></use></svg> <span>Link de afiliado — podemos receber comissão.</span>
+        </p>
+        <div style="height:8px"></div>
+        <p class="disclosure disclosure--sponsored">
+          <svg class="ico"><use href="#i-info"></use></svg>
+          <span><span class="disclosure__tag">Patrocinado</span> <b>Conteúdo pago por [marca].</b> Produzido pela equipe comercial, sem participação da redação. <em>(Extensão prevista, desligada hoje — só afiliado orgânico.)</em></span>
+        </p>
+        <p class="note" style="margin-top:10px">Mesma família visual, peso crescente. O rótulo "Patrocinado" já nasce mais forte que o de afiliado — quando o publieditorial existir, é só ligar o modificador.</p>
+      </div>
+    </div>
+
+    <h3 style="font-size:var(--fs-h3);margin:32px 0 12px">6.4 Box "Onde comprar" (estende o <code style="font-family:var(--font-mono)">.verdict</code>)</h3>
+    <div class="verdict">
+      <div class="verdict__score"><span>8,9</span></div>
+      <div>
+        <h4>Placa de vídeo de entrada que aguenta 1440p</h4>
+        <p style="font-size:var(--fs-sm);color:var(--ink-2)">O veredito editorial fica intacto: nota, prós e contras vêm ANTES de qualquer preço.</p>
+      </div>
+    </div>
+    <div class="buybox">
+      <div class="buybox__head">
+        <h4><svg class="ico" style="width:17px;height:17px;color:var(--ink-3);display:inline-block;vertical-align:-3px"><use href="#i-cart"></use></svg> Onde comprar</h4>
+        <span class="buybox__stamp">preços de 06/08, 09:10</span>
+      </div>
+      <p class="disclosure disclosure--mini"><svg class="ico"><use href="#i-tag"></use></svg> <span>Links de afiliado: podemos receber comissão, sem custo extra para você.</span></p>
+      <div class="buybox__list">
+        <div class="store">
+          <div class="store__main">
+            <span class="store__name"><span class="store__logo">A</span> Loja A <span class="deal-seal"><svg class="ico"><use href="#i-check-circle"></use></svg> Melhor custo-benefício</span></span>
+            <span class="store__note">12x sem juros · entrega em 4 dias</span>
+          </div>
+          <div class="store__buy">
+            <span class="store__price">R$ 2.199<s>R$ 2.499</s></span>
+            <a class="btn btn--buy btn--sm" href="#" rel="sponsored nofollow">Ver na loja</a>
+          </div>
+        </div>
+        <div class="store">
+          <div class="store__main">
+            <span class="store__name"><span class="store__logo">B</span> Loja B</span>
+            <span class="store__note">à vista no Pix · retirada em loja</span>
+          </div>
+          <div class="store__buy">
+            <span class="store__price">R$ 2.249</span>
+            <a class="btn btn--buy btn--sm" href="#" rel="sponsored nofollow">Ver na loja</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="note">O <code style="font-family:var(--font-mono)">.buybox</code> nunca substitui o <code style="font-family:var(--font-mono)">.verdict</code>: ele é um bloco irmão, colado embaixo. Quem só quer a nota já a leu; quem quer comprar rola 200px.</p>
+
+    <h3 style="font-size:var(--fs-h3);margin:32px 0 12px">6.5 Coluna de preço no comparativo + selo</h3>
+    <div class="table-wrap">
+      <table class="cmp">
+        <caption class="sr-only">Comparativo com coluna de preço e afiliado</caption>
+        <thead><tr><th scope="col">Modelo</th><th scope="col">1440p/60</th><th scope="col">Consumo</th><th scope="col">Preço hoje</th><th scope="col">Onde comprar</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Modelo X</th><td class="win">Sim</td><td>220 W</td><td class="price">R$ 2.199<small>Loja A</small></td><td class="buy"><a class="btn btn--buy btn--sm" href="#" rel="sponsored nofollow">Ver</a></td></tr>
+          <tr class="is-deal"><th scope="row">Modelo Y <span class="deal-seal"><svg class="ico"><use href="#i-check-circle"></use></svg> Melhor custo-benefício</span></th><td class="win">Sim</td><td class="win">180 W</td><td class="price">R$ 1.899<small>Loja B</small></td><td class="buy"><a class="btn btn--buy btn--sm" href="#" rel="sponsored nofollow">Ver</a></td></tr>
+          <tr><th scope="row">Modelo Z</th><td>Parcial</td><td>210 W</td><td class="price">R$ 1.749<small>Loja C</small></td><td class="buy"><a class="btn btn--buy btn--sm" href="#" rel="sponsored nofollow">Ver</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">O selo é <strong>contorno + ícone + frase em caixa mista</strong> — o oposto formal de um badge de temperatura (preenchido, mono, caixa-alta, pulsante). Impossível confundir "melhor compra" com "está bombando". E ele segue o critério do comparativo, não a comissão.</p>
+
+    <h3 style="font-size:var(--fs-h3);margin:32px 0 12px">6.6 Afiliado dentro do texto (guia/listicle)</h3>
+    <div class="grid g-md-2">
+      <div class="prose" style="font-size:var(--fs-sm)">
+        <p>Para 1080p a 144 Hz, o melhor conjunto é um monitor rápido com painel IPS — o <a class="aff-link" href="#" rel="sponsored nofollow">modelo de 27" que usamos na redação<span class="aff-tag">afiliado</span></a> resolve sem drama. Se o orçamento apertar, dá para começar pelo <a class="aff-link" href="#" rel="sponsored nofollow">mouse de 60 g<span class="aff-tag">afiliado</span></a> e trocar o resto depois.</p>
+        <p class="note">Link de afiliado: sublinhado tracejado + etiqueta "afiliado" ao lado. Link editorial: sublinhado sólido carmim. São duas gramáticas visuais diferentes na mesma frase.</p>
+      </div>
+      <div class="aff-summary" style="margin-top:0;border-top:0;padding-top:0">
+        <h3><svg class="ico" style="width:18px;height:18px;color:var(--ink-3)"><use href="#i-cart"></use></svg> Produtos citados neste guia</h3>
+        <p class="disclosure disclosure--mini"><svg class="ico"><use href="#i-tag"></use></svg> <span>Links de afiliado. A escolha dos produtos é da redação.</span></p>
+        <div class="aff-summary__list">
+          <article class="prod"><div class="prod__img">1:1</div>
+            <div class="prod__body"><h4 class="prod__name">Monitor 27" 144 Hz</h4>
+              <div class="prod__foot"><span class="prod__price">R$ 1.299</span><a class="btn btn--buy btn--sm" href="#" rel="sponsored nofollow">Ver</a></div></div>
+          </article>
+          <article class="prod"><div class="prod__img">1:1</div>
+            <div class="prod__body"><h4 class="prod__name">Mouse leve 60 g</h4>
+              <div class="prod__foot"><span class="prod__price">R$ 249</span><a class="btn btn--buy btn--sm" href="#" rel="sponsored nofollow">Ver</a></div></div>
+          </article>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ACESSIBILIDADE E RESPONSIVO ============ -->
+  <section class="section" aria-labelledby="s-a11y">
+    <div class="section-head"><h2 class="section-title" id="s-a11y">7. Acessibilidade e breakpoints</h2></div>
+    <div class="grid g-md-2">
+      <div class="spec">
+        <h4>Alvos de toque</h4>
+        <p>Mínimo 44×44px em qualquer elemento clicável; 48px nos botões primários. Espaçamento mínimo de 8px entre alvos adjacentes.</p>
+      </div>
+      <div class="spec">
+        <h4>Cor nunca sozinha</h4>
+        <p>Todo badge de temperatura tem ícone + rótulo textual. A tendência tem seta e palavra ("Subindo"), não só cor. O termômetro tem <code style="font-family:var(--font-mono)">aria-label</code>. Testado para deuteranopia e protanopia.</p>
+      </div>
+      <div class="spec">
+        <h4>Contraste nos dois temas</h4>
+        <p>Cada token foi calculado no claro e no escuro: texto ≥ 4.5:1, badge preenchido ≥ 4.7:1 com o texto de dentro. O laranja "Em alta" usa texto escuro nos dois temas porque laranja com branco não passa.</p>
+      </div>
+      <div class="spec">
+        <h4>Publicidade e leitores de tela</h4>
+        <p>Rótulo "Publicidade" é texto real (não imagem), o slot fica fora do <code style="font-family:var(--font-mono)">&lt;article&gt;</code> e os links de afiliado carregam <code style="font-family:var(--font-mono)">rel="sponsored nofollow"</code> + etiqueta textual.</p>
+      </div>
+      <div class="spec">
+        <h4>Movimento</h4>
+        <p>Só o badge "Urgente" e o ponto do logo pulsam. Tudo respeita <code style="font-family:var(--font-mono)">prefers-reduced-motion</code>.</p>
+      </div>
+      <div class="spec">
+        <h4>Teclado e leitores de tela</h4>
+        <p>Skip link, foco visível de 3px, landmarks semânticos, <code style="font-family:var(--font-mono)">aria-current</code> na navegação e ordem de DOM igual à ordem visual.</p>
+      </div>
+      <div class="spec">
+        <h4>Breakpoints</h4>
+        <p>Base 320px · 560 (ações no header) · 640 (2 colunas) · 768 (fim da bottom-nav) · 900 (3 colunas) · 1024 (sidebar) · 1180 (trilho de compartilhamento) · 1280 (largura máxima).</p>
+      </div>
+      <div class="spec">
+        <h4>Performance percebida</h4>
+        <p>Manchete, badge e TL;DR são HTML puro no primeiro byte. Imagens com <code style="font-family:var(--font-mono)">aspect-ratio</code> reservado (zero CLS) e embeds só ao clique.</p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <fieldset class="theme-field">
+      <legend>Aparência</legend>
+      <div class="theme-seg">
+        <input type="radio" name="theme" id="th-auto" checked>
+        <label for="th-auto"><svg class="ico"><use href="#i-auto"></use></svg> Sistema</label>
+        <input type="radio" name="theme" id="th-light">
+        <label for="th-light"><svg class="ico"><use href="#i-sun"></use></svg> Claro</label>
+        <input type="radio" name="theme" id="th-dark">
+        <label for="th-dark"><svg class="ico"><use href="#i-moon"></use></svg> Escuro</label>
+      </div>
+    </fieldset>
+    <p class="footer__legal">Ortus Pixel · Sempre antenado no universo nerd. · Design System v0.2 · agosto/2026</p>
+  </div>
+</footer>
+
+<script src="assets/ortuspixel.js"></script>
+</body>
+</html>

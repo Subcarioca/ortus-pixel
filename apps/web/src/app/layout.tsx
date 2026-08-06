@@ -1,0 +1,164 @@
+/**
+ * =============================================================================
+ * LAYOUT RAIZ
+ * =============================================================================
+ *
+ * Server Component (padrão no App Router). Nada aqui vira JavaScript no
+ * navegador, o que é decisivo para o LCP no celular — público majoritário
+ * segundo o briefing.
+ */
+
+import type { Metadata, Viewport } from 'next';
+
+import { CATEGORIES, routes } from '@canalnerd/core';
+
+import './canalnerd.css';
+import { THEME_INIT_SCRIPT } from '@/lib/theme';
+import { SiteHeader } from '@/components/site-header';
+import { SiteFooter } from '@/components/site-footer';
+import { BottomNav } from '@/components/bottom-nav';
+import { OrganizationJsonLd } from '@/components/json-ld';
+import { AdSenseLoader } from '@/components/adsense-loader';
+
+const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? 'CanalNerd';
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+
+/**
+ * Metadados padrão, herdados e sobrescritos por cada página.
+ *
+ * `metadataBase` é o que permite usar caminhos relativos em Open Graph e
+ * canonical: sem ele, o Next emite avisos e as URLs sociais saem quebradas.
+ */
+export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: `${SITE_NAME} — Notícias de games, cinema, séries, anime e cultura nerd`,
+    // O `%s` é preenchido pelo título de cada página.
+    template: `%s | ${SITE_NAME}`,
+  },
+  description:
+    'Cobertura em tempo real do universo nerd: games, cinema, séries, anime, mangá, HQs e tecnologia. O que está em alta agora, primeiro.',
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: 'website',
+    locale: 'pt_BR',
+    siteName: SITE_NAME,
+  },
+  twitter: {
+    card: 'summary_large_image',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      // Sem limite de tamanho de prévia: em notícias, um snippet maior e uma
+      // imagem grande na SERP aumentam bastante o CTR.
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
+  },
+  alternates: {
+    canonical: '/',
+    types: {
+      'application/rss+xml': `${SITE_URL}/feed.xml`,
+    },
+  },
+};
+
+/**
+ * Viewport separado dos metadados (exigência do Next 15+).
+ *
+ * `themeColor` casa com o `--bg` do design system e evita o flash da barra do
+ * navegador no mobile — a primeira coisa que o usuário vê. Agora são DOIS
+ * valores, um por esquema: com um valor só, quem usa o tema escuro teria a
+ * barra do navegador clara sobre um site escuro (ou o contrário), e a emenda
+ * fica visível no topo da tela.
+ *
+ * `colorScheme: 'light dark'` declara que o site suporta os dois — é o que faz
+ * o navegador pintar corretamente scrollbars, campos de formulário e controles
+ * nativos, que não são estilizados pelo nosso CSS.
+ */
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F5F5F7' },
+    { media: '(prefers-color-scheme: dark)', color: '#131317' },
+  ],
+  colorScheme: 'light dark',
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    // `suppressHydrationWarning` no <html>: o script inline abaixo altera o
+    // atributo `data-theme` ANTES do React hidratar. Sem esta anotação, o React
+    // avisaria no console que o HTML do servidor difere do que ele encontrou —
+    // um aviso correto para qualquer outro atributo, e esperado para este.
+    <html lang="pt-BR" suppressHydrationWarning>
+      <head>
+        {/*
+          TEMA ANTES DA PRIMEIRA PINTURA (anti-FOUC).
+
+          Precisa ser inline e síncrono, aqui no <head>: o HTML é estático e
+          servido pela CDN (o servidor não sabe qual tema este leitor escolheu),
+          então quem aplica a preferência é o navegador, antes de pintar. Ver o
+          racional completo em lib/theme.ts.
+
+          `dangerouslySetInnerHTML` com uma CONSTANTE do nosso próprio código —
+          nenhum dado de usuário entra nesta string, portanto não há superfície
+          de injeção.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+
+        {/*
+          Pré-conexão com o Google Fonts. `preconnect` resolve DNS, TCP e TLS
+          antecipadamente; sem isso, a fonte só começa a baixar depois do CSS
+          ser analisado, atrasando o First Contentful Paint em ~300ms no 4G.
+        */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body>
+        {/*
+          Skip link: acessibilidade (WCAG 2.4.1). Permite ao usuário de teclado
+          pular a navegação e ir direto ao conteúdo. Fica visível apenas ao
+          receber foco — comportamento definido no CSS do design system.
+        */}
+        <a href="#conteudo" className="skip-link">
+          Pular para o conteúdo
+        </a>
+
+        <SiteHeader categories={CATEGORIES} />
+
+        <main id="conteudo">{children}</main>
+
+        <SiteFooter categories={CATEGORIES} />
+
+        {/* Navegação inferior fixa: o público usa o celular com uma mão. */}
+        <BottomNav />
+
+        {/*
+          Dados estruturados da Organização.
+          Peça de E-E-A-T: é como o Google associa o site a uma entidade
+          editorial real, com logo, perfis sociais e contato.
+        */}
+        <OrganizationJsonLd siteName={SITE_NAME} siteUrl={SITE_URL} />
+
+        {/*
+          Script do AdSense — por último no <body> e com estratégia preguiçosa.
+          Não renderiza nada quando não há Publisher ID configurado, então em
+          desenvolvimento nenhuma requisição sai para o Google (o que também
+          evita impressão inválida com o próprio time navegando).
+        */}
+        <AdSenseLoader />
+      </body>
+    </html>
+  );
+}

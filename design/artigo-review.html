@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Análise: a Placa de Vídeo de Entrada que Aguenta 1440p — Ortus Pixel</title>
+<meta name="description" content="Testamos 14 jogos, medimos consumo e barulho. Nota, prós e contras — e onde comprar pelo melhor preço do dia.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/ortuspixel.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+
+<div class="protobar"><div class="container protobar__inner">
+  <span>Protótipo Ortus Pixel</span>
+  <a href="index.html">Home</a>
+  <a href="em-alta.html">Em Alta</a>
+  <a href="categoria.html">Categoria</a>
+  <a href="categoria-hardware.html">Tech › Hardware</a>
+  <a href="hub-franquia.html">Hub de franquia</a>
+  <a href="artigo.html">Artigo (quente)</a>
+  <a href="artigo-review.html" aria-current="page">Review + afiliados</a>
+  <a href="sistema.html">Design system</a>
+</div></div>
+
+<div class="progress" aria-hidden="true"><div class="progress__bar"></div></div>
+
+<header class="header">
+  <div class="container header__bar">
+    <button class="icon-btn nav-toggle" aria-label="Abrir menu de editorias" aria-expanded="false"><svg class="ico"><use href="#i-menu"></use></svg></button>
+    <a class="logo" href="index.html"><span class="logo__dot" aria-hidden="true"></span>Ortus<b>Pixel</b></a>
+    <nav class="header__nav" aria-label="Editorias">
+      <a href="categoria.html">Games</a>
+      <a href="categoria.html">Cinema &amp; Séries</a>
+      <a href="categoria.html">Anime &amp; Mangá</a>
+      <a href="categoria.html">HQs</a>
+      <a href="categoria-hardware.html" aria-current="page">Tech</a>
+      <a href="categoria.html">Eventos</a>
+    </nav>
+    <div class="header__actions">
+      <button class="btn btn--primary btn--sm only-desk"><svg class="ico"><use href="#i-share"></use></svg> Compartilhar</button>
+      <label class="icon-btn lbl-dark" for="th-dark"><svg class="ico"><use href="#i-moon"></use></svg><span class="sr-only">Ativar tema escuro</span></label>
+      <label class="icon-btn lbl-light" for="th-light"><svg class="ico"><use href="#i-sun"></use></svg><span class="sr-only">Ativar tema claro</span></label>
+      <button class="icon-btn" aria-label="Buscar na Ortus Pixel"><svg class="ico"><use href="#i-search"></use></svg></button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <div class="container">
+    <nav class="breadcrumb" aria-label="Você está em">
+      <a href="index.html">Home</a><svg class="ico"><use href="#i-chevron-right"></use></svg>
+      <a href="categoria-hardware.html">Tech</a><svg class="ico"><use href="#i-chevron-right"></use></svg>
+      <a href="categoria-hardware.html">Hardware</a>
+    </nav>
+  </div>
+
+  <div class="container">
+    <div class="article-layout">
+
+      <div class="share-rail" aria-label="Compartilhar">
+        <a class="share__btn share__btn--wa" href="#" aria-label="Compartilhar no WhatsApp"><svg class="ico"><use href="#i-whatsapp"></use></svg><span>WhatsApp</span></a>
+        <a class="share__btn share__btn--x" href="#" aria-label="Compartilhar no X"><svg class="ico"><use href="#i-xcom"></use></svg><span>X</span></a>
+        <a class="share__btn share__btn--tt" href="#" aria-label="Compartilhar no TikTok"><svg class="ico"><use href="#i-tiktok"></use></svg><span>TikTok</span></a>
+        <button class="share__btn" aria-label="Copiar link"><svg class="ico"><use href="#i-link"></use></svg><span>Copiar</span></button>
+      </div>
+
+      <article class="article">
+        <!-- Mesmo cabeçalho de sempre: temperatura → editoria → manchete.
+             Aqui a faixa é RELEVANTE: sem hero gigante, sem ticker, sem push. -->
+        <div class="article__kicker">
+          <span class="heat heat--base heat--lg"><svg class="ico"><use href="#i-dot"></use></svg> Relevante</span>
+          <span class="cat cat--tech">Tech · Hardware</span>
+        </div>
+
+        <h1 class="article__title">Análise: a placa de vídeo de entrada que finalmente aguenta 1440p</h1>
+        <p class="article__dek">Testamos 14 jogos, medimos consumo, temperatura e barulho durante duas semanas. A conclusão surpreendeu — e o preço ajuda.</p>
+
+        <div class="byline">
+          <span class="byline__avatar" aria-hidden="true"></span>
+          <div style="flex:1">
+            <div class="byline__name">Por <a href="#">Rafa Nunes</a>, editor de Tech</div>
+            <div class="byline__meta">Publicado hoje às 08:00 · 9 min de leitura · testes feitos entre 20/07 e 03/08</div>
+          </div>
+        </div>
+
+        <!-- ==========================================================
+             DISCLOSURE COMPLETA — topo do artigo, ANTES de qualquer link.
+             Em formato review/guia ela pode ficar no topo porque não há
+             conteúdo quente disputando a dobra. Em artigo QUENTE, esta mesma
+             disclosure desce e nasce colada ao primeiro bloco comercial.
+             ========================================================== -->
+        <p class="disclosure">
+          <svg class="ico"><use href="#i-tag"></use></svg>
+          <span><b>Este post contém links de afiliado.</b> Se você comprar por um deles, a Ortus Pixel pode receber uma comissão — sem custo extra para você.
+          A nota, os prós e os contras foram fechados <b>antes</b> de qualquer link ser inserido, e nenhuma loja participou da análise.
+          <a href="#">Nossa política comercial</a></span>
+        </p>
+
+        <figure>
+          <div class="thumb" data-c="tech"><span class="thumb__note">Foto do produto · 16:9</span></div>
+          <figcaption>A placa testada na bancada da redação. Foto: Ortus Pixel</figcaption>
+        </figure>
+
+        <!-- 1. VEREDITO EDITORIAL — nota, prós e contras vêm PRIMEIRO -->
+        <div class="verdict">
+          <div class="verdict__score"><span>8,9</span></div>
+          <div>
+            <h4>Compra fácil de recomendar para 1440p</h4>
+            <p style="font-size:var(--fs-sm);color:var(--ink-2)">Roda tudo o que testamos a 60 fps com qualidade alta, consome pouco e é silenciosa. Só decepciona em ray tracing pesado.</p>
+            <div class="pros-cons">
+              <div class="pros"><h5>Pontos altos</h5><ul><li>Consumo de 180 W</li><li>Silenciosa sob carga</li><li>12 GB de memória</li></ul></div>
+              <div class="cons"><h5>Pontos baixos</h5><ul><li>Ray tracing fraco</li><li>Só duas saídas de vídeo</li></ul></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. BOX "ONDE COMPRAR" — ESTENDE o veredito, não o substitui.
+             Vem logo abaixo, colado, sempre depois da nota. Nomes genéricos
+             (Loja A/B/C) porque a rede de afiliados ainda não foi escolhida. -->
+        <div class="buybox">
+          <div class="buybox__head">
+            <h4><svg class="ico" style="width:17px;height:17px;color:var(--ink-3);display:inline-block;vertical-align:-3px"><use href="#i-cart"></use></svg> Onde comprar</h4>
+            <span class="buybox__stamp">preços verificados em 06/08, 09:10</span>
+          </div>
+          <p class="disclosure disclosure--mini"><svg class="ico"><use href="#i-tag"></use></svg> <span>Links de afiliado — podemos receber comissão, sem custo extra para você.</span></p>
+
+          <div class="buybox__list">
+            <div class="store">
+              <div class="store__main">
+                <span class="store__name"><span class="store__logo">A</span> Loja A <span class="deal-seal"><svg class="ico"><use href="#i-check-circle"></use></svg> Melhor custo-benefício</span></span>
+                <span class="store__note">12x sem juros · entrega em 4 dias · garantia de 3 anos</span>
+              </div>
+              <div class="store__buy">
+                <span class="store__price">R$ 2.199<s>R$ 2.499</s></span>
+                <a class="btn btn--buy btn--sm" href="#" rel="sponsored nofollow">Ver na loja <svg class="ico" style="width:13px;height:13px"><use href="#i-external"></use></svg></a>
+              </div>
+            </div>
+            <div class="store">
+              <div class="store__main">
+                <span class="store__name"><span class="store__logo">B</span> Loja B</span>
+                <span class="store__note">à vista no Pix · retirada em loja física</span>
+              </div>
+              <div class="store__buy">
+                <span class="store__price">R$ 2.249</span>
+                <a class="btn btn--buy btn--sm" href="#" rel="sponsored nofollow">Ver na loja <svg class="ico" style="width:13px;height:13px"><use href="#i-external"></use></svg></a>
+              </div>
+            </div>
+            <div class="store">
+              <div class="store__main">
+                <span class="store__name"><span class="store__logo">C</span> Loja C</span>
+                <span class="store__note">frete grátis para o Sudeste · últimas 3 unidades</span>
+              </div>
+              <div class="store__buy">
+                <span class="store__price">R$ 2.310</span>
+                <a class="btn btn--buy btn--sm" href="#" rel="sponsored nofollow">Ver na loja <svg class="ico" style="width:13px;height:13px"><use href="#i-external"></use></svg></a>
+              </div>
+            </div>
+          </div>
+          <p class="form-hint">Ordenado por preço, não por comissão. Se o preço mudar, a ordem muda sozinha.</p>
+        </div>
+
+        <!-- ANÚNCIO 1 do formato review: só depois do veredito + buybox -->
+        <div class="ad ad--rect">
+          <span class="ad__label"><svg class="ico" style="width:12px;height:12px"><use href="#i-info"></use></svg> Publicidade</span>
+          <div class="ad__box">AdSense · 300×250 / 336×280 — altura reservada</div>
+        </div>
+
+        <!-- Índice para leitura longa -->
+        <div class="toc">
+          <p class="toc__label">Nesta análise</p>
+          <ol>
+            <li><a href="#s1">Desempenho em 1440p, jogo a jogo</a></li>
+            <li><a href="#s2">Consumo, temperatura e barulho</a></li>
+            <li><a href="#s3">Comparativo com as concorrentes diretas</a></li>
+            <li><a href="#s4">Para quem vale (e para quem não vale)</a></li>
+          </ol>
+        </div>
+
+        <div class="prose">
+          <h2 id="s1">Desempenho em 1440p, jogo a jogo</h2>
+          <p>Em 14 títulos testados, a média ficou em 71 fps com qualidade alta a 1440p. Só dois jogos pediram ajuste de sombras para se manter acima de 60. Para quem sai de uma placa de 4 GB, a diferença é imediata — especialmente em texturas.</p>
+          <p>Usamos a mesma bancada de sempre e um <a class="aff-link" href="#" rel="sponsored nofollow">monitor de 27" a 144 Hz<span class="aff-tag">afiliado</span></a> para medir frame time. Vale dizer: nenhum ganho aqui aparece se o resto do PC for antigo — leia nosso <a href="categoria-hardware.html">guia de gargalo de CPU</a> antes de trocar só a placa.</p>
+
+          <h2 id="s2">Consumo, temperatura e barulho</h2>
+          <p>180 W de pico. A fonte de 550 W que já estava na bancada deu conta com folga, mas se a sua for genérica, troque — uma <a class="aff-link" href="#" rel="sponsored nofollow">fonte 650 W com selo 80 Plus<span class="aff-tag">afiliado</span></a> custa menos que o prejuízo de uma queima.</p>
+          <blockquote>"Duas semanas de uso e a placa nunca passou de 68 °C com o gabinete fechado."</blockquote>
+
+          <h2 id="s3">Comparativo com as concorrentes diretas</h2>
+          <p>Três placas na mesma faixa, mesmos testes, mesmo dia:</p>
+        </div>
+
+        <!-- 3. COMPARATIVO com COLUNA DE PREÇO + selo de melhor custo-benefício.
+             O selo segue o critério do teste (fps por real), não a comissão. -->
+        <div class="table-wrap">
+          <table class="cmp">
+            <caption class="sr-only">Comparativo entre três placas de vídeo, com preço e onde comprar</caption>
+            <thead>
+              <tr>
+                <th scope="col">Modelo</th><th scope="col">Média 1440p</th><th scope="col">Consumo</th>
+                <th scope="col">Preço hoje</th><th scope="col">Onde comprar</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Modelo X (testado)</th><td class="win">71 fps</td><td>180 W</td>
+                <td class="price">R$ 2.199<small>Loja A</small></td>
+                <td class="buy"><a class="btn btn--buy btn--sm" href="#" rel="sponsored nofollow">Ver</a></td>
+              </tr>
+              <tr class="is-deal">
+                <th scope="row">Modelo Y <span class="deal-seal"><svg class="ico"><use href="#i-check-circle"></use></svg> Melhor custo-benefício</span></th>
+                <td>66 fps</td><td class="win">165 W</td>
+                <td class="price">R$ 1.899<small>Loja B</small></td>
+                <td class="buy"><a class="btn btn--buy btn--sm" href="#" rel="sponsored nofollow">Ver</a></td>
+              </tr>
+              <tr>
+                <th scope="row">Modelo Z</th><td>58 fps</td><td>210 W</td>
+                <td class="price">R$ 1.749<small>Loja C</small></td>
+                <td class="buy"><a class="btn btn--buy btn--sm" href="#" rel="sponsored nofollow">Ver</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="disclosure disclosure--mini"><svg class="ico"><use href="#i-tag"></use></svg> <span>Coluna "onde comprar" com links de afiliado. Preços de 06/08 — confira na loja antes de fechar.</span></p>
+
+        <div class="prose">
+          <h2 id="s4">Para quem vale (e para quem não vale)</h2>
+          <p>Vale para quem joga em 1440p e quer parar de mexer em configuração. Não vale para quem já tem uma placa da geração passada no mesmo patamar — a diferença não paga a troca.</p>
+        </div>
+
+        <!-- CTA de newsletter no meio/fim do corpo, como em qualquer formato -->
+        <div class="cta-inline">
+          <div>
+            <h4>Quer saber quando esse preço cair?</h4>
+            <p>A gente avisa por e-mail quando uma peça que analisamos entra em promoção de verdade. Sem cupom requentado.</p>
+          </div>
+          <form class="form-inline" data-demo style="min-width:min(100%,320px)">
+            <label class="sr-only" for="email-rev">Seu e-mail</label>
+            <input class="input" id="email-rev" type="email" autocomplete="email" placeholder="seu@email.com" required>
+            <button class="btn btn--primary" type="submit">Avise-me</button>
+          </form>
+        </div>
+
+        <!-- 4. RESUMO "PRODUTOS CITADOS" — fecha o formato guia/review.
+             Junta em um lugar só tudo que apareceu inline no texto. -->
+        <section class="aff-summary" aria-labelledby="h-citados">
+          <h3 id="h-citados"><svg class="ico" style="width:19px;height:19px;color:var(--ink-3)"><use href="#i-cart"></use></svg> Produtos citados nesta análise</h3>
+          <p class="disclosure disclosure--mini"><svg class="ico"><use href="#i-tag"></use></svg> <span>Links de afiliado. A escolha dos produtos é da redação — sempre.</span></p>
+          <div class="aff-summary__list">
+            <article class="prod">
+              <div class="prod__img">1:1</div>
+              <div class="prod__body">
+                <h4 class="prod__name">Placa de vídeo · Modelo X (a testada)</h4>
+                <p class="prod__spec">12 GB · 180 W</p>
+                <div class="prod__foot"><span class="prod__price">R$ 2.199<small>Loja A</small></span><a class="btn btn--buy btn--sm" href="#" rel="sponsored nofollow">Ver</a></div>
+              </div>
+            </article>
+            <article class="prod">
+              <div class="prod__img">1:1</div>
+              <div class="prod__body">
+                <h4 class="prod__name">Monitor 27" 144 Hz</h4>
+                <p class="prod__spec">Usado nos testes de frame time</p>
+                <div class="prod__foot"><span class="prod__price">R$ 1.299<small>Loja A</small></span><a class="btn btn--buy btn--sm" href="#" rel="sponsored nofollow">Ver</a></div>
+              </div>
+            </article>
+            <article class="prod">
+              <div class="prod__img">1:1</div>
+              <div class="prod__body">
+                <h4 class="prod__name">Fonte 650 W · 80 Plus</h4>
+                <p class="prod__spec">Recomendada se a sua for genérica</p>
+                <div class="prod__foot"><span class="prod__price">R$ 429<small>Loja B</small></span><a class="btn btn--buy btn--sm" href="#" rel="sponsored nofollow">Ver</a></div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <!-- ANÚNCIO 2 (limite do formato review): antes das relacionadas -->
+        <div class="ad ad--leader">
+          <span class="ad__label"><svg class="ico" style="width:12px;height:12px"><use href="#i-info"></use></svg> Publicidade</span>
+          <div class="ad__box">AdSense · 320×100 / 728×90 — altura reservada</div>
+        </div>
+
+        <div class="divider"></div>
+        <div>
+          <h3 style="font-size:1.1rem;margin-bottom:12px">Compartilhar</h3>
+          <div class="share">
+            <a class="share__btn share__btn--wa" href="#"><svg class="ico"><use href="#i-whatsapp"></use></svg> WhatsApp</a>
+            <a class="share__btn share__btn--x" href="#"><svg class="ico"><use href="#i-xcom"></use></svg> X</a>
+            <button class="share__btn"><svg class="ico"><use href="#i-link"></use></svg> Copiar link</button>
+          </div>
+        </div>
+
+        <!-- Relacionadas -->
+        <section aria-labelledby="h-rel2" style="margin-top:40px">
+          <div class="section-head">
+            <h2 class="section-title" id="h-rel2" style="font-size:var(--fs-h3)">Mais de Hardware</h2>
+            <a class="link-more" href="categoria-hardware.html">Ver a sub-seção <svg class="ico" style="width:13px;height:13px"><use href="#i-chevron-right"></use></svg></a>
+          </div>
+          <div class="stack-sm">
+            <article><a class="card card--row" href="artigo-review.html">
+              <div class="thumb" data-c="tech"></div>
+              <div>
+                <span class="heat heat--ever"><svg class="ico"><use href="#i-book"></use></svg> Guia</span>
+                <h3 class="card__title">Montar um PC gamer de R$ 4.000 em 2026: peça por peça</h3>
+                <div class="meta"><span>16 min de leitura</span></div>
+              </div>
+            </a></article>
+            <article><a class="card card--row" href="artigo-review.html">
+              <div class="thumb" data-c="tech"></div>
+              <div>
+                <span class="heat heat--base"><svg class="ico"><use href="#i-dot"></use></svg> Relevante</span>
+                <h3 class="card__title">4 monitores de 27" até R$ 1.500: qual vale em 2026</h3>
+                <div class="meta"><span>ontem</span></div>
+              </div>
+            </a></article>
+          </div>
+        </section>
+
+        <!-- Comunidade (Discord como DESTINO) -->
+        <div class="community" style="margin-top:32px">
+          <div class="community__top">
+            <span class="community__logo"><svg class="ico" style="width:24px;height:24px"><use href="#i-discord"></use></svg></span>
+            <div>
+              <h4>Dúvida de montagem? O canal #hardware ajuda</h4>
+              <span class="online">1.104 membros · 87 online agora</span>
+            </div>
+          </div>
+          <p>Manda a lista de peças que a galera revisa antes de você comprar.</p>
+          <a class="btn btn--discord" href="#"><svg class="ico"><use href="#i-discord"></use></svg> Entrar no canal #hardware</a>
+        </div>
+
+        <!-- COMENTÁRIOS: Discord OU Google, mesmo peso. Separado da comunidade. -->
+        <section aria-labelledby="h-com2" style="margin-top:40px">
+          <div class="section-head">
+            <h2 class="section-title" id="h-com2" style="font-size:var(--fs-h3)"><svg class="ico"><use href="#i-message"></use></svg> Comentários <span style="color:var(--ink-3);font-family:var(--font-mono);font-size:1rem">63</span></h2>
+            <a class="link-more" href="#">Regras da comunidade <svg class="ico" style="width:13px;height:13px"><use href="#i-chevron-right"></use></svg></a>
+          </div>
+          <div class="side-box">
+            <h3 style="font-size:1.05rem;text-transform:none;letter-spacing:-.01em;margin-bottom:6px">Entre para comentar</h3>
+            <p style="font-size:var(--fs-sm);color:var(--ink-2);margin-bottom:14px">Use a conta que você já tem. Não criamos senha nova, não pedimos e-mail extra.</p>
+            <div class="auth-grid">
+              <button class="btn btn--discord"><svg class="ico"><use href="#i-discord"></use></svg> Comentar com Discord</button>
+              <button class="btn btn--google"><svg class="ico"><use href="#i-google"></use></svg> Comentar com Google</button>
+            </div>
+            <p class="auth-note">Pegamos só nome público e foto. Você escolhe o apelido que aparece e pode apagar seus comentários quando quiser. <a href="#" style="border-bottom:1px solid var(--line)">Como tratamos seus dados</a></p>
+          </div>
+        </section>
+      </article>
+
+      <aside class="sidebar">
+        <div class="side-box side-sticky">
+          <h3><svg class="ico" style="width:18px;height:18px;color:var(--ink-3)"><use href="#i-cart"></use></svg> Resumo da compra</h3>
+          <p style="font-size:var(--fs-sm);color:var(--ink-2);margin-bottom:12px">Menor preço do produto analisado, atualizado hoje.</p>
+          <article class="prod prod--stack" style="padding:10px">
+            <div class="prod__body">
+              <h4 class="prod__name">Modelo X · 12 GB</h4>
+              <p class="prod__spec">Nota 8,9 · análise completa acima</p>
+              <div class="prod__foot"><span class="prod__price">R$ 2.199<small>Loja A</small></span><a class="btn btn--buy btn--sm" href="#" rel="sponsored nofollow">Ver</a></div>
+            </div>
+          </article>
+          <p class="disclosure disclosure--mini"><svg class="ico"><use href="#i-tag"></use></svg> <span>Link de afiliado.</span></p>
+        </div>
+
+        <div class="side-box">
+          <h3><svg class="ico" style="width:18px;height:18px;color:var(--heat-hot)"><use href="#i-flame"></use></svg> Quentes agora</h3>
+          <div class="side-list">
+            <a class="rank" href="artigo.html" style="padding:8px 0;background:none">
+              <span class="rank__pos" style="color:var(--heat-hot-text)">01</span>
+              <span><span class="rank__title" style="font-size:.95rem">GTA VI tem data confirmada</span>
+              <span class="meta" style="margin-top:4px"><span class="cat cat--games">Games</span></span></span>
+              <span class="heatbar heatbar--hot heatbar--sm" data-on="4" role="img" aria-label="Temperatura: urgente"><i></i><i></i><i></i><i></i></span>
+            </a>
+            <a class="rank" href="artigo.html" style="padding:8px 0;background:none">
+              <span class="rank__pos" style="color:var(--heat-rise-text)">02</span>
+              <span><span class="rank__title" style="font-size:.95rem">Vazam specs do headset da Valve</span>
+              <span class="meta" style="margin-top:4px"><span class="cat cat--tech">Tech</span></span></span>
+              <span class="heatbar heatbar--rise heatbar--sm" data-on="3" role="img" aria-label="Temperatura: em alta"><i></i><i></i><i></i><i></i></span>
+            </a>
+          </div>
+        </div>
+
+        <div class="ad ad--rail ad--sticky">
+          <span class="ad__label"><svg class="ico" style="width:12px;height:12px"><use href="#i-info"></use></svg> Publicidade</span>
+          <div class="ad__box">AdSense · 300×600 — altura reservada, sticky</div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <fieldset class="theme-field">
+      <legend>Aparência</legend>
+      <div class="theme-seg">
+        <input type="radio" name="theme" id="th-auto" checked>
+        <label for="th-auto"><svg class="ico"><use href="#i-auto"></use></svg> Sistema</label>
+        <input type="radio" name="theme" id="th-light">
+        <label for="th-light"><svg class="ico"><use href="#i-sun"></use></svg> Claro</label>
+        <input type="radio" name="theme" id="th-dark">
+        <label for="th-dark"><svg class="ico"><use href="#i-moon"></use></svg> Escuro</label>
+      </div>
+    </fieldset>
+    <p class="footer__legal">© 2026 Ortus Pixel · Este artigo contém links de afiliado, sinalizados no texto e antes de cada bloco.</p>
+  </div>
+</footer>
+
+<!-- Anúncio ancorado: esta página não exibe a sticky bar de newsletter,
+     então o ancorado pode entrar (a regra vive no CSS, não no HTML). -->
+<div class="ad-anchor" role="region" aria-label="Publicidade">
+  <div class="ad">
+    <span class="ad__label"><svg class="ico" style="width:12px;height:12px"><use href="#i-info"></use></svg> Publicidade</span>
+    <div class="ad__box">320×50 — altura reservada</div>
+  </div>
+  <button class="icon-btn" aria-label="Fechar anúncio" data-dismiss=".ad-anchor"><svg class="ico"><use href="#i-x"></use></svg></button>
+</div>
+
+<nav class="bottom-nav" aria-label="Navegação principal (mobile)">
+  <a href="index.html"><svg class="ico"><use href="#i-home"></use></svg> Home</a>
+  <a href="em-alta.html"><svg class="ico ico-hot"><use href="#i-flame"></use></svg> Em alta</a>
+  <a href="categoria-hardware.html" aria-current="page"><svg class="ico"><use href="#i-grid"></use></svg> Editorias</a>
+  <a href="hub-franquia.html"><svg class="ico"><use href="#i-book"></use></svg> Meus hubs</a>
+  <a href="#"><svg class="ico"><use href="#i-user"></use></svg> Conta</a>
+</nav>
+
+<script src="assets/ortuspixel.js"></script>
+</body>
+</html>

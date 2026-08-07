@@ -20,7 +20,7 @@
   "scripts": {
     "dev": "npm run dev --workspace=@canalnerd/web",
     "dev:curator": "npm run dev --workspace=@canalnerd/curator",
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run db:generate && npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "//check:classes": [

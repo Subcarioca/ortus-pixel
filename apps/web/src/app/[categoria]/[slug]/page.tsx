@@ -335,7 +335,7 @@ export default async function ArticlePage({
                 Resumo em 15 segundos
               </h2>
               <ul>
-                {tldr.map((point, index) => (
+                {tldr.map((point: string, index: number) => (
                   <li key={index}>{point}</li>
                 ))}
               </ul>

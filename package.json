@@ -2,7 +2,7 @@
   "name": "canalnerd",
   "version": "0.1.0",
   "private": true,
-  "description": "CanalNerd — portal de notícias do universo nerd com pipeline de curadoria automática por score de popularidade.",
+  "description": "Ortus Pixel — portal de notícias do universo nerd com pipeline de curadoria automática por score de popularidade.",
   "//": [
     "Usamos npm workspaces (nativo, sem dependência extra) em vez de Turborepo/Nx.",
     "Motivo: o projeto tem 5 pacotes; a complexidade de um task-runner com cache",

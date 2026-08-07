@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { routes } from '@canalnerd/core';
 
 import { AdminLogin } from '@/components/admin/admin-login';
+import { ADMIN_SESSION_COOKIE } from '@/server/admin-auth';
 import { getAccuracyReportSafe } from '@/server/admin-metrics';
 import { safeCompare } from '@/server/security';
 
@@ -32,7 +33,7 @@ async function isAuthenticated(): Promise<boolean> {
   const expected = process.env.ADMIN_ACCESS_TOKEN;
   if (!expected) return false;
   const cookieStore = await cookies();
-  const provided = cookieStore.get('canalnerd_admin')?.value;
+  const provided = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
   return Boolean(provided) && safeCompare(provided!, expected);
 }
 

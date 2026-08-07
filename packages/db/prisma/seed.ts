@@ -105,7 +105,7 @@ async function seedAuthors() {
     {
       slug: 'marina-alves',
       name: 'Marina Alves',
-      email: 'marina@canalnerd.com.br',
+      email: 'marina@ortuspixel.com',
       role: 'Editora-chefe',
       bio: 'Jornalista com 12 anos de cobertura de games e cultura pop. Cobriu 8 edições da E3 e 6 da CCXP. Especialista em indústria de jogos e mercado brasileiro.',
       systemRole: 'admin',
@@ -118,7 +118,7 @@ async function seedAuthors() {
     {
       slug: 'rafael-tanaka',
       name: 'Rafael Tanaka',
-      email: 'rafael@canalnerd.com.br',
+      email: 'rafael@ortuspixel.com',
       role: 'Repórter de Cinema & Séries',
       bio: 'Crítico de cinema formado em Audiovisual pela USP. Escreve sobre adaptações de quadrinhos e franquias de ficção científica desde 2016.',
       systemRole: 'editor',
@@ -128,7 +128,7 @@ async function seedAuthors() {
     {
       slug: 'juliana-costa',
       name: 'Juliana Costa',
-      email: 'juliana@canalnerd.com.br',
+      email: 'juliana@ortuspixel.com',
       role: 'Repórter de Anime & Mangá',
       bio: 'Tradutora de japonês e pesquisadora de cultura otaku. Acompanha o mercado editorial de mangás no Brasil há 9 anos.',
       systemRole: 'writer',
@@ -790,7 +790,7 @@ async function seedAffiliateOffers() {
         currency: 'BRL',
         // URL de exemplo, sem rede de afiliados definida. Sempre https: link
         // comercial em http vaza o referer e permite adulteração no caminho.
-        offerUrl: `https://example.com/oferta/${o.key}?ref=canalnerd-placeholder`,
+        offerUrl: `https://example.com/oferta/${o.key}?ref=ortuspixel-placeholder`,
         programCategory: o.programCategory,
         availability: o.availability,
         disclosureKind: 'affiliate',
@@ -929,7 +929,7 @@ async function seedPendingTopics() {
 }
 
 async function main() {
-  console.log('Semeando banco do CanalNerd...\n');
+  console.log('Semeando banco da Ortus Pixel...\n');
   // A ordem importa: categorias antes de franquias (FK), franquias antes de
   // tópicos, e assim por diante.
   await seedCategories();

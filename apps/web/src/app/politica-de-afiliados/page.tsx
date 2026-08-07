@@ -29,7 +29,7 @@ export const revalidate = 86400;
 export const metadata: Metadata = {
   title: 'Política de afiliados e publicidade',
   description:
-    'Como o CanalNerd ganha dinheiro, o que é link de afiliado, o que é anúncio e por que nada disso influencia o que publicamos.',
+    'Como a Ortus Pixel ganha dinheiro, o que é link de afiliado, o que é anúncio e por que nada disso influencia o que publicamos.',
   alternates: { canonical: '/politica-de-afiliados' },
 };
 
@@ -41,7 +41,7 @@ export default function AffiliatePolicyPage() {
       <article className="article">
         <h1 className="article__title">Política de afiliados e publicidade</h1>
         <p className="article__dek">
-          Como o CanalNerd ganha dinheiro e por que isso não muda o que a gente publica.
+          Como a Ortus Pixel ganha dinheiro e por que isso não muda o que a gente publica.
         </p>
 
         <div className="prose">
@@ -88,7 +88,7 @@ export default function AffiliatePolicyPage() {
 
           <h2>O que a monetização NÃO influencia</h2>
           <p>
-            O CanalNerd ordena as notícias por um{' '}
+            A Ortus Pixel ordena as notícias por um{' '}
             <Link href={routes.methodology()}>score de popularidade</Link> calculado a
             partir de sinais de interesse do público: velocidade de busca, repercussão em
             redes, autoridade da fonte e outros.
@@ -105,7 +105,7 @@ export default function AffiliatePolicyPage() {
 
           <h2>Conteúdo patrocinado</h2>
           <p>
-            Hoje o CanalNerd <strong>não publica</strong> conteúdo patrocinado (matéria
+            Hoje a Ortus Pixel <strong>não publica</strong> conteúdo patrocinado (matéria
             paga por anunciante). Se um dia isso mudar, ele virá com identificação
             destacada de "Patrocinado", diferente do aviso de afiliado, e nunca aparecerá
             no ranking de <Link href={routes.trending()}>Em alta</Link>.

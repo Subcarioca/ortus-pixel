@@ -7,6 +7,7 @@
 
 import { NextResponse } from 'next/server';
 
+import { ADMIN_SESSION_COOKIE } from '@/server/admin-auth';
 import { checkRateLimit, getClientIp, safeCompare } from '@/server/security';
 
 export const dynamic = 'force-dynamic';
@@ -46,7 +47,7 @@ export async function POST(request: Request) {
 
   const response = NextResponse.json({ ok: true });
 
-  response.cookies.set('canalnerd_admin', expected, {
+  response.cookies.set(ADMIN_SESSION_COOKIE, expected, {
     // `httpOnly` impede que JavaScript leia o cookie — se houver um XSS em
     // qualquer parte do site, a sessão do admin não é roubada.
     httpOnly: true,

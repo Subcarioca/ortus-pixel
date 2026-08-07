@@ -13,7 +13,7 @@ import { routes, type CategoryDefinition } from '@canalnerd/core';
  *
  * RE-SKIN v0.3 — duas mudanças de vocabulário:
  *
- *  - O logo virou `Canal<b>Nerd</b>`. O `<b>` não é decoração: `.logo b` é o
+ *  - O logo virou `Ortus<b>Pixel</b>`. O `<b>` não é decoração: `.logo b` é o
  *    que aplica `--brand-ink` (o carmim recalibrado na v0.3, AAA como texto
  *    nos dois temas). Sem ele, a marca ficava monocromática no header.
  *  - Os links do menu deixaram de usar `.cat cat--{slug}`. `.cat` é o RÓTULO
@@ -27,9 +27,9 @@ export function SiteHeader({ categories }: { categories: readonly CategoryDefini
   return (
     <header className="header">
       <div className="container header__bar">
-        <Link href={routes.home()} className="logo" aria-label="CanalNerd — página inicial">
+        <Link href={routes.home()} className="logo" aria-label="Ortus Pixel — página inicial">
           <span className="logo__dot" aria-hidden="true" />
-          Canal<b>Nerd</b>
+          Ortus<b>Pixel</b>
         </Link>
 
         <nav className="header__nav" aria-label="Editorias">

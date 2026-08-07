@@ -319,7 +319,7 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs = 8000
  *
  * SEGURANÇA (open redirect): `returnTo` vem da URL e é hostil. Sem validação,
  * `/api/auth/discord?returnTo=https://evil.com` transformaria o nosso domínio
- * em trampolim de phishing — o link começa em canalnerd.com.br, o que é
+ * em trampolim de phishing — o link começa em ortuspixel.com, o que é
  * exatamente o que dá credibilidade ao golpe.
  *
  * Só aceitamos caminho relativo. A rejeição de `//` é essencial e sutil:

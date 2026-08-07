@@ -37,6 +37,8 @@ import Link from 'next/link';
 
 import { DISCLOSURE_TEXT, type DisclosureKind } from '@canalnerd/core';
 
+import { SITE_NAME } from '@/lib/site';
+
 interface AffiliateDisclosureProps {
   kind: DisclosureKind;
   /**
@@ -53,7 +55,9 @@ export function AffiliateDisclosure({ kind, variant = 'full' }: AffiliateDisclos
   if (variant === 'mini') {
     return (
       <p className="disclosure disclosure--mini">
-        {kind === 'sponsored' ? 'Conteúdo patrocinado.' : 'Link de afiliado — o CanalNerd pode receber comissão.'}
+        {kind === 'sponsored'
+          ? 'Conteúdo patrocinado.'
+          : `Link de afiliado — a ${SITE_NAME} pode receber uma comissão.`}
       </p>
     );
   }

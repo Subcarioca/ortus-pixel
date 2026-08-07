@@ -4,6 +4,8 @@ import webpush from 'web-push';
 
 import { prisma } from '@canalnerd/db';
 
+import { CONTACT_EMAIL } from '@/lib/site';
+
 /**
  * =============================================================================
  * ENVIO DE PUSH NOTIFICATION
@@ -32,7 +34,7 @@ import { prisma } from '@canalnerd/db';
 function configureVapid(): boolean {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const subject = process.env.VAPID_SUBJECT ?? 'mailto:contato@canalnerd.com.br';
+  const subject = process.env.VAPID_SUBJECT ?? `mailto:${CONTACT_EMAIL}`;
 
   if (!publicKey || !privateKey) return false;
 

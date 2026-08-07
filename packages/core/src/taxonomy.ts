@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * TAXONOMIA DO CANALNERD — categorias, subnichos e prioridade de monitoramento
+ * TAXONOMIA DA ORTUS PIXEL — categorias, subnichos e prioridade de monitoramento
  * =============================================================================
  *
  * POR QUE ISSO É UM ARQUIVO DE CÓDIGO, E NÃO SÓ LINHAS NO BANCO?

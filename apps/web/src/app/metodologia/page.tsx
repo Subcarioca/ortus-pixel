@@ -9,7 +9,7 @@
  *     confiabilidade. Um número de 0 a 100 sem explicação parece inventado —
  *     com explicação, vira credencial editorial.
  *  2. SEO: é conteúdo evergreen único, que ninguém mais tem.
- *  3. Produto: diferencia o CanalNerd dos concorrentes, que publicam "achando"
+ *  3. Produto: diferencia a Ortus Pixel dos concorrentes, que publicam "achando"
  *     o que vai bombar.
  *
  * O QUE EXPOMOS E O QUE NÃO EXPOMOS: descrevemos os SINAIS e as FAIXAS, mas não
@@ -27,7 +27,7 @@ import { BreadcrumbJsonLd } from '@/components/json-ld';
 export const metadata: Metadata = {
   title: 'Como calculamos o score de popularidade',
   description:
-    'Entenda a metodologia por trás do score de 0 a 100 que ordena as notícias do CanalNerd: quais sinais usamos, como eles são combinados e o que cada faixa significa.',
+    'Entenda a metodologia por trás do score de 0 a 100 que ordena as notícias da Ortus Pixel: quais sinais usamos, como eles são combinados e o que cada faixa significa.',
   alternates: { canonical: routes.methodology() },
 };
 
@@ -70,7 +70,7 @@ const SIGNALS = [
   {
     name: 'Afinidade da nossa audiência',
     description:
-      'Como os leitores do CanalNerd historicamente reagem a cada franquia. É o único sinal que nenhum concorrente consegue reproduzir, porque depende do comportamento da nossa própria base.',
+      'Como os leitores da Ortus Pixel historicamente reagem a cada franquia. É o único sinal que nenhum concorrente consegue reproduzir, porque depende do comportamento da nossa própria base.',
   },
   {
     name: 'Gatilhos editoriais sensíveis',
@@ -99,7 +99,7 @@ export default function MethodologyPage() {
         <article className="article">
           <h1 className="article__title">Como calculamos o score de popularidade</h1>
           <p className="article__dek">
-            Toda notícia do CanalNerd recebe uma nota de 0 a 100 que indica o quanto o assunto
+            Toda notícia da Ortus Pixel recebe uma nota de 0 a 100 que indica o quanto o assunto
             está em ascensão neste momento. Ela define o que vai para o topo da home, o que
             entra em &ldquo;Em alta&rdquo; e o que dispara alerta na redação.
           </p>

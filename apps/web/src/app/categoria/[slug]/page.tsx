@@ -32,6 +32,7 @@ import Link from 'next/link';
 
 import {
   CATEGORIES,
+  type CategorySlug,
   catModifier,
   heatClass,
   isCategorySlug,
@@ -58,6 +59,33 @@ export function generateStaticParams() {
 }
 
 /**
+ * SEO editorial por categoria, com o texto homologado no protótipo de design.
+ *
+ * PRECEDÊNCIA (do mais forte para o mais fraco):
+ *   1. `seoTitle` / `seoDescription` da linha no banco — campo do EDITOR, que
+ *      pode otimizar sem deploy. Um seed jamais sobrescreve isso.
+ *   2. Este mapa — a copy assinada pelo design, para as páginas que existem no
+ *      protótipo (hoje: Games, em `design/categoria.html`).
+ *   3. O padrão genérico montado a partir de nome e descrição da taxonomia.
+ *
+ * POR QUE UM MAPA E NÃO UM PADRÃO GENÉRICO PARA TODOS: o título de Games é
+ * "Notícias, Trailers e Análises" porque é isso que se busca sobre games.
+ * Aplicar a mesma fórmula a HQs ("HQs — Notícias, Trailers e Análises")
+ * anunciaria um conteúdo que a editoria não entrega. Título de SEO é promessa;
+ * generalizar promessa é como se ganha clique e se perde leitor.
+ *
+ * O sufixo "| Ortus Pixel" NÃO aparece aqui: quem o acrescenta é o template de
+ * título do layout raiz.
+ */
+const CATEGORY_SEO: Partial<Record<CategorySlug, { title: string; description: string }>> = {
+  games: {
+    title: 'Games — Notícias, Trailers e Análises',
+    description:
+      'Notícias, análises e guias de games: lançamentos, patches, rumores e o que está bombando agora. Atualizado em tempo real.',
+  },
+};
+
+/**
  * No Next 15, `params` é uma Promise (mudança para suportar renderização
  * parcial). Por isso o `await` antes de usar.
  */
@@ -74,9 +102,14 @@ export async function generateMetadata({
 
   const { category } = data;
 
+  const designSeo = CATEGORY_SEO[slug];
+
   return {
-    title: category.seoTitle ?? `${category.name} — notícias, lançamentos e novidades`,
-    description: category.seoDescription ?? category.description,
+    title:
+      category.seoTitle ??
+      designSeo?.title ??
+      `${category.name} — notícias, lançamentos e novidades`,
+    description: category.seoDescription ?? designSeo?.description ?? category.description,
     // Canonical explícito evita que variações com query string (?formato=...,
     // ?utm_source=...) sejam indexadas como páginas distintas e diluam a
     // autoridade entre duplicatas.

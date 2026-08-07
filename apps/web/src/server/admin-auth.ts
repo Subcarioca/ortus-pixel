@@ -5,6 +5,20 @@ import { cookies } from 'next/headers';
 import { safeCompare } from './security';
 
 /**
+ * Nome do cookie de sessão do painel.
+ *
+ * EXPORTADO e usado por todo mundo que lê ou escreve este cookie. O nome estava
+ * repetido como literal em quatro arquivos, e o reposicionamento de marca
+ * mostrou o risco na prática: renomear três dos quatro deixaria o login
+ * gravando um cookie que a verificação não lê — ou seja, um painel que aceita a
+ * senha e devolve a tela de login, sem erro nenhum no log.
+ *
+ * O prefixo é o da marca (`ortuspixel_`) para não colidir com cookies de outras
+ * aplicações que venham a rodar no mesmo domínio.
+ */
+export const ADMIN_SESSION_COOKIE = 'ortuspixel_admin';
+
+/**
  * =============================================================================
  * AUTENTICAÇÃO DO PAINEL — extraída para um módulo único
  * =============================================================================
@@ -34,7 +48,7 @@ export async function isAdminAuthenticated(): Promise<boolean> {
   if (!expected) return false;
 
   const cookieStore = await cookies();
-  const provided = cookieStore.get('canalnerd_admin')?.value;
+  const provided = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
   if (!provided) return false;
 
   // Comparação em tempo constante — ver server/security.ts.

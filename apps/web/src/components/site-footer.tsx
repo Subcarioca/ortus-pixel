@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { routes, type CategoryDefinition } from '@canalnerd/core';
 
+import { SITE_NAME, SITE_TAGLINE, SOCIAL_HANDLE } from '@/lib/site';
 import { ThemeToggle } from './theme-toggle';
 
 /**
@@ -31,10 +32,29 @@ export function SiteFooter({ categories }: { categories: readonly CategoryDefini
           <div>
             <Link href={routes.home()} className="logo">
               <span className="logo__dot" aria-hidden="true" />
-              Canal<b>Nerd</b>
+              Ortus<b>Pixel</b>
             </Link>
+            {/*
+              A TAGLINE abre a descrição, em negrito, como no protótipo: é a
+              única linha do site em que a marca se explica em cinco palavras.
+              O `<strong>` não é ênfase decorativa — ele separa a promessa (o
+              que somos) do detalhamento (o que fazemos), e é o que o leitor de
+              tela anuncia com destaque.
+            */}
             <p className="note">
-              Cobertura em tempo real do universo nerd. O que está em alta, primeiro.
+              <strong>{SITE_TAGLINE}</strong> Cobertura em tempo real: o que está em
+              alta, primeiro.
+            </p>
+            {/*
+              Handle das redes em TEXTO, sem os botões de ícone do protótipo.
+              Motivo: o `.icon-btn` do design depende do sprite SVG de
+              `design/assets/ortuspixel.js`, que ainda não foi portado para o
+              app — renderizar os botões agora daria quatro quadrados vazios.
+              O handle sozinho já entrega a informação; os ícones entram junto
+              com o sprite, sem precisar mexer nesta cópia.
+            */}
+            <p className="note">
+              Em todas as redes: <b>{SOCIAL_HANDLE}</b>
             </p>
           </div>
 
@@ -62,7 +82,7 @@ export function SiteFooter({ categories }: { categories: readonly CategoryDefini
           </nav>
 
           <nav aria-label="Institucional">
-            <h4>O CanalNerd</h4>
+            <h4>A {SITE_NAME}</h4>
             <ul>
               <li>
                 <Link href={routes.newsroom()}>Nossa redação</Link>
@@ -97,16 +117,22 @@ export function SiteFooter({ categories }: { categories: readonly CategoryDefini
             Código do CONAR e as próprias redes de afiliados esperam.
           */}
           <p className="note">
-            <strong>Transparência:</strong> o CanalNerd usa publicidade e links de
+            <strong>Transparência:</strong> a {SITE_NAME} usa publicidade e links de
             afiliado. Nenhum dos dois influencia a posição de uma notícia no ranking
             de temperatura.{' '}
             <Link href="/politica-de-afiliados">Política de afiliados e publicidade</Link>
           </p>
         </div>
 
+        {/*
+          O ano continua sendo calculado em tempo de renderização, e não fixado
+          em "2026" como no protótipo estático: um rodapé com ano velho é o
+          sinal clássico de site abandonado, e a página é revalidada com
+          frequência suficiente para a conta nunca ficar desatualizada.
+        */}
         <p className="footer__legal">
-          © {new Date().getFullYear()} CanalNerd. Todos os direitos reservados. Marcas e
-          imagens pertencem aos seus respectivos detentores.
+          © {new Date().getFullYear()} {SITE_NAME} · Todos os direitos reservados ·
+          Marcas e imagens pertencem aos seus respectivos detentores.
         </p>
       </div>
     </footer>

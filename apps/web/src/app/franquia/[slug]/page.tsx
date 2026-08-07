@@ -41,6 +41,7 @@ import Link from 'next/link';
 
 import { catClass, routes } from '@canalnerd/core';
 
+import { DISCORD_INVITE_URL } from '@/lib/site';
 import { ArticleCard } from '@/components/article-card';
 import { BreadcrumbJsonLd, CollectionJsonLd } from '@/components/json-ld';
 import { PushOptIn } from '@/components/push-opt-in';
@@ -59,11 +60,22 @@ export async function generateMetadata({
 
   const { franchise } = data;
 
+  /**
+   * O padrão de título/descrição é o do protótipo `design/hub-franquia.html`,
+   * com o nome da franquia interpolado — para GTA VI ele resolve exatamente na
+   * copy homologada. Ele descreve os quatro blocos que a página realmente tem
+   * (notícias, linha do tempo, trailers, data de lançamento), o que casa com as
+   * buscas típicas de fandom ("gta 6 data de lançamento") melhor do que o
+   * genérico "todas as notícias e novidades" que estava aqui.
+   *
+   * A descrição do banco continua tendo precedência: ela é o texto que a
+   * redação escreveu para AQUELA franquia.
+   */
   return {
-    title: `${franchise.name} — todas as notícias e novidades`,
+    title: `${franchise.name} — Notícias, Trailers e Data de Lançamento`,
     description:
       franchise.description ||
-      `Acompanhe tudo sobre ${franchise.name}: notícias, lançamentos, trailers e análises.`,
+      `Tudo sobre ${franchise.name} em um só lugar: últimas notícias, linha do tempo, trailers e data de lançamento.`,
     alternates: { canonical: routes.franchise(slug) },
     openGraph: {
       title: franchise.name,
@@ -189,7 +201,7 @@ export default async function FranchiseHubPage({
               Seguir {franchise.name}
             </button>
             <a
-              href="https://discord.gg/canalnerd"
+              href={DISCORD_INVITE_URL}
               className="btn btn--discord"
               // `noopener` impede que a página de destino acesse `window.opener`
               // e redirecione a nossa aba (ataque de tabnabbing). `noreferrer`

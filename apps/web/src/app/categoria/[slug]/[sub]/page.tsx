@@ -65,6 +65,25 @@ export function generateStaticParams() {
   return SUBCATEGORIES.map((sub) => ({ slug: sub.parent, sub: sub.slug }));
 }
 
+/**
+ * Copy de SEO das sub-seções que já têm protótipo de design
+ * (hoje: Hardware, em `design/categoria-hardware.html`).
+ *
+ * A descrição foi escrita para uma página de INTENÇÃO DE COMPRA, que é o
+ * contrato desta sub-seção: ela promete bancada própria, comparativo de preço e
+ * veredito ANTES de qualquer link comercial — nessa ordem. É a mesma sequência
+ * que o leitor encontra na página, e é ela que separa "review" de "vitrine".
+ *
+ * Sem sufixo de marca: o template do layout raiz acrescenta "| Ortus Pixel".
+ */
+const SUBCATEGORY_SEO: Partial<Record<SubcategorySlug, { title: string; description: string }>> = {
+  hardware: {
+    title: 'Hardware — Reviews e Guias de Compra',
+    description:
+      'Placas de vídeo, processadores, monitores e periféricos: reviews com bancada própria, comparativo de preço e veredito fechado antes de qualquer link de compra.',
+  },
+};
+
 export async function generateMetadata({
   params,
 }: {
@@ -77,10 +96,11 @@ export async function generateMetadata({
   if (!data) return {};
 
   const { subcategory } = data;
+  const designSeo = SUBCATEGORY_SEO[sub as SubcategorySlug];
 
   return {
-    title: `${subcategory.name} — reviews, comparativos e guias de compra`,
-    description: subcategory.description,
+    title: designSeo?.title ?? `${subcategory.name} — reviews, comparativos e guias de compra`,
+    description: designSeo?.description ?? subcategory.description,
     alternates: { canonical: routes.subcategory(slug, sub) },
     openGraph: {
       title: `${subcategory.name} · ${subcategory.categoryName}`,

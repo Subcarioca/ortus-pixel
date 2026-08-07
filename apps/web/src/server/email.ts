@@ -15,6 +15,8 @@ import 'server-only';
  * seed e dos conectores em modo mock.
  */
 
+import { NEWSLETTER_FROM_EMAIL, SITE_NAME } from '@/lib/site';
+
 export interface EmailMessage {
   to: string;
   subject: string;
@@ -76,7 +78,7 @@ const resendProvider: EmailProvider = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: process.env.NEWSLETTER_FROM ?? 'CanalNerd <noticias@canalnerd.com.br>',
+          from: process.env.NEWSLETTER_FROM ?? `${SITE_NAME} <${NEWSLETTER_FROM_EMAIL}>`,
           to: [message.to],
           subject: message.subject,
           text: message.text,
@@ -132,11 +134,11 @@ export function buildConfirmationEmail(email: string, token: string): EmailMessa
 
   return {
     to: email,
-    subject: 'Confirme sua inscrição na newsletter do CanalNerd',
+    subject: `Confirme sua inscrição na newsletter da ${SITE_NAME}`,
     text: [
       'Falta só um passo!',
       '',
-      'Clique no link abaixo para confirmar sua inscrição na newsletter do CanalNerd:',
+      `Clique no link abaixo para confirmar sua inscrição na newsletter da ${SITE_NAME}:`,
       '',
       confirmUrl,
       '',
@@ -144,7 +146,7 @@ export function buildConfirmationEmail(email: string, token: string): EmailMessa
       '',
       'Se você não pediu esta inscrição, apenas ignore este e-mail — nada será enviado.',
       '',
-      '— Equipe CanalNerd',
+      `— Equipe ${SITE_NAME}`,
     ].join('\n'),
   };
 }
@@ -163,7 +165,7 @@ export function buildWelcomeEmail(email: string, unsubscribeToken: string): Emai
 
   return {
     to: email,
-    subject: 'Inscrição confirmada — bem-vindo ao CanalNerd',
+    subject: `Inscrição confirmada — bem-vindo à ${SITE_NAME}`,
     text: [
       'Pronto! Sua inscrição está confirmada.',
       '',
@@ -172,7 +174,7 @@ export function buildWelcomeEmail(email: string, unsubscribeToken: string): Emai
       '',
       `Para cancelar quando quiser: ${unsubscribeUrl}`,
       '',
-      '— Equipe CanalNerd',
+      `— Equipe ${SITE_NAME}`,
     ].join('\n'),
     headers: {
       'List-Unsubscribe': `<${unsubscribeUrl}>`,

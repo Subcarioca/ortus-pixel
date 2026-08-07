@@ -16,6 +16,7 @@ import { cookies } from 'next/headers';
 
 import { prisma } from '@canalnerd/db';
 
+import { ADMIN_SESSION_COOKIE } from '@/server/admin-auth';
 import { getClientIp, hashPersonalData, safeCompare } from '@/server/security';
 
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,7 @@ async function isAuthenticated(): Promise<boolean> {
   if (!expected) return false;
 
   const cookieStore = await cookies();
-  const provided = cookieStore.get('canalnerd_admin')?.value;
+  const provided = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
   return Boolean(provided) && safeCompare(provided!, expected);
 }
 

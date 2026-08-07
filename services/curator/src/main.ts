@@ -116,7 +116,7 @@ function scheduleLoop(task: () => Promise<void>, intervalMs: number, label: stri
 async function main(): Promise<void> {
   const runOnce = process.argv.includes('--once');
 
-  console.log('CanalNerd — serviço de curadoria');
+  console.log('Ortus Pixel — serviço de curadoria');
   console.log(`Fase ativa: ${getActivePhase()} | Modo: ${runOnce ? 'ciclo único' : 'contínuo'}\n`);
 
   validateStartup();

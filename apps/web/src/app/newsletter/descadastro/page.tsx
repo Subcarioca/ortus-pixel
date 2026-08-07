@@ -3,6 +3,8 @@ import Link from 'next/link';
 
 import { routes } from '@canalnerd/core';
 
+import { CONTACT_EMAIL } from '@/lib/site';
+
 export const metadata: Metadata = {
   title: 'Inscrição cancelada',
   robots: { index: false, follow: false },
@@ -24,7 +26,7 @@ export default async function UnsubscribedPage({
       <p>
         {ok
           ? 'Você não receberá mais nossos e-mails. Sentiremos sua falta — se mudar de ideia, a porta fica aberta.'
-          : 'O link pode estar incorreto. Escreva para contato@canalnerd.com.br que resolvemos manualmente.'}
+          : `O link pode estar incorreto. Escreva para ${CONTACT_EMAIL} que resolvemos manualmente.`}
       </p>
       <p>
         <Link href={routes.home()} className="btn btn--ghost">

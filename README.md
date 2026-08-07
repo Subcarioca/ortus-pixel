@@ -1,4 +1,4 @@
-# CanalNerd
+# Ortus Pixel
 
 Portal de notícias do universo nerd (games, cinema/séries, anime/mangá, HQs, tech, eventos)
 com um **pipeline de curadoria automática** que monitora fontes externas, calcula um
@@ -38,7 +38,7 @@ Portais de nicho competem por **minutos**. Quando a Rockstar anuncia um atraso d
 quem publica primeiro leva a maior parte do tráfego orgânico e social; quem publica em
 quarto lugar leva uma fração.
 
-O CanalNerd ataca isso com um serviço que roda continuamente e responde três perguntas:
+A Ortus Pixel ataca isso com um serviço que roda continuamente e responde três perguntas:
 
 | Pergunta | Resposta do sistema |
 |---|---|
@@ -361,14 +361,16 @@ Sem ele, um reinício deixa tudo fora do ar até alguém entrar por SSH.
 
 Nada aqui é opcional. Os quatro primeiros itens são **bloqueadores de lançamento**.
 
-- [ ] **`robots.ts` ainda gate no domínio antigo — BLOQUEADOR.**
-      `apps/web/src/app/robots.ts` decide se permite indexação com
+- [x] **`robots.ts` travado no domínio antigo — BLOQUEADOR, CORRIGIDO no rebrand.**
+      A rota decidia se permite indexação com
       `NEXT_PUBLIC_SITE_URL?.includes('canalnerd.com.br')`. Com o domínio novo essa
-      condição é **falsa**, e o site entra no ar servindo `Disallow: /` para todos os
-      buscadores — silenciosamente, sem erro em log nenhum. O sintoma seria "o site está
-      no ar há três semanas e não indexou nada". A correção pertence à tarefa de rebrand
-      do código, mas **verifique `curl https://ortuspixel.com/robots.txt` antes de
-      divulgar o site**.
+      condição seria **falsa**, e o site entraria no ar servindo `Disallow: /` para todos
+      os buscadores — silenciosamente, sem erro em log nenhum. O sintoma seria "o site
+      está no ar há três semanas e não indexou nada".
+      A condição agora descreve o estado real ("produção + host público HTTPS não-local")
+      e não cita domínio nenhum, então trocar de domínio não volta a quebrar isso.
+      Ainda assim, **verifique `curl https://ortuspixel.com/robots.txt` antes de
+      divulgar o site** — é um teste de 2 segundos contra um erro de 3 semanas.
 - [ ] **`ADMIN_ACCESS_TOKEN` trocado.** O valor do `.env.example`
       (`troque-me-antes-de-producao`) é público — está no repositório. Enquanto o painel
       usar segredo compartilhado, esse valor sozinho dá acesso a publicar, editar e
@@ -1201,7 +1203,7 @@ Itens que **precisam de decisão do cliente** antes do lançamento:
 ### Re-skin para o design v0.3 — status: **concluído**
 
 O produto não escreve CSS próprio: ele carrega a folha do design system
-(`apps/web/src/app/canalnerd.css`), que é cópia **verbatim** de `design/assets/*.css`
+(`apps/web/src/app/ortuspixel.css`), que é cópia **verbatim** de `design/assets/*.css`
 até a seção 17. O que estava desalinhado, portanto, nunca foi o estilo — era o
 **markup**, que citava classes de versões anteriores ou classes que nunca existiram.
 
@@ -1242,9 +1244,14 @@ Estão listados para não serem confundidos com divergência de estilo.
 | `.load-more`, `.chip__count`, `.editoria` | Paginação, contadores por filtro e blocos por editoria na home — mudanças de consulta, não de apresentação |
 | `.table-wrap` / `.cmp` | Tabelas comparativas: o parser de Markdown ainda não suporta tabelas (decisão deliberada, ver `article-body.tsx`) |
 
-O **rebrand de "CanalNerd" para "Ortus Pixel"** já foi aplicado em `design/` e ainda
-**não** no código do app — é trabalho separado, de propósito: misturar renomeação de
-marca com refactor de markup tornaria os dois impossíveis de revisar.
+O **rebrand de "CanalNerd" para "Ortus Pixel"** foi aplicado primeiro em `design/` e
+depois no código do app, em tarefas separadas de propósito: misturar renomeação de marca
+com refactor de markup tornaria os dois impossíveis de revisar.
+
+**Status: concluído.** Continuam com o nome antigo, por decisão explícita e isolada:
+o escopo dos pacotes npm (`@canalnerd/*`) e as credenciais do Postgres de
+desenvolvimento (`docker-compose.yml`), que renomear quebraria o volume local sem
+benefício nenhum. Ambos são trabalho de uma tarefa futura, com o site já estável no ar.
 
 ---
 

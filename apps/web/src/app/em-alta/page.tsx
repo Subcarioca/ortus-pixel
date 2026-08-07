@@ -51,10 +51,23 @@ import { getTrendingRanking } from '@/server/queries';
 
 export const revalidate = 60;
 
+/**
+ * O título NÃO leva sufixo de marca escrito à mão: o template do layout raiz
+ * (`%s | Ortus Pixel`) já o acrescenta. Escrever "| Ortus Pixel" aqui produziria
+ * a marca duas vezes no mesmo <title>.
+ *
+ * CORREÇÃO DE CONFORMIDADE (ADR 0009) junto com o reposicionamento: a descrição
+ * anterior dizia que o ranking era "ordenado pelo nosso score de popularidade".
+ * Era uma promessa que a página não cumpre mais — e não deve cumprir: o número
+ * de 0 a 100 é interno ao /admin, e anunciá-lo na SERP criaria a expectativa de
+ * encontrá-lo na página (frustração do leitor) além de entregar ao concorrente
+ * a informação de que existe um número calibrável. O que a descrição vende
+ * agora é o que a página de fato entrega: a ORDEM, ao vivo.
+ */
 export const metadata: Metadata = {
-  title: 'Em alta agora — o que o universo nerd está buscando',
+  title: 'Em Alta — O Que Está Bombando no Universo Nerd',
   description:
-    'Ranking ao vivo das notícias mais quentes de games, cinema, séries e anime, ordenado pelo nosso score de popularidade.',
+    'Ranking ao vivo do que está bombando agora: games, cinema, animes e tech, atualizado em tempo real. Sem número de score exposto, sem clickbait — só o que importa.',
   alternates: { canonical: routes.trending() },
 };
 

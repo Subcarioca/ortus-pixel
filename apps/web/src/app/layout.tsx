@@ -12,7 +12,8 @@ import type { Metadata, Viewport } from 'next';
 
 import { CATEGORIES, routes } from '@canalnerd/core';
 
-import './canalnerd.css';
+import './ortuspixel.css';
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, SOCIAL_HANDLE } from '@/lib/site';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
@@ -20,32 +21,44 @@ import { BottomNav } from '@/components/bottom-nav';
 import { OrganizationJsonLd } from '@/components/json-ld';
 import { AdSenseLoader } from '@/components/adsense-loader';
 
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME ?? 'CanalNerd';
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
-
 /**
  * Metadados padrão, herdados e sobrescritos por cada página.
  *
  * `metadataBase` é o que permite usar caminhos relativos em Open Graph e
  * canonical: sem ele, o Next emite avisos e as URLs sociais saem quebradas.
+ *
+ * Nome, URL e descrição vêm de `@/lib/site` — fonte única da marca. Ver o
+ * racional lá: repetir o literal em cada arquivo é o que faz uma troca de marca
+ * deixar rastro do nome antigo em um canto esquecido.
  */
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: `${SITE_NAME} — Notícias de games, cinema, séries, anime e cultura nerd`,
+    default: `${SITE_NAME} — As Notícias Nerd Mais Quentes, Primeiro`,
     // O `%s` é preenchido pelo título de cada página.
     template: `%s | ${SITE_NAME}`,
   },
-  description:
-    'Cobertura em tempo real do universo nerd: games, cinema, séries, anime, mangá, HQs e tecnologia. O que está em alta agora, primeiro.',
+  description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   openGraph: {
     type: 'website',
     locale: 'pt_BR',
     siteName: SITE_NAME,
+    url: SITE_URL,
   },
   twitter: {
     card: 'summary_large_image',
+    // `site` é a conta do VEÍCULO e `creator` a de quem assina o conteúdo.
+    // Enquanto não houver perfil por autor, os dois apontam para a marca — é
+    // preferível a deixar `creator` vazio, que faz o X exibir o card sem atribuição.
+    site: SOCIAL_HANDLE,
+    creator: SOCIAL_HANDLE,
+  },
+  // Título usado quando alguém adiciona o site à tela de início no iOS. O limite
+  // prático é ~12 caracteres antes de o iOS truncar com reticências; "Ortus Pixel"
+  // cabe, então usamos o nome da marca sem abreviar.
+  appleWebApp: {
+    title: SITE_NAME,
   },
   robots: {
     index: true,

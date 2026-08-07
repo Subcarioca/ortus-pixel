@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Tipos, contratos e vocabulário de domínio compartilhados por todo o CanalNerd.",
+  "description": "Tipos, contratos e vocabulário de domínio compartilhados por toda a Ortus Pixel.",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {

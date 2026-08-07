@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Motor de cálculo do score de popularidade do CanalNerd.",
+  "description": "Motor de cálculo do score de popularidade da Ortus Pixel.",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {

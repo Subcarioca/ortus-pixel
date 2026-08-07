@@ -32,6 +32,8 @@ import {
   routes,
 } from '@canalnerd/core';
 
+import { SITE_NAME, SOCIAL_PROFILES } from '@/lib/site';
+
 /**
  * Serializa com escape dos caracteres que poderiam quebrar o contexto <script>.
  * `<` e `>` viram escapes Unicode válidos em JSON — o parser lê o mesmo valor,
@@ -70,11 +72,9 @@ export function OrganizationJsonLd({ siteName, siteUrl }: { siteName: string; si
           width: 600,
           height: 60,
         },
-        sameAs: [
-          'https://x.com/canalnerd',
-          'https://www.youtube.com/@canalnerd',
-          'https://www.instagram.com/canalnerd',
-        ],
+        // `sameAs` é o que amarra o site aos perfis oficiais como UMA entidade
+        // no Knowledge Graph. Handle único (@ortuspixel) em todas as redes.
+        sameAs: [...SOCIAL_PROFILES],
       }}
     />
   );
@@ -113,7 +113,7 @@ export function ArticleJsonLd({
       author: { '@id': authorId },
       publisher: {
         '@type': 'NewsMediaOrganization',
-        name: process.env.NEXT_PUBLIC_SITE_NAME ?? 'CanalNerd',
+        name: SITE_NAME,
         logo: {
           '@type': 'ImageObject',
           url: absoluteUrl('/logo.png'),

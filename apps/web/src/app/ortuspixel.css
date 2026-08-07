@@ -1,11 +1,11 @@
 /* PROVENIÊNCIA — leia antes de editar qualquer linha deste arquivo.
    ---------------------------------------------------------------------------
    Da próxima linha até o início da seção 17 ("Apêndice do produto"), este
-   arquivo é uma cópia VERBATIM de design/assets/canalnerd.css (v0.3), incluindo
+   arquivo é uma cópia VERBATIM de design/assets/ortuspixel.css (v0.3), incluindo
    os comentários originais do time de design. Ele é verificável:
 
-       diff <(sed -n '15,1220p' apps/web/src/app/canalnerd.css) \
-            design/assets/canalnerd.css     # deve sair vazio
+       diff <(sed -n '15,1220p' apps/web/src/app/ortuspixel.css) \
+            design/assets/ortuspixel.css     # deve sair vazio
 
    Para mudar cor, espaçamento ou componente: mude no design e copie de novo.
    Editar aqui cria divergência silenciosa entre protótipo e produto.
@@ -13,7 +13,7 @@
    seção 17, no fim do arquivo — e nada lá redefine token do design.
    ========================================================================== */
 /* ==========================================================================
-   CanalNerd — Design System v0.2 (protótipo de alta fidelidade)
+   Ortus Pixel — Design System v0.2 (protótipo de alta fidelidade)
    Mobile-first. Tema CLARO por padrão + tema ESCURO por escolha (toggle).
    Marca: PRETO + CINZA + VERMELHO. Hierarquia editorial por "temperatura".
    Autor: UI/UX — entrega para o time de front-end/pipeline.
@@ -1226,7 +1226,7 @@ body:has(.push-prompt[data-open="true"]) .ad-anchor { display: none; }
    ==========================================================================
 
    REGRA DE OURO DESTE ARQUIVO: da linha 1 até aqui, o conteúdo é uma cópia
-   BYTE A BYTE de design/assets/canalnerd.css (v0.3). Não edite nada acima —
+   BYTE A BYTE de design/assets/ortuspixel.css (v0.3). Não edite nada acima —
    edite no design e copie de novo. Um token ou componente divergente entre
    protótipo e produto é o bug que ninguém reporta e todo mundo vê: o site
    "quase" igual ao protótipo, com um cinza levemente diferente em cada tela.

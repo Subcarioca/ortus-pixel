@@ -62,6 +62,7 @@ import { RelativeTime } from '@/components/relative-time';
 import { ShareBar } from '@/components/share-bar';
 import { SpoilerBlock } from '@/components/spoiler-block';
 import { commercePolicy } from '@/lib/ads';
+import { DISCORD_INVITE_URL, SITE_NAME } from '@/lib/site';
 import { availableProviders } from '@/server/oauth';
 import { getReaderSession } from '@/server/reader-session';
 import { getArticleBySlug, getArticleComments, getRelatedArticles } from '@/server/queries';
@@ -87,7 +88,18 @@ export async function generateMetadata({
   const url = routes.article(article.category.slug, article.slug);
 
   return {
-    title: article.title,
+    /**
+     * Artigo é a única rota com separador de TRAVESSÃO em vez de barra vertical
+     * ("Manchete — Ortus Pixel", e não "Manchete | Ortus Pixel"), conforme os
+     * protótipos `design/artigo.html` e `design/artigo-review.html`.
+     *
+     * Não é capricho tipográfico: manchete é texto longo, e a barra vertical
+     * grudada no fim de uma frase de 70 caracteres lê-se como ruído na SERP. O
+     * travessão é lido como continuação, e é o padrão que veículos de notícia
+     * usam. Por isso `absolute` — ele desliga o template `%s | Ortus Pixel` do
+     * layout raiz, que se aplica ao resto do site.
+     */
+    title: { absolute: `${article.title} — ${SITE_NAME}` },
     description: article.excerpt,
     alternates: { canonical: url },
     openGraph: {
@@ -433,7 +445,7 @@ export default async function ArticlePage({
                 outros fãs e com a redação.
               </p>
               <a
-                href="https://discord.gg/canalnerd"
+                href={DISCORD_INVITE_URL}
                 className="btn btn--discord"
                 rel="noopener noreferrer"
                 target="_blank"

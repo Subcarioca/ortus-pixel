@@ -5,7 +5,7 @@
  *
  * O QUE É E POR QUE IMPORTA: o `ads.txt` é a lista pública de quem está
  * autorizado a vender o inventário deste domínio. Sem ele, um fraudador compra
- * tráfego barato, declara ser "canalnerd.com.br" num exchange e revende
+ * tráfego barato, declara ser "ortuspixel.com" num exchange e revende
  * impressões falsas em nosso nome. Com ele, o comprador confere a lista e
  * recusa o vendedor não autorizado.
  *
@@ -31,6 +31,8 @@
  * inclusive a legítima. Ausência do arquivo é neutra; arquivo errado é nocivo.
  * Falhar seguro aqui significa não existir.
  */
+
+import { SITE_NAME } from '@/lib/site';
 
 const PUBLISHER_ID = process.env.ADSENSE_PUBLISHER_ID ?? '';
 
@@ -58,7 +60,7 @@ export function GET(): Response {
   }
 
   const lines = [
-    '# ads.txt — CanalNerd',
+    `# ads.txt — ${SITE_NAME}`,
     '# Lista de vendedores autorizados (IAB Tech Lab ads.txt v1.1).',
     '# Gerado por apps/web/src/app/ads.txt/route.ts a partir das variáveis de ambiente.',
     // `f08c47fec0942fa0` é o TAG-ID do Google no sistema do IAB. É público, fixo

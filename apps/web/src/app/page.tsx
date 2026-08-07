@@ -38,11 +38,13 @@
  * renderizava em uma coluna só, inclusive no desktop.
  */
 
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 
 import { CATEGORIES, catClass, catToken, heatClass, routes } from '@canalnerd/core';
 
+import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/site';
 import { ArticleCard } from '@/components/article-card';
 import { HeatBadge } from '@/components/heat-badge';
 import { HeatBar, TrendTag } from '@/components/heat-bar';
@@ -56,6 +58,21 @@ import { getHomeData, getTickerItems, getTopFranchises } from '@/server/queries'
  * é a invalidação por evento disparada pelo curator. Ver server/queries.ts.
  */
 export const revalidate = 60;
+
+/**
+ * Metadados da home.
+ *
+ * `title.absolute` — e não uma string simples — porque o layout raiz define o
+ * template `%s | Ortus Pixel`. Com string simples, a home sairia como
+ * "Ortus Pixel — As Notícias Nerd Mais Quentes, Primeiro | Ortus Pixel": a
+ * marca duplicada, ocupando o espaço útil da SERP (~60 caracteres) duas vezes.
+ * `absolute` diz ao Next para ignorar o template nesta rota.
+ */
+export const metadata: Metadata = {
+  title: { absolute: `${SITE_NAME} — As Notícias Nerd Mais Quentes, Primeiro` },
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: routes.home() },
+};
 
 export default async function HomePage() {
   // Paralelizamos: são três consultas independentes. Em série, a página

@@ -49,7 +49,12 @@ self.addEventListener('push', (event) => {
     payload = {};
   }
 
-  const title = typeof payload.title === 'string' ? payload.title : 'CanalNerd';
+  // Título de reserva quando a carga vem malformada. É literal (e não lido de
+  // variável de ambiente) porque o service worker é servido como arquivo
+  // estático de /public: ele não passa pelo bundler do Next e, portanto, não
+  // tem acesso a `process.env`. Ao trocar a marca, este literal precisa ser
+  // atualizado à mão — está anotado no relatório da renomeação.
+  const title = typeof payload.title === 'string' ? payload.title : 'Ortus Pixel';
   const body = typeof payload.body === 'string' ? payload.body : 'Nova notícia em alta.';
   const url = typeof payload.url === 'string' && payload.url.startsWith('/') ? payload.url : '/';
 
@@ -59,7 +64,7 @@ self.addEventListener('push', (event) => {
     badge: '/badge-72.png',
     // `tag` faz uma notificação nova SUBSTITUIR a anterior do mesmo assunto,
     // em vez de empilhar. Evita 5 notificações do mesmo tópico na tela.
-    tag: typeof payload.tag === 'string' ? payload.tag : 'canalnerd-noticia',
+    tag: typeof payload.tag === 'string' ? payload.tag : 'ortuspixel-noticia',
     // `renotify` garante que a substituição ainda alerte o usuário.
     renotify: true,
     // Não vibra nem faz som fora de horário razoável — respeito à atenção do

@@ -7,7 +7,7 @@
  * POR QUE ESTE SCRIPT EXISTE
  * --------------------------
  * O produto não escreve CSS próprio: ele carrega a folha do design system
- * (`apps/web/src/app/canalnerd.css`, cópia verbatim de `design/assets/*.css`
+ * (`apps/web/src/app/ortuspixel.css`, cópia verbatim de `design/assets/*.css`
  * mais um apêndice de pontes). Isso é ótimo para manter protótipo e produto
  * alinhados, e cria exatamente um risco: **escrever uma classe que não existe é
  * um erro silencioso**.
@@ -52,7 +52,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CSS_FILE = path.join(ROOT, 'apps/web/src/app/canalnerd.css');
+const CSS_FILE = path.join(ROOT, 'apps/web/src/app/ortuspixel.css');
 const CORE_PRESENTATION = path.join(ROOT, 'packages/core/src/presentation.ts');
 
 const args = process.argv.slice(2);

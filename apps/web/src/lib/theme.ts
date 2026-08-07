@@ -26,8 +26,16 @@
 export const THEME_VALUES = ['system', 'light', 'dark'] as const;
 export type ThemePreference = (typeof THEME_VALUES)[number];
 
-/** Chave no localStorage. Constante para o script inline e o React não divergirem. */
-export const THEME_STORAGE_KEY = 'canalnerd-theme';
+/**
+ * Chave no localStorage. Constante para o script inline e o React não divergirem.
+ *
+ * Renomeada de `canalnerd-theme` no reposicionamento de marca. Consequência
+ * conhecida e aceita: quem já tinha escolhido um tema volta ao padrão
+ * ("sistema") uma única vez, porque a chave antiga deixa de ser lida. Como o
+ * site ainda não está em produção, não vale a pena carregar um código de
+ * migração (ler a chave velha, copiar, apagar) para sempre por causa disso.
+ */
+export const THEME_STORAGE_KEY = 'ortuspixel-theme';
 
 export function isThemePreference(value: unknown): value is ThemePreference {
   return typeof value === 'string' && THEME_VALUES.includes(value as ThemePreference);

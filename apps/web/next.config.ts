@@ -57,7 +57,7 @@ const nextConfig: NextConfig = {
     // Larguras alinhadas aos breakpoints do design system (design/README.md §6).
     deviceSizes: [320, 560, 640, 768, 900, 1024, 1180, 1280],
     remotePatterns: [
-      { protocol: 'https', hostname: 'images.canalnerd.test' },
+      { protocol: 'https', hostname: 'images.ortuspixel.test' },
       { protocol: 'https', hostname: '**.ytimg.com' },
       // Placeholder de imagens do seed local — trocar pelo CDN real em produção.
       { protocol: 'https', hostname: 'picsum.photos' },

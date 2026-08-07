@@ -45,8 +45,15 @@ interface PushOptInProps {
 
 type State = 'checking' | 'unsupported' | 'available' | 'granted' | 'denied' | 'dismissed';
 
-/** Chave de recusa no armazenamento local. */
-const DISMISS_KEY = 'canalnerd:push-dismissed-at';
+/**
+ * Chave de recusa no armazenamento local.
+ *
+ * Renomeada junto com a marca. Efeito de uma vez só: quem já tinha dispensado o
+ * convite de push volta a vê-lo (a janela de 30 dias reinicia), porque a chave
+ * antiga não é mais consultada. Aceito conscientemente — ver a mesma nota em
+ * lib/theme.ts.
+ */
+const DISMISS_KEY = 'ortuspixel:push-dismissed-at';
 /** Recusou? Só perguntamos de novo em 30 dias (design §4). */
 const DISMISS_DAYS = 30;
 

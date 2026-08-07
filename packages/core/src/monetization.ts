@@ -84,7 +84,7 @@ export const DISCLOSURE_TEXT: Record<DisclosureKind, { label: string; body: stri
   affiliate: {
     label: 'Conteúdo com links de afiliado',
     body:
-      'Este texto contém links de afiliado: se você comprar por eles, o CanalNerd recebe uma comissão da loja, sem custo adicional para você. A escolha dos produtos é editorial e independente — nenhuma loja paga para aparecer aqui.',
+      'Este texto contém links de afiliado: se você comprar por eles, a Ortus Pixel pode receber uma comissão da loja, sem custo adicional para você. A escolha dos produtos é editorial e independente — nenhuma loja paga para aparecer aqui.',
   },
   sponsored: {
     label: 'Conteúdo patrocinado',

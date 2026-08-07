@@ -2,7 +2,7 @@
   "name": "@canalnerd/web",
   "version": "0.1.0",
   "private": true,
-  "description": "Front-end do CanalNerd (Next.js App Router) + painel editorial.",
+  "description": "Front-end da Ortus Pixel (Next.js App Router) + painel editorial.",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

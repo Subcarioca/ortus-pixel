@@ -74,7 +74,7 @@ export async function fetchWithResilience(
           // User-agent identificável é boa prática e exigência explícita de
           // várias APIs (o Reddit rejeita requisições sem UA descritivo).
           'User-Agent':
-            process.env.REDDIT_USER_AGENT ?? 'canalnerd/0.1 (+https://canalnerd.com.br)',
+            process.env.REDDIT_USER_AGENT ?? 'OrtusPixelBot/1.0 (+https://ortuspixel.com)',
           Accept: 'application/json, text/xml, application/xml, */*',
           ...options.headers,
         },

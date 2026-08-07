@@ -36,7 +36,7 @@ import { generateToken, hashPersonalData, hashToken } from './security';
  * caminho não cacheado (escrever comentário, ver o próprio pendente).
  */
 
-const SESSION_COOKIE = 'canalnerd_reader';
+const SESSION_COOKIE = 'ortuspixel_reader';
 
 /**
  * 30 dias. Comentar é atividade esporádica: sessão curta obrigaria a pessoa a

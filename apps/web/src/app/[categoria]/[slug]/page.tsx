@@ -203,7 +203,29 @@ export default async function ArticlePage({
         ]}
       />
 
-      <div className="container article-layout">
+      {/*
+        `.layout-2col` (conteúdo + 320px), e NÃO `.article-layout`.
+
+        Este era um bug de layout de verdade, e vale entender o mecanismo porque
+        ele é fácil de reintroduzir. `.article-layout` é uma grade de TRÊS
+        colunas a partir de 1180px — `56px | 1fr | 320px` —, e a primeira é o
+        trilho vertical de compartilhamento (`.share-rail`) do protótipo. Como
+        `.share-rail` é `display:none` abaixo de 1180px, ele desaparece da grade
+        e tudo funciona; a partir de 1180px ele reaparece. Só que o produto
+        nunca renderizou esse trilho: com apenas dois filhos, era o `<article>`
+        que caía na coluna de 56px. Em telas grandes — as do desktop, as da
+        redação, as de quem revisa o site — o texto da matéria virava uma tira
+        de uma palavra por linha.
+
+        Por que não simplesmente adicionar o trilho: no protótipo ele é uma
+        pilha de botões CIRCULARES de 48px, e o CSS esconde o rótulo textual
+        (`.share-rail .share__btn span { display:none }`) porque cada botão
+        mostra o ícone da rede. O produto ainda não tem sistema de ícones, então
+        o trilho sairia como cinco círculos vazios. Enquanto os ícones não
+        existirem, a resposta certa é usar o componente de duas colunas que o
+        design também oferece — e não fingir uma terceira coluna.
+      */}
+      <div className="container layout-2col">
         <article className="article">
           {/* ---------- 1 a 3: badges e contexto ---------- */}
           <div className="article__kicker">

@@ -23,7 +23,7 @@
  */
 
 import type { Heat, HeatLevel, Trend } from '@canalnerd/core';
-import { HEAT_LABELS, TREND_LABELS } from '@canalnerd/core';
+import { HEAT_LABELS, TREND_LABELS, heatClass } from '@canalnerd/core';
 
 interface HeatBarProps {
   heat: Heat;
@@ -34,7 +34,13 @@ interface HeatBarProps {
 export function HeatBar({ heat, level, size = 'md' }: HeatBarProps) {
   return (
     <span
-      className={`heatbar heatbar--${heat}${size === 'sm' ? ' heatbar--sm' : ''}`}
+      // `heatClass` e não `heatbar--${heat}`: a faixa `base` NÃO tem modificador
+      // no design (`.heatbar` já nasce com `--h: var(--heat-base)`), então a
+      // interpolação direta produzia `.heatbar--base` — a classe mais frequente
+      // do site — sem nenhuma regra correspondente. A assimetria é traiçoeira
+      // porque o BADGE ao lado, no mesmo `.card__head`, tem os quatro
+      // modificadores. Ver HEAT_BLOCK_MODIFIERS em core/presentation.ts.
+      className={`${heatClass('heatbar', heat)}${size === 'sm' ? ' heatbar--sm' : ''}`}
       data-on={level}
       role="img"
       aria-label={`Temperatura: ${HEAT_LABELS[heat].toLowerCase()}`}

@@ -47,7 +47,7 @@
  */
 
 import type { Heat } from '@canalnerd/core';
-import { HEAT_LABELS } from '@canalnerd/core';
+import { HEAT_LABELS, heatClass } from '@canalnerd/core';
 
 interface HeatBadgeProps {
   heat: Heat;
@@ -69,7 +69,12 @@ interface HeatBadgeProps {
 export function HeatBadge({ heat, size = 'sm' }: HeatBadgeProps) {
   return (
     <span
-      className={`heat heat--${heat}${size === 'lg' ? ' heat--lg' : ''}`}
+      // O badge é o único bloco em que as QUATRO faixas têm modificador, então
+      // aqui `heatClass` devolve exatamente o que a interpolação direta
+      // devolveria. Usamos mesmo assim: é a mesma tabela que responde por
+      // `.heatbar`, `.rank` e `.score`, e ter um único caminho evita que o
+      // próximo bloco de temperatura nasça com a interpolação ingênua de novo.
+      className={`${heatClass('heat', heat)}${size === 'lg' ? ' heat--lg' : ''}`}
       // O rótulo textual já está no conteúdo; o `title` acrescenta contexto no
       // hover para quem quiser entender o que a faixa significa.
       title={`Faixa de popularidade: ${HEAT_LABELS[heat]}`}

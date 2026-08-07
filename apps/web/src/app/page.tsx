@@ -41,7 +41,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 
-import { CATEGORIES, catClass, catToken, routes } from '@canalnerd/core';
+import { CATEGORIES, catClass, catToken, heatClass, routes } from '@canalnerd/core';
 
 import { ArticleCard } from '@/components/article-card';
 import { HeatBadge } from '@/components/heat-badge';
@@ -223,7 +223,11 @@ export default async function HomePage() {
             <ol className="rank-list">
               {home.trending.map((item, index) => (
                 <li key={item.id}>
-                  <Link href={item.url} className={`rank rank--${item.heat}`}>
+                  {/* `heatClass` porque `.rank` só tem modificador para as duas
+                      faixas quentes: no design, "relevante" e "guia" usam a
+                      linha neutra. `rank--${item.heat}` gerava `.rank--base` e
+                      `.rank--ever`, que não existem. */}
+                  <Link href={item.url} className={heatClass('rank', item.heat)}>
                     {/* Posição em mono, com zero à esquerda: é o único número
                         público da página e precisa parecer "medida", não texto. */}
                     <span className="rank__pos">{String(index + 1).padStart(2, '0')}</span>
@@ -239,7 +243,7 @@ export default async function HomePage() {
                     </span>
                     {/* `.score` agrupa termômetro + tendência à direita. O
                         NÚMERO (`.score__num`) não entra aqui: é /admin. */}
-                    <span className={`score score--${item.heat}`}>
+                    <span className={heatClass('score', item.heat)}>
                       <HeatBar heat={item.heat} level={item.heatLevel} />
                       <TrendTag trend={item.trend} />
                     </span>
@@ -359,8 +363,32 @@ export default async function HomePage() {
               <Link
                 key={category.slug}
                 href={routes.category(category.slug)}
-                className={`chip cat--${category.slug}`}
+                className="chip"
               >
+                {/*
+                  CLASSE INERTE REMOVIDA, COR RECUPERADA DE OUTRO JEITO.
+
+                  Antes o chip levava `chip cat--${category.slug}`, e isso estava
+                  errado por dois motivos independentes:
+
+                  1. O slug da URL não é o token do design (`cinema-e-series` vs
+                     `cinema`), então metade dos modificadores apontava para uma
+                     classe inexistente.
+                  2. Mesmo com o token certo, não adiantaria: `.cat--*` só
+                     DECLARA a variável `--c`, e `.chip` não lê `--c` em lugar
+                     nenhum. A classe era decorativa sem decorar nada — o pior
+                     tipo de código, porque parece intencional.
+
+                  O protótipo tem um idioma pronto para "marcador colorido da
+                  editoria": um `.cat` VAZIO, que renderiza só o filete de 14×3px
+                  do `::before` (index.html usa exatamente isso ao lado do título
+                  de seção). Reaproveitamos esse idioma aqui em vez de inventar
+                  um modificador de chip que o design não tem.
+
+                  `aria-hidden` porque é redundante: o nome da editoria vem
+                  escrito ao lado, em texto.
+                */}
+                <span className={catClass(category.slug)} aria-hidden="true" />
                 {category.name}
               </Link>
             ))}

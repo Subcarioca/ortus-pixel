@@ -35,7 +35,9 @@ export const metadata: Metadata = {
 
 export default function AffiliatePolicyPage() {
   return (
-    <div className="container article-layout">
+    // Só `.container`: página de texto corrido, sem sidebar. Ver a nota sobre
+    // `.article-layout` em app/[categoria]/[slug]/page.tsx.
+    <div className="container">
       <article className="article">
         <h1 className="article__title">Política de afiliados e publicidade</h1>
         <p className="article__dek">

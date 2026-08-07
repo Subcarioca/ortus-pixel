@@ -112,10 +112,19 @@ painel editorial se popula e nada quebra.
 ### Testes e verificação
 
 ```bash
-npm run typecheck    # verificação de tipos em todos os workspaces
-npm test             # testes do motor de score e da deduplicação
-npm run db:studio    # inspeção visual do banco (Prisma Studio)
+npm run typecheck      # verificação de tipos em todos os workspaces
+npm test               # testes do motor de score, da deduplicação e da apresentação
+npm run check:classes  # markup servido × folha do design (precisa do dev server no ar)
+npm run db:studio      # inspeção visual do banco (Prisma Studio)
 ```
+
+Sobre o `check:classes`: o produto **não escreve CSS próprio** — ele carrega a folha do
+design system. Isso mantém protótipo e produto alinhados e cria exatamente um risco:
+escrever uma classe que não existe é um **erro silencioso**. Não há falha de build nem
+aviso no console; o elemento só renderiza sem o estilo que deveria ter. Este script busca
+as páginas no servidor de desenvolvimento e falha se alguma classe do HTML não existir no
+CSS — inclusive as montadas em tempo de execução, que são justamente as que erram. Sem
+servidor no ar, `npm run check:classes -- --skip-runtime` roda só as checagens estáticas.
 
 ### Dependências opcionais
 
@@ -1187,12 +1196,55 @@ Itens que **precisam de decisão do cliente** antes do lançamento:
   Cobertura hoje é alta, mas num navegador antigo os tokens ficam inválidos. O caminho de
   saída já está documentado pelo design: compilar os tokens em dois blocos (`:root` e
   `[data-theme=dark]`). A arquitetura não muda, só a saída do CSS.
-- **Re-skin para o design v0.2.** Os *tokens* do produto já são os do design novo
-  (com `light-dark()`), e os componentes novos (monetização, comentários, tema) usam as
-  classes v0.2. Os componentes **antigos** ainda usam o vocabulário v0.1
-  (`.cd-box` × `.side-box`, `.rank-list` × `.rank`). Sincronizar exige tocar o markup de
-  todas as páginas — mudança grande demais para viajar junto com a entrega de
-  monetização e impossível de reverter isoladamente se algo quebrar.
+- ~~**Re-skin para o design v0.2.**~~ **Concluído** — ver a seção abaixo.
+
+### Re-skin para o design v0.3 — status: **concluído**
+
+O produto não escreve CSS próprio: ele carrega a folha do design system
+(`apps/web/src/app/canalnerd.css`), que é cópia **verbatim** de `design/assets/*.css`
+até a seção 17. O que estava desalinhado, portanto, nunca foi o estilo — era o
+**markup**, que citava classes de versões anteriores ou classes que nunca existiram.
+
+**O que foi sincronizado**
+
+| Área | O que mudou |
+|---|---|
+| Vocabulário v0.1/v0.2 → v0.3 | `.cd-box` → `.side-box`, `.rank-list__*` → `.rank__*`, `.section__head` → `.section-head`, `.card__foot` → `.meta`, `.article__body` → `.prose`, `.share-bar` → `.share`, `.fandom-list` → `.fandoms`, `.trending-head` → `.hub-hero` |
+| Grades | `.grid` sozinho não define coluna nenhuma no design; os feeds ganharam `.g-sm-2` / `.g-md-3` / `.g-lg-4` |
+| Layout de artigo | `.article-layout` → `.layout-2col`. A primeira é grade de **três** colunas (`56px │ 1fr │ 320px`) e a coluna de 56px é o trilho de compartilhamento, que o produto não renderiza — acima de 1180px o texto da matéria caía nela |
+| Slug de editoria × token do design | `cat--${slug}` gerava `.cat--cinema-e-series`, `.cat--anime-e-manga` e `.cat--hqs`; agora passa por `catModifier()` / `catClass()` |
+| Modificadores de temperatura | `heatbar--${heat}` gerava `.heatbar--base` em quase todo card. `base` é o estado **padrão** e não tem modificador. Centralizado em `heatClass()` |
+| Bloco de afiliados | A variante `summary` reutilizava o markup da `buybox`; passou a usar `.aff-summary__list` + `.prod`, que é o cartão de **produto** (a `.buybox` compara **lojas**) |
+| Newsletter | `.cta-inline` é grade de duas colunas e distribui pela ordem dos **filhos diretos**; o bloco emitia cinco elementos soltos e saía em zigue-zague |
+
+**O que garante que não volta**
+
+`npm run check:classes` compara o HTML **realmente servido** por 15 páginas com o CSS
+do design e falha se aparecer classe inexistente ou vocabulário morto. Precisa do dev
+server no ar; sem ele, `npm run check:classes -- --skip-runtime` mantém as checagens
+estáticas. `packages/core/src/presentation.test.ts` cobre os dois mapas de tradução
+(slug → token de editoria, temperatura → modificador) sem depender de servidor nem de
+dados.
+
+**O que ficou de fora — e por quê**
+
+Nada disso é dívida de re-skin: são recursos do protótipo que o produto ainda não tem.
+Estão listados para não serem confundidos com divergência de estilo.
+
+| Do protótipo | Por que não entrou |
+|---|---|
+| `.share-rail`, `.icon-btn`, `.nav-toggle`, `.thumb__play`, `.trend` com seta | **Não há sistema de ícones.** O protótipo usa `<svg><use href="#i-…">`; sem os ícones, esses componentes sairiam como círculos e quadrados vazios. É a maior lacuna visual restante e vale como próximo passo |
+| `.verdict` / `.verdict__score` / `.pros-cons` | O veredito de review (nota, prós e contras) já existe no **banco** (`reviewData`), mas nenhuma página o renderiza |
+| `.toc` | Sumário de artigo longo — os `id` dos títulos já são gerados por `article-body.tsx`, falta a lista |
+| `.progress` / `.sticky-bar` | Barra de progresso de leitura: exigiria transformar a página de artigo em Client Component |
+| `.shop`, `.deal-strip` | Vitrine de produtos no hub de franquia e faixa de ofertas em Hardware — dependem de dado que o pipeline ainda não coleta |
+| `.social-proof` / `.avatars` / `.online` | Indicadores de presença ao vivo. Não temos o dado, e um indicador que não reflete estado nenhum é pior que nenhum |
+| `.load-more`, `.chip__count`, `.editoria` | Paginação, contadores por filtro e blocos por editoria na home — mudanças de consulta, não de apresentação |
+| `.table-wrap` / `.cmp` | Tabelas comparativas: o parser de Markdown ainda não suporta tabelas (decisão deliberada, ver `article-body.tsx`) |
+
+O **rebrand de "CanalNerd" para "Ortus Pixel"** já foi aplicado em `design/` e ainda
+**não** no código do app — é trabalho separado, de propósito: misturar renomeação de
+marca com refactor de markup tornaria os dois impossíveis de revisar.
 
 ---
 

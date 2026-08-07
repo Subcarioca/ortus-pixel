@@ -163,7 +163,15 @@ export default async function AdminAffiliatesPage() {
                     </td>
 
                     <td>
-                      <span className={`price-age price-age--${freshness}`}>
+                      {/* `fresh` é o estado padrão e não tem modificador no CSS
+                          — `.price-age` sozinho já é o mono discreto. Só
+                          `warning` e `stale` desviam. Interpolar direto gerava
+                          `.price-age--fresh`, uma classe que não existe. */}
+                      <span
+                        className={`price-age${
+                          freshness === 'fresh' ? '' : ` price-age--${freshness}`
+                        }`}
+                      >
                         {offer.priceUpdatedAt
                           ? `há ${hoursSince(offer.priceUpdatedAt, now)}h`
                           : 'nunca'}

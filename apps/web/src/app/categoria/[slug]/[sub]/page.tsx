@@ -41,6 +41,7 @@ import Link from 'next/link';
 
 import {
   SUBCATEGORIES,
+  catModifier,
   isValidSubcategoryPath,
   routes,
   type CategorySlug,
@@ -140,7 +141,11 @@ export default async function SubcategoryPage({
           <span aria-current="page">{subcategory.name}</span>
         </nav>
 
-        <header className={`editoria-head cat--${categorySlug}`}>
+        {/* Mesma correção da página da editoria: o modificador de cor vem de
+            `catModifier`, porque o slug da URL nem sempre é o nome que o design
+            usa. Aqui a sub-seção herda a cor da editoria-mãe (Hardware é Tech),
+            que é justamente o que amarra as duas páginas visualmente. */}
+        <header className={`editoria-head ${catModifier(categorySlug)}`}>
           <div>
             <h1 className="article__title">{subcategory.name}</h1>
             <p className="section-sub">{subcategory.description}</p>

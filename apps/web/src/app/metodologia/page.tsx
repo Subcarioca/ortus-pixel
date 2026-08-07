@@ -89,7 +89,13 @@ export default function MethodologyPage() {
         ]}
       />
 
-      <div className="container article-layout">
+      {/* Página de texto corrido, sem sidebar: só o `.container`. Antes era
+          `.article-layout`, a grade de três colunas do artigo — e como esta
+          página tem um único filho, a partir de 1180px o texto inteiro caía na
+          coluna de 56px reservada ao trilho de compartilhamento. Ver a nota
+          longa em app/[categoria]/[slug]/page.tsx. O `.article` já limita a
+          medida a 44rem sozinho, que é o que uma página de leitura precisa. */}
+      <div className="container">
         <article className="article">
           <h1 className="article__title">Como calculamos o score de popularidade</h1>
           <p className="article__dek">

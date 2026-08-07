@@ -50,6 +50,67 @@ export const HEAT_LABELS: Record<Heat, string> = {
   ever: 'Guia',
 };
 
+/**
+ * =============================================================================
+ * BLOCO DO DESIGN + TEMPERATURA → CLASSES CSS
+ * =============================================================================
+ *
+ * O PROBLEMA QUE ESTA TABELA RESOLVE, porque ele não é óbvio e já custou caro:
+ *
+ * A escala de temperatura tem quatro valores, mas os blocos do design NÃO têm
+ * quatro modificadores cada um. `base` ("Relevante") é o ESTADO PADRÃO — é o
+ * fluxo normal do site, o caso mais frequente —, então na maior parte dos
+ * blocos ele simplesmente não recebe modificador: a regra base já entrega a cor
+ * neutra. Alguns blocos também não distinguem `ever`, porque naquele contexto
+ * um guia não precisa de tratamento próprio.
+ *
+ * Escrever `` `${bloco} ${bloco}--${heat}` `` — que é o que qualquer pessoa faz
+ * por instinto, e que estava em cinco lugares deste código — produzia classes
+ * que não existem em lugar nenhum: `.heatbar--base` em TODO card de fluxo
+ * normal, `.rank--base` e `.rank--ever` no ranking, `.score--base` na home.
+ *
+ * Por que passou despercebido tanto tempo: uma classe sem regra CSS é
+ * silenciosa. Não há erro de build, não há warning no console, não há mudança
+ * visual — o elemento simplesmente fica com a aparência padrão, que era
+ * justamente a aparência desejada. O único sintoma é para o ser humano: quem
+ * abre o inspetor vê `.heatbar--base` no HTML, procura no CSS, não acha, e
+ * conclui que a folha de estilo está quebrada. Ou, pior, ADICIONA a regra que
+ * faltava e cria uma divergência de verdade com o design.
+ *
+ * A tabela abaixo é, então, uma cópia declarada do que a folha de estilo de
+ * fato define. Ela mora no core (e não em cada componente) para que exista UMA
+ * resposta para "este modificador existe?" — e ela é verificada de duas
+ * maneiras: pelos testes deste pacote e, de ponta a ponta, por
+ * `scripts/check-classes.mjs`, que compara o HTML servido com o CSS real.
+ */
+const HEAT_BLOCK_MODIFIERS = {
+  /** Badge textual. Único bloco com os quatro: aqui `base` tem cor própria. */
+  heat: ['hot', 'rise', 'base', 'ever'],
+  /** Termômetro de 4 blocos. `.heatbar` já nasce com `--h: var(--heat-base)`. */
+  heatbar: ['hot', 'rise', 'ever'],
+  /** Linha do ranking. Só colore a POSIÇÃO das duas faixas quentes. */
+  rank: ['hot', 'rise'],
+  /** Agrupador do termômetro à direita da linha do ranking. */
+  score: ['hot', 'rise', 'ever'],
+} as const satisfies Record<string, readonly Heat[]>;
+
+/** Blocos do design que variam com a temperatura. */
+export type HeatBlock = keyof typeof HEAT_BLOCK_MODIFIERS;
+
+/**
+ * Classe base + modificador de temperatura, quando o modificador existir.
+ *
+ * `heatClass('rank', 'base')` → `'rank'`
+ * `heatClass('rank', 'hot')`  → `'rank rank--hot'`
+ *
+ * Devolver a classe base sozinha não é uma degradação: é o comportamento
+ * CORRETO, porque no design a ausência do modificador É o estado neutro.
+ */
+export function heatClass(block: HeatBlock, heat: Heat): string {
+  const modifiers: readonly Heat[] = HEAT_BLOCK_MODIFIERS[block];
+  return modifiers.includes(heat) ? `${block} ${block}--${heat}` : block;
+}
+
 // =============================================================================
 // SUBSTITUTOS VISUAIS DO NÚMERO (design v0.2, §4 "O número saiu da tela")
 // =============================================================================
@@ -259,6 +320,35 @@ export function catToken(slug: string): CategoryDesignToken | undefined {
 export function catClass(slug: string): string {
   const token = catToken(slug);
   return token ? `cat cat--${token}` : 'cat';
+}
+
+/**
+ * SÓ o modificador `cat--*`, sem a classe base `.cat`.
+ *
+ * Existe porque `.cat--{token}` faz duas coisas diferentes no design, e só uma
+ * delas envolve o rótulo de editoria:
+ *
+ *   1. Como modificador de `.cat`, pinta o filete do rótulo — e aí `catClass`
+ *      já resolve, porque as duas classes andam juntas.
+ *   2. Como PORTADOR DA VARIÁVEL `--c`. A regra é literalmente
+ *      `.cat--games { --c: var(--cat-games); }`: ela não desenha nada, apenas
+ *      declara a cor da editoria como custom property. Qualquer elemento que
+ *      leia `var(--c, …)` herda a cor da editoria de graça — é assim que o
+ *      `.editoria-head` (o filete de 3px sob o título da categoria) sabe de que
+ *      cor pintar sua borda.
+ *
+ * No caso 2, aplicar `.cat` junto seria um erro grave: o elemento receberia
+ * padding, caixa-alta, `font-size: 10px` e um `::before` de 14px — um cabeçalho
+ * de página viraria um badge. Daí a função separada.
+ *
+ * O retorno é `''` (e não `undefined`) para poder ser interpolado direto em
+ * `className` sem produzir a string "undefined" no HTML. Sem token, o elemento
+ * cai no valor de fallback do próprio CSS — em `.editoria-head`, o carmim de
+ * marca.
+ */
+export function catModifier(slug: string): string {
+  const token = catToken(slug);
+  return token ? `cat--${token}` : '';
 }
 
 /**

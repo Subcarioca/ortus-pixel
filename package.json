@@ -23,6 +23,13 @@
     "build": "npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "//check:classes": [
+      "Confere que toda classe do HTML servido existe na folha do design system.",
+      "Fica FORA de `npm run test` porque precisa do dev server no ar (:3000).",
+      "Sem servidor, use `npm run check:classes -- --skip-runtime`: as checagens",
+      "estáticas continuam valendo e não dependem de dados no banco."
+    ],
+    "check:classes": "node scripts/check-classes.mjs",
     "db:generate": "npm run generate --workspace=@canalnerd/db",
     "db:push": "npm run push --workspace=@canalnerd/db",
     "db:seed": "npm run seed --workspace=@canalnerd/db",

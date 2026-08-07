@@ -1267,6 +1267,28 @@ body:has(.push-prompt[data-open="true"]) .ad-anchor { display: none; }
 /* Com foto real, a textura do placeholder só sujaria a imagem. */
 .thumb:has(> img)::after { content: none; }
 
+/* `.thumb` COMO LINK.
+   No protótipo o `.thumb` é sempre uma `<div>` dentro de um `<a>` que embrulha
+   o card inteiro. No produto a capa é o próprio link (um card com dois links
+   irmãos — capa e título — navega melhor no teclado do que um `<a>` gigante
+   envolvendo tudo), e `<a>` é `display:inline` por padrão. Em elemento inline,
+   `aspect-ratio` não se aplica e `position:relative` não cria contexto de
+   tamanho: a moldura 16:9 colapsava para zero, a foto sumia e os badges
+   posicionados dentro dela (`.thumb__tag`) vazavam para a linha do texto.
+   Uma linha de CSS para um sintoma que parecia "as imagens não carregam". */
+a.thumb { display: block; }
+
+/* FOTO DE VERDADE DENTRO DO `.prod__img`.
+   Mesmo caso do `.thumb`, um andar abaixo: no protótipo o `.prod__img` é uma
+   caixa 1:1 com o texto "1:1" dentro; no produto ele recebe um <Image> do Next,
+   que injeta um <img> com width/height próprios. Sem `object-fit: cover` a foto
+   do produto sairia deformada (fabricante manda 4:3, o cartão pede 1:1) e sem
+   `width/height:100%` ela ignoraria a caixa, quebrando o alinhamento da grade
+   de produtos citados. `overflow:hidden` + o raio do próprio contêiner mantêm o
+   canto arredondado que o design pede — <img> não herda border-radius do pai. */
+.prod__img { overflow: hidden; }
+.prod__img > img { width: 100%; height: 100%; object-fit: cover; }
+
 /* NÍVEL DE HEADING × TAMANHO DE FONTE.
    O protótipo estiliza por ELEMENTO (`.side-box h3`, `.buybox h4`,
    `.community h4`…) porque ali o nível foi escolhido pelo tamanho desejado.
@@ -1377,6 +1399,18 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
    o olho compara as datas sem reler o rótulo. */
 .side-list--rows li { display: flex; justify-content: space-between; gap: var(--s-3); align-items: baseline; }
 .side-list--rows time { font-family: var(--font-mono); color: var(--ink-3); font-size: var(--fs-xs); white-space: nowrap; }
+
+/* `.buybox` SEM `.verdict` ACIMA.
+   No design o "Onde comprar" nasce colado ao veredito da review, e por isso
+   tem margem superior NEGATIVA (`calc(-1 * --s-5 + --s-2)`) — é o que faz os
+   dois blocos parecerem uma peça só. O produto ainda não renderiza o
+   `.verdict` (nota, prós e contras): sem ele, essa margem negativa puxava a
+   caixa comercial para cima do último parágrafo do texto, cobrindo uma linha
+   de conteúdo editorial com um bloco de compra. Restauramos a margem normal e
+   devolvemos a negativa apenas quando o veredito de fato existe — assim, no
+   dia em que o `.verdict` entrar, o visual do protótipo volta sozinho. */
+.buybox { margin-top: var(--s-5); }
+.verdict + .buybox { margin-top: calc(var(--s-5) * -1 + var(--s-2)); }
 
 /* ESTADO VAZIO.
    Não existe no protótipo — protótipo nunca fica sem conteúdo; produto fica o

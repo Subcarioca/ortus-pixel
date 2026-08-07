@@ -108,73 +108,95 @@ export function NewsletterForm({
   const isSidebar = variant === 'sidebar';
 
   // Sucesso substitui o formulário no mesmo lugar.
+  //
+  // O `<div>` interno não é enfeite: ele mantém a mesma regra dos dois filhos
+  // explicada logo abaixo. Sem ele, na variante `inline` a grade de duas
+  // colunas jogaria o "Quase lá!" numa coluna e a mensagem na outra — e a
+  // confirmação, que é o momento mais importante do fluxo, sairia partida.
   if (status === 'success') {
     return (
       <div className={blockClass} role="status">
-        <p className="cta-news__kicker">Quase lá!</p>
-        <p>{message}</p>
+        <div>
+          <p className="cta-news__kicker">Quase lá!</p>
+          <p>{message}</p>
+        </div>
       </div>
     );
   }
 
   return (
+    /*
+      DOIS FILHOS, SEMPRE — texto e formulário.
+
+      `.cta-inline` é uma grade de duas colunas a partir de 700px. Quem decide
+      o que vai em cada coluna é a ORDEM dos filhos diretos, então o bloco
+      precisa ter exatamente dois. A versão anterior emitia cinco elementos
+      soltos (kicker, título, descrição, formulário, dica) e a grade os
+      distribuía em zigue-zague: kicker | título, descrição | formulário…
+      Agrupar em dois `<div>` não muda nada em `.cta-news` nem em `.side-box`
+      (que são blocos comuns) e conserta o `.cta-inline`.
+    */
     <section className={blockClass}>
-      <p className="cta-news__kicker">Newsletter</p>
-      {/*
-        `<h2>` porque o bloco é uma seção da página, e o design estiliza o
-        título do CTA por elemento (`.cta-news h3`, `.cta-inline h4`). A ponte
-        de heading na seção 17 do CSS reaplica o tamanho certo ao nível que a
-        semântica do documento exige — o nível não pode ser escolhido pelo
-        tamanho da fonte (WCAG 1.3.1).
-      */}
-      <h2>{title}</h2>
-      <p>{description}</p>
+      <div>
+        <p className="cta-news__kicker">Newsletter</p>
+        {/*
+          `<h2>` porque o bloco é uma seção da página, e o design estiliza o
+          título do CTA por elemento (`.cta-news h3`, `.cta-inline h4`). A ponte
+          de heading na seção 17 do CSS reaplica o tamanho certo ao nível que a
+          semântica do documento exige — o nível não pode ser escolhido pelo
+          tamanho da fonte (WCAG 1.3.1).
+        */}
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
 
-      {/* Na sidebar o formulário empilha (`.stack-sm`) e o botão ocupa a
-          largura toda (`.btn--block`). É o markup do protótipo para este ponto
-          — e não uma exceção nossa: `.form-inline` só funciona onde a JANELA
-          passa de 560px E o bloco é largo, e a segunda condição o CSS não tem
-          como verificar. */}
-      <form onSubmit={handleSubmit} className={isSidebar ? 'stack-sm' : 'form-inline'}>
-        <label htmlFor={`email-${source}`} className="sr-only">
-          Seu e-mail
-        </label>
-        <input
-          id={`email-${source}`}
-          type="email"
-          name="email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          placeholder="seu@email.com"
-          required
-          // `type="email"` + `required` dão validação nativa do navegador, sem
-          // JavaScript. A validação de verdade acontece no servidor — validação
-          // de cliente é conveniência de UX, nunca uma barreira de segurança.
-          autoComplete="email"
-          className="input"
-          disabled={status === 'submitting'}
-          aria-describedby={status === 'error' ? `erro-${source}` : undefined}
-          aria-invalid={status === 'error'}
-        />
-        <button
-          type="submit"
-          className={`btn btn--primary${isSidebar ? ' btn--block' : ''}`}
-          disabled={status === 'submitting'}
-        >
-          {status === 'submitting' ? 'Enviando...' : 'Quero receber'}
-        </button>
-      </form>
+      <div>
+        {/* Na sidebar o formulário empilha (`.stack-sm`) e o botão ocupa a
+            largura toda (`.btn--block`). É o markup do protótipo para este ponto
+            — e não uma exceção nossa: `.form-inline` só funciona onde a JANELA
+            passa de 560px E o bloco é largo, e a segunda condição o CSS não tem
+            como verificar. */}
+        <form onSubmit={handleSubmit} className={isSidebar ? 'stack-sm' : 'form-inline'}>
+          <label htmlFor={`email-${source}`} className="sr-only">
+            Seu e-mail
+          </label>
+          <input
+            id={`email-${source}`}
+            type="email"
+            name="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="seu@email.com"
+            required
+            // `type="email"` + `required` dão validação nativa do navegador, sem
+            // JavaScript. A validação de verdade acontece no servidor — validação
+            // de cliente é conveniência de UX, nunca uma barreira de segurança.
+            autoComplete="email"
+            className="input"
+            disabled={status === 'submitting'}
+            aria-describedby={status === 'error' ? `erro-${source}` : undefined}
+            aria-invalid={status === 'error'}
+          />
+          <button
+            type="submit"
+            className={`btn btn--primary${isSidebar ? ' btn--block' : ''}`}
+            disabled={status === 'submitting'}
+          >
+            {status === 'submitting' ? 'Enviando...' : 'Quero receber'}
+          </button>
+        </form>
 
-      {status === 'error' && (
-        // `role="alert"` faz o leitor de tela anunciar o erro imediatamente.
-        <p id={`erro-${source}`} className="form-hint form-hint--error" role="alert">
-          {message}
+        {status === 'error' && (
+          // `role="alert"` faz o leitor de tela anunciar o erro imediatamente.
+          <p id={`erro-${source}`} className="form-hint form-hint--error" role="alert">
+            {message}
+          </p>
+        )}
+
+        <p className="form-hint">
+          Enviamos um e-mail de confirmação. Você pode cancelar quando quiser.
         </p>
-      )}
-
-      <p className="form-hint">
-        Enviamos um e-mail de confirmação. Você pode cancelar quando quiser.
-      </p>
+      </div>
     </section>
   );
 }

@@ -70,18 +70,124 @@ export function AffiliateOffers({
 
   const anySponsored = renderable.some((item) => item.offer.disclosureKind === 'sponsored');
 
+  /*
+    RE-SKIN v0.3 — as duas variantes deixaram de compartilhar o mesmo markup.
+
+    Antes, `summary` trocava só a classe do contêiner (`.aff-summary` no lugar
+    de `.buybox`) e reaproveitava `.buybox__head` + `.buybox__list` + `.store`
+    por dentro. O resultado não quebrava, e é por isso que passou: `.store` é
+    uma linha genérica e continuava renderizando. Mas era o componente errado.
+
+    No design os dois blocos respondem a perguntas diferentes:
+
+      .buybox  → "ONDE comprar ESTE produto". Uma linha por LOJA, comparando
+                 preço entre lojas. A unidade é a loja (`.store`).
+      .aff-summary → "QUAIS produtos apareceram nesta matéria". Um cartão por
+                 PRODUTO, com foto, especificação e preço. A unidade é o
+                 produto (`.prod`, dentro de `.aff-summary__list`).
+
+    Um guia de "os 8 melhores headsets" saía como oito linhas de texto com
+    preço à direita, quando o design prevê oito cartões com foto — que é o que
+    faz o leitor reconhecer o produto sem ler.
+
+    Outra diferença que só o protótipo revela: em `.aff-summary` a divulgação
+    de afiliado vem LOGO ABAIXO DO TÍTULO, antes dos produtos; na `.buybox` ela
+    fecha o bloco. As duas posições cumprem a mesma regra ("antes do clique"),
+    e cada uma segue o seu protótipo.
+  */
+  if (variant === 'summary') {
+    return (
+      <section className="aff-summary" aria-labelledby="ofertas-titulo">
+        {/* Sem classe no heading: `.aff-summary h3` é quem estiliza no design, e
+            a ponte da seção 17 estende o seletor a h2/h4 para que o NÍVEL siga
+            a hierarquia do documento (h2, porque o h1 é a manchete). */}
+        <h2 id="ofertas-titulo">{title}</h2>
+
+        <AffiliateDisclosure kind={anySponsored ? 'sponsored' : 'affiliate'} variant="mini" />
+
+        <div className="aff-summary__list">
+          {renderable.map(({ offer, href }) => {
+            const showPrice = canDisplayPrice(offer, now);
+
+            return (
+              <article key={offer.id} className="prod">
+                {/* `.prod__img` é uma caixa 1:1 que no protótipo carrega só o
+                    rótulo "1:1". Com foto real, a ponte `.prod__img > img` da
+                    seção 17 faz a imagem preencher a caixa sem alterar a razão
+                    de aspecto — mesmo mecanismo do `.thumb`. Sem foto, a caixa
+                    permanece: some o produto da linha, não o alinhamento da
+                    grade. */}
+                <div className="prod__img">
+                  {offer.imageUrl && (
+                    <Image
+                      src={offer.imageUrl}
+                      // Alt vazio: o nome do produto vem em texto ao lado.
+                      alt=""
+                      width={120}
+                      height={120}
+                    />
+                  )}
+                </div>
+
+                <div className="prod__body">
+                  <h3 className="prod__name">
+                    {offer.productName}
+                    <span className="aff-tag">afiliado</span>
+                  </h3>
+
+                  <p className="prod__spec">
+                    {offer.brand ? `${offer.brand} · ` : ''}
+                    {AFFILIATE_PROGRAM_LABELS[offer.programCategory]}
+                    {offer.availability === 'out-of-stock' && ' · indisponível'}
+                  </p>
+
+                  <div className="prod__foot">
+                    <span className="prod__price">
+                      {showPrice && offer.priceCents !== null ? (
+                        formatPrice(offer.priceCents, offer.currency)
+                      ) : (
+                        <small>preço não confirmado hoje</small>
+                      )}
+                      {/* `.prod__price small` é a linha de baixo, menor e cinza:
+                          no design é onde vai a loja. Só entra quando existe um
+                          preço em cima — senão haveria dois `<small>` empilhados
+                          e nenhum preço. */}
+                      {showPrice && offer.priceCents !== null && (
+                        <small>{offer.retailerName}</small>
+                      )}
+                    </span>
+
+                    <a
+                      href={href}
+                      className="btn btn--buy btn--sm"
+                      rel={AFFILIATE_REL}
+                      target="_blank"
+                    >
+                      Ver
+                      <span className="sr-only">
+                        {' '}
+                        {offer.productName} em {offer.retailerName} (link de afiliado)
+                      </span>
+                    </a>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section
-      className={variant === 'summary' ? 'aff-summary' : 'buybox'}
-      aria-labelledby="ofertas-titulo"
-    >
+    <section className="buybox" aria-labelledby="ofertas-titulo">
       <div className="buybox__head">
         {/* RE-SKIN v0.3: o título não leva classe. No design quem o estiliza é
-            `.buybox h4` / `.aff-summary h3`; a ponte da seção 17 estende esses
-            seletores a qualquer nível de heading, para que o NÍVEL continue
-            sendo ditado pela hierarquia do documento (aqui h2, porque o h1 é a
-            manchete). `.cd-box__title` nunca existiu — e `.cd-box`, no design,
-            é a caixinha da contagem regressiva do hub de franquia. */}
+            `.buybox h4`; a ponte da seção 17 estende o seletor a qualquer nível
+            de heading, para que o NÍVEL continue sendo ditado pela hierarquia
+            do documento (aqui h2, porque o h1 é a manchete). `.cd-box__title`
+            nunca existiu — e `.cd-box`, no design, é a caixinha da contagem
+            regressiva do hub de franquia. */}
         <h2 id="ofertas-titulo">{title}</h2>
         <span className="buybox__stamp">
           preços verificados nas últimas {PRICE_FRESHNESS_HOURS}h
@@ -96,7 +202,9 @@ export function AffiliateOffers({
             <article key={offer.id} className="store">
               <div className="store__main">
                 <h3 className="store__name">
-                  {offer.imageUrl && variant === 'buybox' && (
+                  {/* A checagem de variante saiu daqui: este ramo do componente
+                      já É a `buybox`. Condição que nunca é falsa é ruído. */}
+                  {offer.imageUrl && (
                     <Image
                       src={offer.imageUrl}
                       // Alt vazio: o nome do produto vem logo ao lado, em texto.

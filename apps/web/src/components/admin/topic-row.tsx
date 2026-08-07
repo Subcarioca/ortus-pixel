@@ -154,7 +154,20 @@ export function TopicRow({ topic }: TopicRowProps) {
               ) : (
                 topic.sourceName
               )}{' '}
-              <span className={`chip chip--sm tier--${topic.sourceTier}`}>{topic.sourceTier}</span>
+              {/* Só os dois EXTREMOS têm modificador no CSS (`official` em
+                  verde, `unverified` em âmbar); os quatro tiers do meio ficam
+                  neutros de propósito — se todos tivessem cor, nenhum saltaria.
+                  Interpolar o tier direto gerava `.tier--tier2Press` e afins:
+                  classes sem regra nenhuma. Mesmo princípio de `heatClass`. */}
+              <span
+                className={`chip chip--sm${
+                  topic.sourceTier === 'official' || topic.sourceTier === 'unverified'
+                    ? ` tier--${topic.sourceTier}`
+                    : ''
+                }`}
+              >
+                {topic.sourceTier}
+              </span>
             </p>
           )}
 

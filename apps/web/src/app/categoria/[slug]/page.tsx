@@ -30,7 +30,14 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
-import { CATEGORIES, isCategorySlug, routes, subcategoriesOf } from '@canalnerd/core';
+import {
+  CATEGORIES,
+  catModifier,
+  heatClass,
+  isCategorySlug,
+  routes,
+  subcategoriesOf,
+} from '@canalnerd/core';
 
 import { ArticleCard } from '@/components/article-card';
 import { BreadcrumbJsonLd, CollectionJsonLd } from '@/components/json-ld';
@@ -112,8 +119,15 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
       />
 
       <div className="container">
-        {/* Filete de 3px na cor da editoria (design §3). */}
-        <header className={`editoria-head cat--${slug}`}>
+        {/* Filete de 3px na cor da editoria (design §3).
+            `catModifier` — e não `cat--${slug}` cru. O slug da URL é longo por
+            causa da busca (`cinema-e-series`, `anime-e-manga`, `hqs`), enquanto
+            o design nomeia a editoria pela palavra curta (`cinema`, `anime`,
+            `hq`). Escrevendo o slug direto, três das seis editorias apontavam
+            para uma classe inexistente, `--c` ficava indefinida e o filete caía
+            no fallback carmim: metade do site tinha perdido a cor da editoria
+            sem nada quebrar. Ver CATEGORY_DESIGN_TOKEN em core/presentation.ts. */}
+        <header className={`editoria-head ${catModifier(slug)}`}>
           <div>
             <h1 className="article__title">{category.name}</h1>
             <p className="section-sub">{category.description}</p>
@@ -204,7 +218,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
               <ol className="rank-list rank-list--dense">
                 {trending.map((item, index) => (
                   <li key={item.id}>
-                    <Link href={item.url} className={`rank rank--${item.heat}`}>
+                    <Link href={item.url} className={heatClass('rank', item.heat)}>
                       <span className="rank__pos">{String(index + 1).padStart(2, '0')}</span>
                       <span>
                         <span className="rank__title">{item.title}</span>

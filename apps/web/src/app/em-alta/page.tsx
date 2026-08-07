@@ -39,7 +39,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-import { catClass, routes } from '@canalnerd/core';
+import { catClass, heatClass, routes } from '@canalnerd/core';
 
 import { ArticleCard } from '@/components/article-card';
 import { HeatBadge } from '@/components/heat-badge';
@@ -119,7 +119,7 @@ export default async function TrendingPage() {
             <ol className="rank-list">
               {rest.map((item, index) => (
                 <li key={item.id}>
-                  <Link href={item.url} className={`rank rank--${item.heat}`}>
+                  <Link href={item.url} className={heatClass('rank', item.heat)}>
                     <span className="rank__pos">{String(index + 2).padStart(2, '0')}</span>
                     <span>
                       {/* Aqui, ao contrário da home, o badge textual entra na
@@ -138,7 +138,7 @@ export default async function TrendingPage() {
                         <RelativeTime date={item.publishedAt} />
                       </span>
                     </span>
-                    <span className={`score score--${item.heat}`}>
+                    <span className={heatClass('score', item.heat)}>
                       <HeatBar heat={item.heat} level={item.heatLevel} />
                       <TrendTag trend={item.trend} />
                     </span>

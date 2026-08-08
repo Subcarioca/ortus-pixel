@@ -1,0 +1,16 @@
+{
+  "name": "@subcarioca/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Front-end da Ortus Pixel (Next.js App Router) + painel editorial.",
+  "scripts": {
+    "build": "echo already-built",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "next": "^15.1.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "web-push": "^3.6.7"
+  }
+}

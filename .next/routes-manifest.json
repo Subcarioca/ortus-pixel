@@ -1,0 +1,237 @@
+{
+  "version": 3,
+  "pages404": true,
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    },
+    {
+      "source": "/f/:slug",
+      "destination": "/franquia/:slug",
+      "statusCode": 308,
+      "regex": "^(?!/_next)/f(?:/([^/]+?))(?:/)?$"
+    },
+    {
+      "source": "/trending",
+      "destination": "/em-alta",
+      "statusCode": 308,
+      "regex": "^(?!/_next)/trending(?:/)?$"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/:path*",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        }
+      ],
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))?(?:/)?$"
+    },
+    {
+      "source": "/sw.js",
+      "headers": [
+        {
+          "key": "Service-Worker-Allowed",
+          "value": "/"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ],
+      "regex": "^/sw\\.js(?:/)?$"
+    }
+  ],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/api/admin/topics/[id]",
+      "regex": "^/api/admin/topics/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/topics/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/auth/[provider]",
+      "regex": "^/api/auth/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPprovider": "nxtPprovider"
+      },
+      "namedRegex": "^/api/auth/(?<nxtPprovider>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/auth/[provider]/callback",
+      "regex": "^/api/auth/([^/]+?)/callback(?:/)?$",
+      "routeKeys": {
+        "nxtPprovider": "nxtPprovider"
+      },
+      "namedRegex": "^/api/auth/(?<nxtPprovider>[^/]+?)/callback(?:/)?$"
+    },
+    {
+      "page": "/categoria/[slug]",
+      "regex": "^/categoria/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/categoria/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/categoria/[slug]/[sub]",
+      "regex": "^/categoria/([^/]+?)/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug",
+        "nxtPsub": "nxtPsub"
+      },
+      "namedRegex": "^/categoria/(?<nxtPslug>[^/]+?)/(?<nxtPsub>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/franquia/[slug]",
+      "regex": "^/franquia/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/franquia/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/[categoria]/[slug]",
+      "regex": "^/([^/]+?)/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPcategoria": "nxtPcategoria",
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/(?<nxtPcategoria>[^/]+?)/(?<nxtPslug>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/admin",
+      "regex": "^/admin(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin(?:/)?$"
+    },
+    {
+      "page": "/admin/afiliados",
+      "regex": "^/admin/afiliados(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/afiliados(?:/)?$"
+    },
+    {
+      "page": "/admin/comentarios",
+      "regex": "^/admin/comentarios(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/comentarios(?:/)?$"
+    },
+    {
+      "page": "/admin/precisao",
+      "regex": "^/admin/precisao(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/precisao(?:/)?$"
+    },
+    {
+      "page": "/ads.txt",
+      "regex": "^/ads\\.txt(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/ads\\.txt(?:/)?$"
+    },
+    {
+      "page": "/em-alta",
+      "regex": "^/em\\-alta(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/em\\-alta(?:/)?$"
+    },
+    {
+      "page": "/metodologia",
+      "regex": "^/metodologia(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/metodologia(?:/)?$"
+    },
+    {
+      "page": "/newsletter/confirmado",
+      "regex": "^/newsletter/confirmado(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/newsletter/confirmado(?:/)?$"
+    },
+    {
+      "page": "/newsletter/descadastro",
+      "regex": "^/newsletter/descadastro(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/newsletter/descadastro(?:/)?$"
+    },
+    {
+      "page": "/politica-de-afiliados",
+      "regex": "^/politica\\-de\\-afiliados(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/politica\\-de\\-afiliados(?:/)?$"
+    },
+    {
+      "page": "/robots.txt",
+      "regex": "^/robots\\.txt(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/robots\\.txt(?:/)?$"
+    },
+    {
+      "page": "/sitemap.xml",
+      "regex": "^/sitemap\\.xml(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/sitemap\\.xml(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSuffix": ".prefetch.rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments"
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

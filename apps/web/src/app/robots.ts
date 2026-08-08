@@ -38,7 +38,7 @@
 
 import type { MetadataRoute } from 'next';
 
-import { absoluteUrl } from '@canalnerd/core';
+import { absoluteUrl } from '@subcarioca/core';
 
 /**
  * Hosts que caracterizam ambiente local/privado.

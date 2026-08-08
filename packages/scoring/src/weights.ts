@@ -17,7 +17,7 @@
  *    precisão contra o conjunto em produção e só então promover. Ver Fase 3.
  */
 
-import type { SignalDimension } from '@canalnerd/core';
+import type { SignalDimension } from '@subcarioca/core';
 
 export interface WeightSet {
   version: string;

@@ -26,7 +26,7 @@
  * server/reader-session.ts.
  */
 
-import { COMMENT_PROVIDER_LABELS, type CommentView } from '@canalnerd/core';
+import { COMMENT_PROVIDER_LABELS, type CommentView } from '@subcarioca/core';
 
 import { RelativeTime } from '@/components/relative-time';
 import { CommentForm } from './comment-form';

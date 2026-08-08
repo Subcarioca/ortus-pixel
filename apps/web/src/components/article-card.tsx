@@ -29,8 +29,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import type { ContentCardData } from '@canalnerd/core';
-import { catClass, catToken, routes } from '@canalnerd/core';
+import type { ContentCardData } from '@subcarioca/core';
+import { catClass, catToken, routes } from '@subcarioca/core';
 
 import { HeatBadge } from './heat-badge';
 import { HeatBar, TrendTag } from './heat-bar';

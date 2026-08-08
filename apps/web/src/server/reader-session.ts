@@ -2,8 +2,8 @@ import 'server-only';
 
 import { cookies } from 'next/headers';
 
-import { prisma } from '@canalnerd/db';
-import { isCommentProvider, type CommentProvider } from '@canalnerd/core';
+import { prisma } from '@subcarioca/db';
+import { isCommentProvider, type CommentProvider } from '@subcarioca/core';
 
 import { generateToken, hashPersonalData, hashToken } from './security';
 

@@ -39,7 +39,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
-import { catClass, routes } from '@canalnerd/core';
+import { catClass, routes } from '@subcarioca/core';
 
 import { DISCORD_INVITE_URL } from '@/lib/site';
 import { ArticleCard } from '@/components/article-card';

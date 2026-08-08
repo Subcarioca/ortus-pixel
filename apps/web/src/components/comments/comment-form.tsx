@@ -25,7 +25,7 @@
 
 import { useState } from 'react';
 
-import { COMMENT_MAX_LENGTH } from '@canalnerd/core';
+import { COMMENT_MAX_LENGTH } from '@subcarioca/core';
 
 interface CommentFormProps {
   articleId: string;

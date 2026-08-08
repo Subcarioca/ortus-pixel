@@ -18,7 +18,7 @@
 
 import { NextResponse } from 'next/server';
 
-import { prisma } from '@canalnerd/db';
+import { prisma } from '@subcarioca/db';
 
 import { hashToken } from '@/server/security';
 

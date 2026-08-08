@@ -1,5 +1,5 @@
 {
-  "name": "@canalnerd/curator",
+  "name": "@subcarioca/curator",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,9 +13,9 @@
     "test": "node --import tsx --test src/**/*.test.ts"
   },
   "dependencies": {
-    "@canalnerd/core": "*",
-    "@canalnerd/db": "*",
-    "@canalnerd/scoring": "*"
+    "@subcarioca/core": "*",
+    "@subcarioca/db": "*",
+    "@subcarioca/scoring": "*"
   },
   "devDependencies": {
     "tsx": "^4.19.2"

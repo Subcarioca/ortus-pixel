@@ -31,7 +31,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
-import { SIGNAL_DIMENSIONS } from '@canalnerd/core';
+import { SIGNAL_DIMENSIONS } from '@subcarioca/core';
 import { WEIGHTS_V1 } from './weights.ts';
 
 const SRC_DIR = dirname(fileURLToPath(import.meta.url));

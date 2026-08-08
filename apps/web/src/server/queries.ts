@@ -41,8 +41,8 @@ import {
   type ContentCardData,
   type ContentFormat,
   type ScoreBand,
-} from '@canalnerd/core';
-import { ARTICLE_INCLUDE, mapArticle, mapComment, prisma } from '@canalnerd/db';
+} from '@subcarioca/core';
+import { ARTICLE_INCLUDE, mapArticle, mapComment, prisma } from '@subcarioca/db';
 
 /**
  * `unstable_cache` serializa o valor de retorno via JSON ao gravar/ler do

@@ -213,7 +213,7 @@ step "instalando dependências (npm ci)" install_deps
 # =============================================================================
 generate_client() {
   # Precisa vir ANTES do build: o `next build` faz type-check e importa
-  # `@canalnerd/db`, que importa o client gerado. Sem isto, o build falha com
+  # `@subcarioca/db`, que importa o client gerado. Sem isto, o build falha com
   # "@prisma/client did not initialize yet" — mensagem que manda o
   # desenvolvedor procurar no lugar errado.
   npm run db:generate
@@ -331,7 +331,7 @@ build_app() {
   export NODE_ENV=production
   # NÃO ligamos NEXT_OUTPUT_STANDALONE: standalone só serve ao caminho Docker.
   # Aqui o PM2 roda `next start`, que usa o build normal.
-  npm run build --workspace=@canalnerd/web
+  npm run build --workspace=@subcarioca/web
 }
 step "compilando o site (next build)" build_app
 

@@ -38,7 +38,7 @@ import {
   isCategorySlug,
   routes,
   subcategoriesOf,
-} from '@canalnerd/core';
+} from '@subcarioca/core';
 
 import { ArticleCard } from '@/components/article-card';
 import { BreadcrumbJsonLd, CollectionJsonLd } from '@/components/json-ld';

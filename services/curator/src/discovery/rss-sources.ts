@@ -21,9 +21,9 @@
  * mudar um número — não escrever código novo.
  */
 
-import type { CategorySlug } from '@canalnerd/core';
+import type { CategorySlug } from '@subcarioca/core';
 import { fetchText } from '../connectors/http';
-import type { SourceTier } from '@canalnerd/core';
+import type { SourceTier } from '@subcarioca/core';
 
 export interface NewsSource {
   id: string;

@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { routes, type CategoryDefinition } from '@canalnerd/core';
+import { routes, type CategoryDefinition } from '@subcarioca/core';
 
 import { SITE_NAME, SITE_TAGLINE, SOCIAL_HANDLE } from '@/lib/site';
 import { ThemeToggle } from './theme-toggle';

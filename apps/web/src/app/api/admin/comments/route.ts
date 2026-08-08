@@ -21,7 +21,7 @@
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 
-import { prisma } from '@canalnerd/db';
+import { prisma } from '@subcarioca/db';
 
 import { isAdminAuthenticated } from '@/server/admin-auth';
 import { revokeAllSessions } from '@/server/reader-session';

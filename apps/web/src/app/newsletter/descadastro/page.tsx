@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-import { routes } from '@canalnerd/core';
+import { routes } from '@subcarioca/core';
 
 import { CONTACT_EMAIL } from '@/lib/site';
 

@@ -2,7 +2,7 @@ import 'server-only';
 
 import { createHash, randomBytes } from 'node:crypto';
 
-import { COMMENT_PROVIDERS, sanitizeDisplayName, type CommentProvider } from '@canalnerd/core';
+import { COMMENT_PROVIDERS, sanitizeDisplayName, type CommentProvider } from '@subcarioca/core';
 
 /**
  * =============================================================================

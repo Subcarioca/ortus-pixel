@@ -22,7 +22,7 @@ import {
   heatForBand,
   type EmotionalTrigger,
   type ScoreBand,
-} from '@canalnerd/core';
+} from '@subcarioca/core';
 
 import { HeatBadge } from '../heat-badge';
 import { ScoreValue } from './score-value';

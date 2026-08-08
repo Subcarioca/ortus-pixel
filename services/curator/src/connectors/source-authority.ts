@@ -18,8 +18,8 @@
  * vetor de manipulação interna.
  */
 
-import type { SignalConnector, SignalContext, SignalMeasurement } from '@canalnerd/core';
-import { SOURCE_TIERS, type SourceTier } from '@canalnerd/core';
+import type { SignalConnector, SignalContext, SignalMeasurement } from '@subcarioca/core';
+import { SOURCE_TIERS, type SourceTier } from '@subcarioca/core';
 
 /**
  * Domínios classificados por nível de autoridade.

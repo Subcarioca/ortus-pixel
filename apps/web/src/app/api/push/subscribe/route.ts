@@ -20,7 +20,7 @@
 
 import { NextResponse } from 'next/server';
 
-import { prisma } from '@canalnerd/db';
+import { prisma } from '@subcarioca/db';
 
 import { checkRateLimit, getClientIp } from '@/server/security';
 

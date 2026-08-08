@@ -23,7 +23,7 @@
  * do que economiza.
  */
 
-import type { SignalConnector } from '@canalnerd/core';
+import type { SignalConnector } from '@subcarioca/core';
 
 import { googleTrendsConnector } from './google-trends';
 import { redditConnector } from './reddit';

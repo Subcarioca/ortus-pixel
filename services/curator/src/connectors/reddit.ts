@@ -22,8 +22,8 @@
  * enriquecimento e tem cache agressivo. Chamamos o mínimo possível.
  */
 
-import type { SignalConnector, SignalContext, SignalMeasurement } from '@canalnerd/core';
-import { logNormalize } from '@canalnerd/core';
+import type { SignalConnector, SignalContext, SignalMeasurement } from '@subcarioca/core';
+import { logNormalize } from '@subcarioca/core';
 
 import { deterministicRandom, fetchJson } from './http';
 

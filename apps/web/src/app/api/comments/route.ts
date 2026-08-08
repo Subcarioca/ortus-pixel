@@ -26,8 +26,8 @@
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 
-import { validateCommentContent } from '@canalnerd/core';
-import { prisma } from '@canalnerd/db';
+import { validateCommentContent } from '@subcarioca/core';
+import { prisma } from '@subcarioca/db';
 
 import { getReaderSession } from '@/server/reader-session';
 import { CACHE_TAGS } from '@/server/queries';

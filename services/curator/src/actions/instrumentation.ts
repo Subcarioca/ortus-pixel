@@ -24,7 +24,7 @@
  * ruim; perder um breaking news porque o log falhou é inaceitável.
  */
 
-import { prisma } from '@canalnerd/db';
+import { prisma } from '@subcarioca/db';
 
 export interface PipelineEventInput {
   eventType: string;

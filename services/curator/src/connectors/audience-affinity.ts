@@ -22,9 +22,9 @@
  * Um índice 1.0 significa "performa como a média"; 2.0, "o dobro da média".
  */
 
-import type { SignalConnector, SignalContext, SignalMeasurement } from '@canalnerd/core';
-import { clamp } from '@canalnerd/core';
-import { prisma } from '@canalnerd/db';
+import type { SignalConnector, SignalContext, SignalMeasurement } from '@subcarioca/core';
+import { clamp } from '@subcarioca/core';
+import { prisma } from '@subcarioca/db';
 
 /**
  * Converte o índice de afinidade (0 a ~3, centrado em 1) para o intervalo [0,1]

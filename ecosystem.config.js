@@ -8,7 +8,7 @@
  *   ortuspixel-web      -> o site Next.js já compilado (`next start`)
  *   ortuspixel-curator  -> o serviço de curadoria em laço contínuo
  *
- * NOTA SOBRE NOMES: os pacotes internos ainda se chamam `@canalnerd/*` — o
+ * NOTA SOBRE NOMES: os pacotes internos ainda se chamam `@subcarioca/*` — o
  * rebrand do código-fonte é uma tarefa separada. Os nomes de PROCESSO aqui já
  * usam a marca final de propósito: eles aparecem no `pm2 list`, nos logs e nos
  * alertas de produção, e renomeá-los depois quebraria o `pm2 save`/`startup`
@@ -31,7 +31,7 @@
  * -----------------------------------------------------------------------------
  * DECISÃO 1 — POR QUE NÃO CHAMAMOS `npm run start`
  * -----------------------------------------------------------------------------
- * Seria mais curto (`script: 'npm', args: 'run start -w @canalnerd/web'`), mas
+ * Seria mais curto (`script: 'npm', args: 'run start -w @subcarioca/web'`), mas
  * cria um processo intermediário: PM2 gerencia o `npm`, e o `npm` gerencia o
  * Node. Quando o PM2 manda SIGTERM num deploy, quem recebe é o `npm` — e ele
  * nem sempre repassa o sinal. O efeito prático é o pior possível: o Next é

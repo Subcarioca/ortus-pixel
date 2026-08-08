@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { routes } from '@canalnerd/core';
+import { routes } from '@subcarioca/core';
 
 /**
  * Navegação inferior fixa (mobile).

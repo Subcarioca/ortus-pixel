@@ -22,8 +22,8 @@
 
 import Link from 'next/link';
 
-import { COMMENT_PROVIDER_LABELS, isCommentProvider, routes } from '@canalnerd/core';
-import { prisma } from '@canalnerd/db';
+import { COMMENT_PROVIDER_LABELS, isCommentProvider, routes } from '@subcarioca/core';
+import { prisma } from '@subcarioca/db';
 
 import { AdminLogin } from '@/components/admin/admin-login';
 import { AdminActionButton } from '@/components/admin/admin-action-button';

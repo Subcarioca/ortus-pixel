@@ -15,7 +15,7 @@ import type { Metadata } from 'next';
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 
-import { routes } from '@canalnerd/core';
+import { routes } from '@subcarioca/core';
 
 import { AdminLogin } from '@/components/admin/admin-login';
 import { ADMIN_SESSION_COOKIE } from '@/server/admin-auth';

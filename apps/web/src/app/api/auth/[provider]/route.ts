@@ -16,7 +16,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-import { isCommentProvider } from '@canalnerd/core';
+import { isCommentProvider } from '@subcarioca/core';
 
 import { buildAuthorizationRequest, getProviderConfig, safeReturnTo } from '@/server/oauth';
 import { checkRateLimit, getClientIp } from '@/server/security';

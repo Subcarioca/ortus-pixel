@@ -14,7 +14,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-import { prisma } from '@canalnerd/db';
+import { prisma } from '@subcarioca/db';
 
 import { ADMIN_SESSION_COOKIE } from '@/server/admin-auth';
 import { getClientIp, hashPersonalData, safeCompare } from '@/server/security';

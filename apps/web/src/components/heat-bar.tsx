@@ -22,8 +22,8 @@
  * lado em todos os usos.
  */
 
-import type { Heat, HeatLevel, Trend } from '@canalnerd/core';
-import { HEAT_LABELS, TREND_LABELS, heatClass } from '@canalnerd/core';
+import type { Heat, HeatLevel, Trend } from '@subcarioca/core';
+import { HEAT_LABELS, TREND_LABELS, heatClass } from '@subcarioca/core';
 
 interface HeatBarProps {
   heat: Heat;

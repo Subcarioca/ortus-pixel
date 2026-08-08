@@ -18,7 +18,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { AFFILIATE_PROGRAM_CATEGORIES, AFFILIATE_PROGRAM_LABELS } from '@canalnerd/core';
+import { AFFILIATE_PROGRAM_CATEGORIES, AFFILIATE_PROGRAM_LABELS } from '@subcarioca/core';
 
 export function OfferCreateForm() {
   const router = useRouter();

@@ -35,7 +35,7 @@
 
 import Link from 'next/link';
 
-import { DISCLOSURE_TEXT, type DisclosureKind } from '@canalnerd/core';
+import { DISCLOSURE_TEXT, type DisclosureKind } from '@subcarioca/core';
 
 import { SITE_NAME } from '@/lib/site';
 

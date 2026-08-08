@@ -31,7 +31,7 @@
 
 import { NextResponse } from 'next/server';
 
-import { isCategorySlug } from '@canalnerd/core';
+import { isCategorySlug } from '@subcarioca/core';
 
 import { getTrendingRanking } from '@/server/queries';
 import { checkRateLimit, getClientIp } from '@/server/security';

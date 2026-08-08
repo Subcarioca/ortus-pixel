@@ -2,7 +2,7 @@ import 'server-only';
 
 import webpush from 'web-push';
 
-import { prisma } from '@canalnerd/db';
+import { prisma } from '@subcarioca/db';
 
 import { CONTACT_EMAIL } from '@/lib/site';
 

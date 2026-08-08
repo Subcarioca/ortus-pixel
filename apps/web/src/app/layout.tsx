@@ -10,7 +10,7 @@
 
 import type { Metadata, Viewport } from 'next';
 
-import { CATEGORIES, routes } from '@canalnerd/core';
+import { CATEGORIES, routes } from '@subcarioca/core';
 
 import './ortuspixel.css';
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, SOCIAL_HANDLE } from '@/lib/site';

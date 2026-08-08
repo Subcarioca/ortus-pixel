@@ -29,8 +29,8 @@
  * importa mais do que a velocidade.
  */
 
-import type { SignalConnector, SignalContext, SignalMeasurement } from '@canalnerd/core';
-import { clamp } from '@canalnerd/core';
+import type { SignalConnector, SignalContext, SignalMeasurement } from '@subcarioca/core';
+import { clamp } from '@subcarioca/core';
 
 import { deterministicRandom, fetchText } from './http';
 

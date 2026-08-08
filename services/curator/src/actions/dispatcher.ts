@@ -25,9 +25,9 @@
  * esperar o próximo ciclo. Em breaking news, minutos são o produto.
  */
 
-import { bandForScore, type ScoreBand, type ScoreResult } from '@canalnerd/core';
-import { prisma } from '@canalnerd/db';
-import { isEligibleForAutomation } from '@canalnerd/scoring';
+import { bandForScore, type ScoreBand, type ScoreResult } from '@subcarioca/core';
+import { prisma } from '@subcarioca/db';
+import { isEligibleForAutomation } from '@subcarioca/scoring';
 
 import { logPipelineEvent } from './instrumentation';
 import { notifyNewsroom } from './newsroom-alert';

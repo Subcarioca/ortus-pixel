@@ -24,7 +24,7 @@
  * olho nu. Uma prop opcional `score` num componente compartilhado não seria.
  */
 
-import { bandForScore } from '@canalnerd/core';
+import { bandForScore } from '@subcarioca/core';
 
 interface ScoreValueProps {
   /** Score efetivo (com override humano aplicado, quando houver). */

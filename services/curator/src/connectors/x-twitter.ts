@@ -24,8 +24,8 @@
  * intenção: ele impede que um bug de laço gere uma fatura de cinco dígitos.
  */
 
-import type { SignalConnector, SignalContext, SignalMeasurement } from '@canalnerd/core';
-import { logNormalize } from '@canalnerd/core';
+import type { SignalConnector, SignalContext, SignalMeasurement } from '@subcarioca/core';
+import { logNormalize } from '@subcarioca/core';
 
 import { deterministicRandom, fetchJson } from './http';
 

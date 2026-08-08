@@ -18,7 +18,7 @@ import type { NextConfig } from 'next';
  * para quem não pediu.
  *
  * `outputFileTracingRoot` é obrigatório em monorepo: sem ele o rastreamento
- * para na pasta de `apps/web` e os pacotes locais (`@canalnerd/*`, que são
+ * para na pasta de `apps/web` e os pacotes locais (`@subcarioca/*`, que são
  * links simbólicos para `packages/`) ficam de fora — o contêiner sobe e quebra
  * no primeiro import, em runtime. `process.cwd()` durante o build é a pasta do
  * workspace (`apps/web`), então dois níveis acima é a raiz do monorepo.
@@ -43,9 +43,9 @@ const nextConfig: NextConfig = {
 
   // Os pacotes do monorepo são consumidos como TypeScript-fonte (sem passo de
   // build próprio). `transpilePackages` faz o Next compilá-los junto com o app.
-  // Ganho: alterar um tipo em @canalnerd/core reflete no site com hot reload,
+  // Ganho: alterar um tipo em @subcarioca/core reflete no site com hot reload,
   // sem `npm run build` em cascata. Custo: build do app um pouco mais lento.
-  transpilePackages: ['@canalnerd/core', '@canalnerd/db', '@canalnerd/scoring'],
+  transpilePackages: ['@subcarioca/core', '@subcarioca/db', '@subcarioca/scoring'],
 
   reactStrictMode: true,
   poweredByHeader: false,

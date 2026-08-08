@@ -24,7 +24,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 
-import { isCommentProvider } from '@canalnerd/core';
+import { isCommentProvider } from '@subcarioca/core';
 
 import { exchangeCodeForProfile, getProviderConfig, safeReturnTo } from '@/server/oauth';
 import { createReaderSession, setSessionCookie } from '@/server/reader-session';

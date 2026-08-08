@@ -21,8 +21,8 @@
  * audiência.
  */
 
-import type { SignalConnector, SignalContext, SignalMeasurement } from '@canalnerd/core';
-import { prisma } from '@canalnerd/db';
+import type { SignalConnector, SignalContext, SignalMeasurement } from '@subcarioca/core';
+import { prisma } from '@subcarioca/db';
 
 /**
  * Converte a distância até o lançamento em um valor de sinal.

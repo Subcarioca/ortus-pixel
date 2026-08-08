@@ -33,7 +33,7 @@
 import { validateRegistry } from './connectors/registry';
 import { runCurationCycle, rescorePublished } from './pipeline/curate';
 import { getCircuitStates } from './pipeline/orchestrator';
-import { validateWeightSet, DEFAULT_WEIGHTS } from '@canalnerd/scoring';
+import { validateWeightSet, DEFAULT_WEIGHTS } from '@subcarioca/scoring';
 
 const DISCOVERY_INTERVAL_MS = 15 * 60 * 1000;
 const RESCORE_INTERVAL_MS = 5 * 60 * 1000;

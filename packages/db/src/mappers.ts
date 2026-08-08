@@ -3,7 +3,7 @@
  * MAPPERS — a fronteira entre persistência e domínio
  * =============================================================================
  *
- * Estas funções traduzem linhas do Prisma para os tipos de `@canalnerd/core`.
+ * Estas funções traduzem linhas do Prisma para os tipos de `@subcarioca/core`.
  *
  * "Isso não é boilerplate desnecessário?" É a pergunta certa, e a resposta é
  * não, por três motivos concretos:
@@ -35,7 +35,7 @@ import type {
   Franchise,
   ScoreBand,
   Tag,
-} from '@canalnerd/core';
+} from '@subcarioca/core';
 import {
   CATEGORY_BY_SLUG,
   isCategorySlug,
@@ -45,7 +45,7 @@ import {
   toCommentStatus,
   toDisclosureKind,
   toOfferAvailability,
-} from '@canalnerd/core';
+} from '@subcarioca/core';
 import type { Prisma } from '@prisma/client';
 
 /**

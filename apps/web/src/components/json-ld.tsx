@@ -23,14 +23,14 @@
  * e, portanto, entrada não confiável.
  */
 
-import type { AffiliateOffer, Article } from '@canalnerd/core';
+import type { AffiliateOffer, Article } from '@subcarioca/core';
 import {
   PRICE_FRESHNESS_HOURS,
   SCHEMA_AVAILABILITY,
   absoluteUrl,
   canDisplayPrice,
   routes,
-} from '@canalnerd/core';
+} from '@subcarioca/core';
 
 import { SITE_NAME, SOCIAL_PROFILES } from '@/lib/site';
 

@@ -35,7 +35,7 @@
  * vídeo está decidindo uma compra — ali o bloco comercial é serviço, não ruído.
  */
 
-import type { ContentFormat, Heat } from '@canalnerd/core';
+import type { ContentFormat, Heat } from '@subcarioca/core';
 
 /**
  * Formatos de slot. Os nomes são os das classes CSS do design (`.ad--*`), e não

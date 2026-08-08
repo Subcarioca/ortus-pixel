@@ -16,8 +16,8 @@
  * desenvolvimento sem nenhuma configuração — mesma filosofia do seed.
  */
 
-import type { EmotionalTrigger } from '@canalnerd/core';
-import { EMOTIONAL_TRIGGER_LABELS } from '@canalnerd/core';
+import type { EmotionalTrigger } from '@subcarioca/core';
+import { EMOTIONAL_TRIGGER_LABELS } from '@subcarioca/core';
 
 export interface NewsroomAlert {
   topicId: string;

@@ -39,7 +39,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-import { catClass, heatClass, routes } from '@canalnerd/core';
+import { catClass, heatClass, routes } from '@subcarioca/core';
 
 import { ArticleCard } from '@/components/article-card';
 import { HeatBadge } from '@/components/heat-badge';

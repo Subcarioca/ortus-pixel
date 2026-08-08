@@ -1,8 +1,8 @@
 /**
- * Ponto único de entrada do pacote `@canalnerd/core`.
+ * Ponto único de entrada do pacote `@subcarioca/core`.
  *
  * Manter um barrel file explícito (em vez de deixar cada consumidor importar
- * caminhos internos como `@canalnerd/core/src/signals.js`) nos dá liberdade
+ * caminhos internos como `@subcarioca/core/src/signals.js`) nos dá liberdade
  * para reorganizar os arquivos internos sem quebrar quem consome o pacote.
  */
 export * from './taxonomy';

@@ -162,7 +162,7 @@ persistente vive fora dele. Isso melhora três coisas de uma vez — backup e *p
 recovery* passam a ser problema do provedor, recriar o VPS deixa de ter risco de perda de
 dados, e o recurso mais escasso da máquina (RAM) fica inteiro para o Node.
 
-> **Sobre os nomes internos.** Os pacotes ainda se chamam `@canalnerd/*` — o rebrand do
+> **Sobre os nomes internos.** Os pacotes ainda se chamam `@subcarioca/*` — o rebrand do
 > código-fonte é uma tarefa separada. Os artefatos de deploy (domínio, nomes de processo,
 > nomes de container, URLs de callback) **já usam a marca final**, porque trocá-los depois
 > significaria reemitir certificado, reeditar o Nginx, refazer o `pm2 save` e recadastrar
@@ -1249,7 +1249,7 @@ depois no código do app, em tarefas separadas de propósito: misturar renomeaç
 com refactor de markup tornaria os dois impossíveis de revisar.
 
 **Status: concluído.** Continuam com o nome antigo, por decisão explícita e isolada:
-o escopo dos pacotes npm (`@canalnerd/*`) e as credenciais do Postgres de
+o escopo dos pacotes npm (`@subcarioca/*`) e as credenciais do Postgres de
 desenvolvimento (`docker-compose.yml`), que renomear quebraria o volume local sem
 benefício nenhum. Ambos são trabalho de uma tarefa futura, com o site já estável no ar.
 

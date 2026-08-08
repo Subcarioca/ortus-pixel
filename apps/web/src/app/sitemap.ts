@@ -22,8 +22,8 @@
 
 import type { MetadataRoute } from 'next';
 
-import { CATEGORIES, absoluteUrl, routes } from '@canalnerd/core';
-import { prisma } from '@canalnerd/db';
+import { CATEGORIES, absoluteUrl, routes } from '@subcarioca/core';
+import { prisma } from '@subcarioca/db';
 
 export const revalidate = 3600;
 

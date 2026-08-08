@@ -45,7 +45,7 @@ import {
   isCategorySlug,
   routes,
   trendForDelta,
-} from '@canalnerd/core';
+} from '@subcarioca/core';
 
 import { AdSlot } from '@/components/ad-slot';
 import { AffiliateDisclosure } from '@/components/affiliate-disclosure';

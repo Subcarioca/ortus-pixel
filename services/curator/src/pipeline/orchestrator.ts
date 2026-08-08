@@ -32,7 +32,7 @@ import type {
   SignalConnector,
   SignalContext,
   SignalMeasurement,
-} from '@canalnerd/core';
+} from '@subcarioca/core';
 
 /** Estado do circuit breaker de um conector, mantido em memória. */
 interface CircuitState {

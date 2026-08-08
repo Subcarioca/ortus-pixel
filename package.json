@@ -18,9 +18,9 @@
     "node": ">=20.9.0"
   },
   "scripts": {
-    "dev": "npm run dev --workspace=@canalnerd/web",
-    "dev:curator": "npm run dev --workspace=@canalnerd/curator",
-    "start": "npm run start --workspace=@canalnerd/web",
+    "dev": "npm run dev --workspace=@subcarioca/web",
+    "dev:curator": "npm run dev --workspace=@subcarioca/curator",
+    "start": "npm run start --workspace=@subcarioca/web",
     "build": "npm run db:generate && npm run build --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
@@ -31,11 +31,11 @@
       "estáticas continuam valendo e não dependem de dados no banco."
     ],
     "check:classes": "node scripts/check-classes.mjs",
-    "db:generate": "npm run generate --workspace=@canalnerd/db",
-    "db:push": "npm run push --workspace=@canalnerd/db",
-    "db:seed": "npm run seed --workspace=@canalnerd/db",
-    "db:studio": "npm run studio --workspace=@canalnerd/db",
-    "curator:once": "npm run once --workspace=@canalnerd/curator",
+    "db:generate": "npm run generate --workspace=@subcarioca/db",
+    "db:push": "npm run push --workspace=@subcarioca/db",
+    "db:seed": "npm run seed --workspace=@subcarioca/db",
+    "db:studio": "npm run studio --workspace=@subcarioca/db",
+    "curator:once": "npm run once --workspace=@subcarioca/curator",
     "setup": "npm install && npm run db:generate"
   },
   "devDependencies": {

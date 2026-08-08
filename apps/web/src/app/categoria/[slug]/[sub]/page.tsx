@@ -46,7 +46,7 @@ import {
   routes,
   type CategorySlug,
   type SubcategorySlug,
-} from '@canalnerd/core';
+} from '@subcarioca/core';
 
 import { AdSlot } from '@/components/ad-slot';
 import { ArticleCard } from '@/components/article-card';

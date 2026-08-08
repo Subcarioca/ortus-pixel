@@ -14,7 +14,7 @@
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
 
-import type { SignalDimension, SignalMeasurement } from '@canalnerd/core';
+import type { SignalDimension, SignalMeasurement } from '@subcarioca/core';
 import { calculateScore, isEligibleForAutomation } from './engine.ts';
 import { validateWeightSet, WEIGHTS_V1 } from './weights.ts';
 

@@ -8,7 +8,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-import { routes } from '@canalnerd/core';
+import { routes } from '@subcarioca/core';
 
 export const metadata: Metadata = {
   title: 'Inscrição confirmada',

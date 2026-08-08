@@ -21,8 +21,8 @@
  * Este é o padrão Strategy aplicado onde ele realmente se paga.
  */
 
-import type { SignalConnector, SignalContext, SignalMeasurement } from '@canalnerd/core';
-import { logNormalize, normalizeGrowth } from '@canalnerd/core';
+import type { SignalConnector, SignalContext, SignalMeasurement } from '@subcarioca/core';
+import { logNormalize, normalizeGrowth } from '@subcarioca/core';
 
 import { deterministicRandom, fetchJson } from './http';
 

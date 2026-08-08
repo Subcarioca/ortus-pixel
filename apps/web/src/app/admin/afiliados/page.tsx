@@ -33,8 +33,8 @@ import {
   priceFreshness,
   routes,
   toAffiliateProgramCategory,
-} from '@canalnerd/core';
-import { prisma } from '@canalnerd/db';
+} from '@subcarioca/core';
+import { prisma } from '@subcarioca/db';
 
 import { AdminLogin } from '@/components/admin/admin-login';
 import { AdminActionButton } from '@/components/admin/admin-action-button';

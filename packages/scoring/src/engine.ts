@@ -33,7 +33,7 @@ import {
   type SignalDimension,
   type SignalMeasurement,
   SIGNAL_DIMENSIONS,
-} from '@canalnerd/core';
+} from '@subcarioca/core';
 
 import { DEFAULT_WEIGHTS, SEO_WEIGHTS_V1, type WeightSet } from './weights';
 

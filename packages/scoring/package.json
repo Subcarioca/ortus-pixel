@@ -1,7 +1,6 @@
 {
-  "name": "@canalnerd/scoring",
+  "name": "@subcarioca/scoring",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "description": "Motor de cálculo do score de popularidade da Ortus Pixel.",
   "main": "./src/index.ts",
@@ -9,11 +8,14 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test src/*.test.ts"
   },
   "dependencies": {
-    "@canalnerd/core": "*"
+    "@subcarioca/core": "^0.1.0"
   }
 }

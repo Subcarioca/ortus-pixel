@@ -36,7 +36,7 @@ import {
   canDisplayPrice,
   formatPrice,
   type AffiliateOffer,
-} from '@canalnerd/core';
+} from '@subcarioca/core';
 
 import { AFFILIATE_REL, safeAffiliateUrl } from '@/lib/safe-url';
 import { AffiliateDisclosure } from './affiliate-disclosure';

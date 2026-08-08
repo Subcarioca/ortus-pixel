@@ -21,7 +21,7 @@
  */
 
 import { PrismaClient } from '@prisma/client';
-import { CATEGORIES, SUBCATEGORIES, slugify, estimateReadingMinutes } from '@canalnerd/core';
+import { CATEGORIES, SUBCATEGORIES, slugify, estimateReadingMinutes } from '@subcarioca/core';
 
 const prisma = new PrismaClient();
 

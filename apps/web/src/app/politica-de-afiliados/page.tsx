@@ -21,7 +21,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-import { PRICE_FRESHNESS_HOURS, routes } from '@canalnerd/core';
+import { PRICE_FRESHNESS_HOURS, routes } from '@subcarioca/core';
 
 /** Conteúdo institucional: muda uma ou duas vezes por ano. */
 export const revalidate = 86400;

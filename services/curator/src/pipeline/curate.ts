@@ -31,9 +31,9 @@ import {
   type EmotionalTrigger,
   type ScoreResult,
   type SignalContext,
-} from '@canalnerd/core';
-import { prisma } from '@canalnerd/db';
-import { calculateScore, DEFAULT_WEIGHTS, isEligibleForAutomation } from '@canalnerd/scoring';
+} from '@subcarioca/core';
+import { prisma } from '@subcarioca/db';
+import { calculateScore, DEFAULT_WEIGHTS, isEligibleForAutomation } from '@subcarioca/scoring';
 
 import { getAvailableConnectors } from '../connectors/registry';
 import { detectTriggers } from '../connectors/emotional-triggers';

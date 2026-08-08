@@ -29,7 +29,7 @@
  * houver dados rotulados para medir se o ganho compensa.
  */
 
-import type { EmotionalTrigger, SignalConnector, SignalContext, SignalMeasurement } from '@canalnerd/core';
+import type { EmotionalTrigger, SignalConnector, SignalContext, SignalMeasurement } from '@subcarioca/core';
 
 /**
  * Padrões por gatilho, em português e inglês (as fontes primárias costumam ser

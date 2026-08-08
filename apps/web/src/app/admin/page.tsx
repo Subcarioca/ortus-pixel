@@ -25,8 +25,8 @@
 
 import Link from 'next/link';
 
-import { SCORE_BANDS, bandForScore, routes } from '@canalnerd/core';
-import { prisma } from '@canalnerd/db';
+import { SCORE_BANDS, bandForScore, routes } from '@subcarioca/core';
+import { prisma } from '@subcarioca/db';
 
 import { AdminLogin } from '@/components/admin/admin-login';
 import { TopicRow } from '@/components/admin/topic-row';

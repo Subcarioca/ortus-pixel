@@ -23,7 +23,7 @@
  *     de erros.)
  */
 
-import { COMMENT_PROVIDER_LABELS, isCommentProvider } from '@canalnerd/core';
+import { COMMENT_PROVIDER_LABELS, isCommentProvider } from '@subcarioca/core';
 
 interface CommentLoginProps {
   providers: string[];

@@ -16,7 +16,7 @@
 
 import { NextResponse } from 'next/server';
 
-import { prisma } from '@canalnerd/db';
+import { prisma } from '@subcarioca/db';
 
 import { buildWelcomeEmail, sendEmail } from '@/server/email';
 import { generateToken, hashToken } from '@/server/security';

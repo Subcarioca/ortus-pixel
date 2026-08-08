@@ -20,7 +20,7 @@
 
 import type { Metadata } from 'next';
 
-import { SCORE_BANDS, absoluteUrl, routes } from '@canalnerd/core';
+import { SCORE_BANDS, absoluteUrl, routes } from '@subcarioca/core';
 
 import { BreadcrumbJsonLd } from '@/components/json-ld';
 

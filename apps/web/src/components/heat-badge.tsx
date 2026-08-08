@@ -46,8 +46,8 @@
  * apresentação pública que mudou.
  */
 
-import type { Heat } from '@canalnerd/core';
-import { HEAT_LABELS, heatClass } from '@canalnerd/core';
+import type { Heat } from '@subcarioca/core';
+import { HEAT_LABELS, heatClass } from '@subcarioca/core';
 
 interface HeatBadgeProps {
   heat: Heat;

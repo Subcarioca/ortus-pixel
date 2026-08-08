@@ -29,7 +29,7 @@ import {
   AFFILIATE_PROGRAM_CATEGORIES,
   DISCLOSURE_KINDS,
   OFFER_AVAILABILITY,
-} from '@canalnerd/core';
+} from '@subcarioca/core';
 import {
   confirmOfferPrice,
   linkOfferToArticle,
@@ -37,7 +37,7 @@ import {
   setOfferActive,
   unlinkOfferFromArticle,
   updateOfferPrice,
-} from '@canalnerd/db';
+} from '@subcarioca/db';
 
 import { isAdminAuthenticated } from '@/server/admin-auth';
 import { CACHE_TAGS } from '@/server/queries';

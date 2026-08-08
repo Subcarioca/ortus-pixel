@@ -42,7 +42,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 
-import { CATEGORIES, catClass, catToken, heatClass, routes } from '@canalnerd/core';
+import { CATEGORIES, catClass, catToken, heatClass, routes } from '@subcarioca/core';
 
 import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/site';
 import { ArticleCard } from '@/components/article-card';

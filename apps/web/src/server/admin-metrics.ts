@@ -6,7 +6,7 @@ import 'server-only';
  * =============================================================================
  *
  * Reimplementa aqui (em vez de importar do curator) as consultas de KPI que o
- * painel precisa. Motivo: o pacote `@canalnerd/curator` é um SERVIÇO, não uma
+ * painel precisa. Motivo: o pacote `@subcarioca/curator` é um SERVIÇO, não uma
  * biblioteca — importá-lo no app web traria junto conectores, agendador e
  * dependências de rede que não têm nada a ver com renderizar uma página.
  *
@@ -14,8 +14,8 @@ import 'server-only';
  * há divergência de dado: há apenas dois leitores do mesmo registro.
  */
 
-import { buildAccuracyReport, type AccuracySample } from '@canalnerd/scoring';
-import { prisma } from '@canalnerd/db';
+import { buildAccuracyReport, type AccuracySample } from '@subcarioca/scoring';
+import { prisma } from '@subcarioca/db';
 
 /**
  * Percentual de QUENTES publicados dentro da meta de 30 minutos.

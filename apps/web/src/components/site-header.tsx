@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-import { routes, type CategoryDefinition } from '@canalnerd/core';
+import { routes, type CategoryDefinition } from '@subcarioca/core';
 
 /**
  * Cabeçalho do site.

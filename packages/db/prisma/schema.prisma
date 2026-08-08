@@ -21,7 +21,12 @@
 //   - Datas sempre em UTC; a conversão para o fuso do leitor é feita na borda.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "native" mantém o dev local (Windows/Mac) funcionando; os demais cobrem
+  // as variantes mais comuns de hospedagem Linux (Hostinger inclusive) —
+  // sem isso, um build feito localmente no Windows gera só o engine do
+  // Windows, que não roda no servidor de produção.
+  binaryTargets = ["native", "debian-openssl-3.0.x", "debian-openssl-1.1.x", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {

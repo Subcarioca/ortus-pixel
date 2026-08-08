@@ -13,9 +13,13 @@ import { routes, type CategoryDefinition } from '@canalnerd/core';
  *
  * RE-SKIN v0.3 — duas mudanças de vocabulário:
  *
- *  - O logo virou `Ortus<b>Pixel</b>`. O `<b>` não é decoração: `.logo b` é o
- *    que aplica `--brand-ink` (o carmim recalibrado na v0.3, AAA como texto
- *    nos dois temas). Sem ele, a marca ficava monocromática no header.
+ *  - O logo do HEADER usa a marca curta `O.<b>Pixel</b>` (rebranding visual —
+ *    o nome do site continua "Ortus Pixel" em toda parte que não é o wordmark:
+ *    `SITE_NAME`, meta tags, JSON-LD, e-mails). O rodapé mantém o nome por
+ *    extenso (ver site-footer.tsx) para não perder o "Ortus" de vista. O `<b>`
+ *    não é decoração: `.logo b` é o que aplica `--brand-ink` (o carmim
+ *    recalibrado na v0.3, AAA como texto nos dois temas). Sem ele, a marca
+ *    ficava monocromática no header.
  *  - Os links do menu deixaram de usar `.cat cat--{slug}`. `.cat` é o RÓTULO
  *    de editoria (filete colorido + caixa-alta 10px), pensado para aparecer
  *    dentro de um card, subordinado ao badge de temperatura. Aplicá-lo ao menu
@@ -29,7 +33,7 @@ export function SiteHeader({ categories }: { categories: readonly CategoryDefini
       <div className="container header__bar">
         <Link href={routes.home()} className="logo" aria-label="Ortus Pixel — página inicial">
           <span className="logo__dot" aria-hidden="true" />
-          Ortus<b>Pixel</b>
+          O.<b>Pixel</b>
         </Link>
 
         <nav className="header__nav" aria-label="Editorias">

@@ -118,6 +118,33 @@ async function safeQuery<T>(label: string, query: () => Promise<T>, fallback: T)
 }
 
 /**
+ * Como `safeQuery`, mas para a consulta que decide se a ENTIDADE existe
+ * (artigo por slug, categoria, sub-categoria, franquia). Aqui `null` tem um
+ * significado público específico: a página chama `notFound()` e devolve 404.
+ *
+ * Se a causa real for o banco fora do ar, 404 é a resposta ERRADA — o Google
+ * desindexa 404 persistente, enquanto trata 500 como falha transitória e tenta
+ * de novo depois. Por isso a exceção NÃO é engolida aqui: sobe e vira erro 500
+ * de verdade, distinguível de "este artigo/categoria não existe".
+ *
+ * Um "não encontrado" LEGÍTIMO (o `findUnique`/`findFirst` resolve para
+ * `null` sem lançar) continua funcionando normalmente — só a EXCEÇÃO é
+ * repropagada. Listas (matérias da categoria, relacionadas etc.) continuam em
+ * `safeQuery`: ali, degradar para vazio é a resposta certa.
+ */
+async function requiredQuery<T>(label: string, query: () => Promise<T>): Promise<T> {
+  try {
+    return await query();
+  } catch (error) {
+    console.error(
+      `[queries] "${label}" falhou (entidade obrigatória; erro repropagado como 500):`,
+      error instanceof Error ? error.message : error,
+    );
+    throw error;
+  }
+}
+
+/**
  * Tags de cache. O curator invalida por estes nomes via /api/revalidate.
  * Constantes (e não strings soltas) porque um typo aqui produz um bug mudo:
  * a invalidação "funciona" e a página nunca atualiza.
@@ -392,10 +419,8 @@ export const getTrendingRanking = withDateRevival(getTrendingRankingCached);
 
 const getCategoryPageCached = unstable_cache(
   async (slug: string) => {
-    const category = await safeQuery(
-      'category:lookup',
-      () => prisma.category.findUnique({ where: { slug } }),
-      null,
+    const category = await requiredQuery('category:lookup', () =>
+      prisma.category.findUnique({ where: { slug } }),
     );
     if (!category) return null;
 
@@ -480,14 +505,11 @@ export const getCategoryPage = withDateRevival(getCategoryPageCached);
  */
 const getSubcategoryPageCached = unstable_cache(
   async (categorySlug: string, subSlug: string) => {
-    const subcategory = await safeQuery(
-      'subcategory:lookup',
-      () =>
-        prisma.subcategory.findFirst({
-          where: { slug: subSlug, category: { slug: categorySlug } },
-          include: { category: { select: { slug: true, name: true, accentColor: true } } },
-        }),
-      null,
+    const subcategory = await requiredQuery('subcategory:lookup', () =>
+      prisma.subcategory.findFirst({
+        where: { slug: subSlug, category: { slug: categorySlug } },
+        include: { category: { select: { slug: true, name: true, accentColor: true } } },
+      }),
     );
     if (!subcategory) return null;
 
@@ -527,14 +549,11 @@ export const getSubcategoryPage = withDateRevival(getSubcategoryPageCached);
 
 const getFranchiseHubCached = unstable_cache(
   async (slug: string) => {
-    const franchise = await safeQuery(
-      'franchise:lookup',
-      () =>
-        prisma.franchise.findUnique({
-          where: { slug },
-          include: { primaryCategory: { select: { slug: true, name: true } } },
-        }),
-      null,
+    const franchise = await requiredQuery('franchise:lookup', () =>
+      prisma.franchise.findUnique({
+        where: { slug },
+        include: { primaryCategory: { select: { slug: true, name: true } } },
+      }),
     );
     if (!franchise) return null;
 
@@ -678,17 +697,14 @@ function articleQuery(slug: string) {
 
 const articleLoader = async (slug: string) => {
   {
-    const article = await safeQuery(
-      'article:by-slug',
-      () =>
-        prisma.article.findFirst({
-          where: { slug, status: 'published' },
-          include: {
-            ...ARTICLE_INCLUDE,
-            liveUpdates: { orderBy: { createdAt: 'desc' }, take: 50 },
-          },
-        }),
-      null,
+    const article = await requiredQuery('article:by-slug', () =>
+      prisma.article.findFirst({
+        where: { slug, status: 'published' },
+        include: {
+          ...ARTICLE_INCLUDE,
+          liveUpdates: { orderBy: { createdAt: 'desc' }, take: 50 },
+        },
+      }),
     );
     if (!article) return null;
 

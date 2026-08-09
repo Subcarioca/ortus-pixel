@@ -193,5 +193,41 @@ export function feedAdSlot(index: number): AdSlotSpec | null {
   return { id: `feed-${index}`, format: 'feed', placement: 'feed' };
 }
 
+/**
+ * Slots da HOME (linha "Home" da tabela §7.1: leaderboard depois do ranking +
+ * retângulo no fim da grade).
+ *
+ * O HERO É INTOCÁVEL — e é por isso que esta função devolve uma lista fixa, sem
+ * parâmetro de posição: não existe combinação de argumentos que consiga inserir
+ * um slot acima da dobra. A restrição vive na forma da função, não na disciplina
+ * de quem a chama.
+ *
+ * Sobre "depois do ranking": trata-se da SEÇÃO "Em alta agora" da home, não da
+ * página /em-alta — essa continua sendo zona livre de anúncio no fluxo do
+ * ranking (linha "Em Alta" da mesma tabela), porque é ela que sustenta a
+ * credibilidade editorial do produto.
+ */
+export function homeAdSlots(): { afterTrending: AdSlotSpec | null; endOfFeed: AdSlotSpec | null } {
+  if (!ADS_ENABLED) return { afterTrending: null, endOfFeed: null };
+
+  return {
+    afterTrending: { id: 'home-pos-ranking', format: 'leader', placement: 'end' },
+    endOfFeed: { id: 'home-fim-grade', format: 'rect', placement: 'end' },
+  };
+}
+
+/**
+ * Slot fixo da barra lateral de CATEGORIA.
+ *
+ * 300×250 (`rect`), e não os 300×600 do trilho de artigo: é o que a tabela
+ * especifica para a linha "Categoria". Reaproveita a variante existente com a
+ * flag `sticky` do `AdSlot` — criar uma variante nova de CSS para a mesma caixa
+ * só acrescentaria um nome a manter.
+ */
+export function categoryRailSlot(): AdSlotSpec | null {
+  if (!ADS_ENABLED) return null;
+  return { id: 'categoria-trilho', format: 'rect', placement: 'rail' };
+}
+
 /** Rótulo obrigatório acima de todo slot (design §7.2). */
 export const AD_LABEL = 'Publicidade';

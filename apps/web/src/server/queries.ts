@@ -37,6 +37,7 @@ import {
   heatForBand,
   heatLevelForHeat,
   isCategorySlug,
+  rankRecommendations,
   trendForDelta,
   type ContentCardData,
   type ContentFormat,
@@ -762,33 +763,241 @@ export async function getArticleComments(articleId: string) {
   return rows.map(mapComment);
 }
 
-/** Relacionadas por franquia: principal alavanca de páginas por sessão. */
+/**
+ * Relacionadas: principal alavanca de páginas por sessão.
+ *
+ * A ORDEM NÃO É MAIS CRONOLÓGICA. Antes, o bloco mostrava as 4 matérias mais
+ * recentes que dividissem qualquer franquia com o artigo aberto — o que fazia
+ * todos os artigos de uma franquia movimentada exibirem as MESMAS relacionadas,
+ * e nunca conectava dois conteúdos parecidos de franquias diferentes.
+ *
+ * Agora o pool é pontuado por `rankRecommendations` (packages/core), que combina
+ * franquia, sub-categoria, categoria e recência. Os pesos e o comportamento
+ * esperado estão fixados por teste lá — este arquivo cuida só de montar o pool
+ * e traduzir o resultado em cards.
+ */
 const getRelatedArticlesCached = unstable_cache(
-  async (articleId: string, franchiseSlugs: string[]) => {
-    if (franchiseSlugs.length === 0) return [];
-
-    const articles = await safeQuery(
+  async (seed: {
+    id: string;
+    franchiseSlugs: string[];
+    categorySlug: string;
+    subcategorySlug: string | null;
+  }) => {
+    /**
+     * O POOL DE CANDIDATOS VEM DE DUAS CONSULTAS, E NÃO DE UM `OR` ÚNICO.
+     *
+     * A razão é o `take`. Com um `OR` só, o banco devolveria os N mais recentes
+     * entre "mesma franquia OU mesma editoria" — e, como a editoria tem ordens
+     * de grandeza mais artigos que a franquia, o corte por data comeria
+     * justamente os da franquia (o sinal FORTE) sempre que ela estivesse quieta
+     * há algumas semanas. O resultado seria o defeito que esta função existe
+     * para corrigir, só que mais caro.
+     *
+     * Separando, cada sinal tem cota própria: os da franquia entram no pool
+     * mesmo antigos, e a pontuação decide o resto.
+     */
+    const [byFranchise, byTaxonomy] = await safeQuery(
       'article:related',
       () =>
-        prisma.article.findMany({
-          where: {
-            status: 'published',
-            id: { not: articleId },
-            franchises: { some: { franchise: { slug: { in: franchiseSlugs } } } },
-          },
-          select: CARD_SELECT,
-          orderBy: { publishedAt: 'desc' },
-          take: 4,
-        }),
-      [],
+        Promise.all([
+          seed.franchiseSlugs.length > 0
+            ? prisma.article.findMany({
+                where: {
+                  status: 'published',
+                  id: { not: seed.id },
+                  franchises: { some: { franchise: { slug: { in: seed.franchiseSlugs } } } },
+                },
+                select: CARD_SELECT,
+                orderBy: { publishedAt: 'desc' },
+                take: 30,
+              })
+            : Promise.resolve([] as CardRow[]),
+          prisma.article.findMany({
+            where: {
+              status: 'published',
+              id: { not: seed.id },
+              // A sub-categoria entra por slug junto da categoria: é o mesmo
+              // filtro por chave estrangeira usado nas páginas de seção.
+              OR: [
+                { category: { slug: seed.categorySlug } },
+                ...(seed.subcategorySlug
+                  ? [{ subcategory: { slug: seed.subcategorySlug } }]
+                  : []),
+              ],
+            },
+            select: CARD_SELECT,
+            orderBy: { publishedAt: 'desc' },
+            take: 30,
+          }),
+        ]),
+      [[], []] as [CardRow[], CardRow[]],
     );
 
-    return articles.map(toCardData);
+    // Deduplicação por id: um artigo da mesma franquia E da mesma editoria
+    // aparece nas duas listas, e contá-lo duas vezes distorceria o ranking.
+    const pool = new Map<string, CardRow>();
+    for (const row of [...byFranchise, ...byTaxonomy]) pool.set(row.id, row);
+
+    const now = new Date();
+
+    const ranked = rankRecommendations(
+      {
+        id: seed.id,
+        franchiseSlugs: seed.franchiseSlugs,
+        categoryKey: seed.categorySlug,
+        subcategoryKey: seed.subcategorySlug,
+        // A data do artigo ABERTO não entra na conta: o desconto por idade se
+        // aplica ao candidato, não a quem está sendo lido. Ler uma matéria
+        // antiga não deve piorar a qualidade das relacionadas dela.
+        publishedAt: null,
+      },
+      [...pool.values()].map((row) => ({
+        id: row.id,
+        franchiseSlugs: row.franchises.map((f) => f.franchise.slug),
+        categoryKey: row.category.slug,
+        subcategoryKey: row.subcategory?.slug ?? null,
+        publishedAt: row.publishedAt,
+        row,
+      })),
+      now,
+      4,
+    );
+
+    return ranked.map((entry) => toCardData(entry.item.row));
   },
   ['related-articles'],
   { revalidate: 3600 },
 );
 export const getRelatedArticles = withDateRevival(getRelatedArticlesCached);
+
+// =============================================================================
+// BUSCA
+// =============================================================================
+
+/**
+ * Tamanho máximo do termo aceito.
+ *
+ * Corta antes de qualquer processamento: um termo de 10 KB não encontra nada de
+ * útil e só serve para fazer o banco trabalhar à toa, repetidamente, de graça.
+ */
+const SEARCH_MAX_LENGTH = 80;
+
+/**
+ * Mínimo de 2 caracteres. Com 1, praticamente todo o acervo casa e o resultado
+ * não ajuda ninguém — além de ser a consulta mais cara possível.
+ */
+const SEARCH_MIN_LENGTH = 2;
+
+export interface SearchResults {
+  /** Termo já normalizado — é ele que a página exibe de volta ao leitor. */
+  term: string;
+  articles: ContentCardData[];
+  franchises: { slug: string; name: string; logoUrl: string | null }[];
+  categories: { slug: string; name: string; description: string }[];
+}
+
+/** Normaliza e valida o termo. Devolve `null` quando não vale consultar. */
+export function normalizeSearchTerm(input: unknown): string | null {
+  if (typeof input !== 'string') return null;
+  // `\s+` colapsado: "zelda    breath" e "zelda breath" são a mesma busca, e
+  // manter as duas formas geraria entradas de log e métricas distintas.
+  const term = input.trim().replace(/\s+/g, ' ').slice(0, SEARCH_MAX_LENGTH);
+  return term.length >= SEARCH_MIN_LENGTH ? term : null;
+}
+
+/**
+ * Busca artigos, franquias e editorias.
+ *
+ * -----------------------------------------------------------------------------
+ * POR QUE NÃO PASSA POR `unstable_cache`
+ * -----------------------------------------------------------------------------
+ * O espaço de chaves é o conjunto de tudo que um humano pode digitar. Cachear
+ * por termo encheria o armazenamento de cache com entradas de uso único (e com
+ * o que bots digitarem), para acertar quase nada — o oposto do que o cache da
+ * home faz, onde uma chave serve a todo mundo. A página de busca é dinâmica
+ * por natureza; o custo é uma consulta indexada.
+ *
+ * -----------------------------------------------------------------------------
+ * DOIS MOTORES, DE PROPÓSITO
+ * -----------------------------------------------------------------------------
+ * ARTIGO usa FULL-TEXT (`tsvector` + GIN, ver a migração
+ * 20260809120000_follows_by_reader_and_article_search): o corpo é grande, o
+ * acervo cresce todo dia e o leitor espera que "jogos" encontre "jogo".
+ *
+ * FRANQUIA e EDITORIA usam `ILIKE`: são dezenas de linhas, com um nome curto
+ * cada. Montar `tsvector` para isso seria infraestrutura para um problema que
+ * não existe — e `ILIKE '%termo%'` ainda casa PEDAÇO de palavra ("zel" acha
+ * "Zelda"), que é justamente o comportamento desejado num campo que funciona
+ * como atalho de navegação.
+ *
+ * SEGURANÇA (A03 — Injeção): o termo entra por `$queryRaw` TEMPLATE TAG, que o
+ * Prisma envia como parâmetro ligado ($1), nunca por concatenação. E o parser
+ * escolhido é `websearch_to_tsquery`, não `to_tsquery`: o primeiro aceita
+ * qualquer texto humano (inclusive aspas soltas, `&`, `!`) sem lançar exceção,
+ * enquanto o segundo estoura erro de sintaxe e transformaria um caractere
+ * digitado por engano em erro 500.
+ */
+export async function searchContent(rawTerm: unknown): Promise<SearchResults | null> {
+  const term = normalizeSearchTerm(rawTerm);
+  if (!term) return null;
+
+  // `safeQuery` (e não `requiredQuery`): busca é LISTAGEM. Se o banco falhar, a
+  // página responde "nada encontrado" e o site continua de pé — devolver 500
+  // numa busca é pior para o leitor do que devolver vazio.
+  const [articleHits, franchises, categories] = await safeQuery(
+    'search:all',
+    () =>
+      Promise.all([
+        prisma.$queryRaw<{ id: string }[]>`
+          SELECT a."id"
+          FROM "Article" a, websearch_to_tsquery('portuguese', ${term}) AS q
+          WHERE a."status" = 'published'
+            AND a."searchVector" @@ q
+          ORDER BY ts_rank(a."searchVector", q) DESC, a."publishedAt" DESC NULLS LAST
+          LIMIT 24
+        `,
+        prisma.franchise.findMany({
+          where: { name: { contains: term, mode: 'insensitive' } },
+          select: { slug: true, name: true, logoUrl: true },
+          orderBy: { followerCount: 'desc' },
+          take: 6,
+        }),
+        prisma.category.findMany({
+          where: { name: { contains: term, mode: 'insensitive' } },
+          select: { slug: true, name: true, description: true },
+          orderBy: { monitoringPriority: 'asc' },
+          take: 4,
+        }),
+      ]),
+    [[], [], []] as [{ id: string }[], SearchResults['franchises'], SearchResults['categories']],
+  );
+
+  // Segunda etapa: os cards vêm do `CARD_SELECT` de sempre.
+  //
+  // Poderíamos ter trazido todas as colunas já no SQL cru, mas aí o contrato de
+  // apresentação existiria em dois lugares — e o dia em que alguém acrescentar
+  // um campo ao card, a busca seria a única listagem do site a não exibi-lo.
+  const ids = articleHits.map((hit) => hit.id);
+
+  const rows =
+    ids.length > 0
+      ? await safeQuery(
+          'search:articles',
+          () => prisma.article.findMany({ where: { id: { in: ids } }, select: CARD_SELECT }),
+          [] as CardRow[],
+        )
+      : [];
+
+  // `findMany` com `in` NÃO preserva a ordem dos ids — e a ordem é o resultado
+  // do ranking, ou seja, a parte que importa. Reordenamos pela posição original.
+  const byId = new Map(rows.map((row) => [row.id, row]));
+  const articles = ids
+    .map((id) => byId.get(id))
+    .filter((row): row is CardRow => row !== undefined)
+    .map(toCardData);
+
+  return { term, articles, franchises, categories };
+}
 
 /** Chips "Seus universos" da home. */
 const getTopFranchisesCached = unstable_cache(

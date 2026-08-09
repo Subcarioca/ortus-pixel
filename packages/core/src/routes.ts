@@ -90,6 +90,21 @@ export const routes = {
   article: (categorySlug: string, articleSlug: string) => `/${categorySlug}/${articleSlug}`,
 
   trending: () => ROUTE_PREFIXES.trending,
+
+  /**
+   * Busca. O parâmetro se chama `q` por convenção universal — é o que as
+   * pessoas esperam ao colar uma URL de busca, e o que o `SearchAction` do
+   * schema.org descreve para os buscadores.
+   */
+  search: (term?: string) => (term ? `/busca?q=${encodeURIComponent(term)}` : '/busca'),
+
+  /**
+   * Área do LEITOR. Deliberadamente fora de `/admin`: são dois públicos
+   * distintos (redação e leitor) com autenticações distintas, e nada na
+   * navegação deve sugerir que existe passagem de um para o outro.
+   */
+  account: () => '/minha-conta',
+
   methodology: () => '/metodologia',
   newsletter: () => '/newsletter',
   newsroom: () => '/redacao',
@@ -99,6 +114,7 @@ export const routes = {
   // --- Painel editorial ---
   admin: () => '/admin',
   adminTopic: (id: string) => `/admin/topicos/${id}`,
+  adminArticles: () => '/admin/materias',
   adminAccuracy: () => '/admin/precisao',
   adminAffiliates: () => '/admin/afiliados',
   adminComments: () => '/admin/comentarios',
@@ -132,6 +148,9 @@ export const RESERVED_SLUGS = new Set([
   'contato',
   'busca',
   'search',
+  // Área do leitor logado. Sem esta linha, uma franquia com slug "minha-conta"
+  // sequestraria a página de conta no dia em que as URLs curtas entrarem.
+  'minha-conta',
   'sitemap',
   'sitemap.xml',
   'robots.txt',

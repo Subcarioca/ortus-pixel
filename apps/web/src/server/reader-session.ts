@@ -68,7 +68,7 @@ export async function createReaderSession(params: {
   displayName: string;
   userAgent: string | null;
   ip: string;
-}): Promise<{ token: string; blocked: boolean }> {
+}): Promise<{ token: string; blocked: boolean; authorId: string }> {
   const providerAccountHash = hashPersonalData(`${params.provider}:${params.providerAccountId}`);
 
   const author = await prisma.commentAuthor.upsert({
@@ -110,7 +110,9 @@ export async function createReaderSession(params: {
     },
   });
 
-  return { token, blocked: author.isBlocked };
+  // `authorId` sai daqui porque o chamador precisa dele para vincular à conta
+  // os follows feitos antes do login (ver `reconcileFollowsOnLogin`).
+  return { token, blocked: author.isBlocked, authorId: author.id };
 }
 
 /** Grava o cookie de sessão. */

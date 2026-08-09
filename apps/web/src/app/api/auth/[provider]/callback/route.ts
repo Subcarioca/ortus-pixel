@@ -26,6 +26,7 @@ import { cookies } from 'next/headers';
 
 import { isCommentProvider } from '@subcarioca/core';
 
+import { reconcileFollowsOnLogin } from '@/server/follows';
 import { exchangeCodeForProfile, getProviderConfig, safeReturnTo } from '@/server/oauth';
 import { createReaderSession, setSessionCookie } from '@/server/reader-session';
 import { getClientIp, safeCompare } from '@/server/security';
@@ -93,7 +94,7 @@ export async function GET(
     return NextResponse.redirect(absolute(`${returnTo}?login=falhou`));
   }
 
-  const { token, blocked } = await createReaderSession({
+  const { token, blocked, authorId } = await createReaderSession({
     provider,
     providerAccountId: profile.providerAccountId,
     displayName: profile.displayName,
@@ -110,10 +111,31 @@ export async function GET(
 
   await setSessionCookie(token);
 
-  // `#comentarios` leva a pessoa de volta exatamente ao ponto de onde ela saiu.
-  // Voltar para o topo do artigo depois de logar faria muita gente desistir de
-  // escrever — o atrito acumulado é o que mata o comentário.
-  return NextResponse.redirect(absolute(`${returnTo}#comentarios`));
+  // Adota os follows feitos ANTES do login neste navegador.
+  //
+  // Roda depois de a sessão estar gravada e nunca antes: se falhar, o login em
+  // si já está completo. Por isso o erro é registrado e engolido — perder a
+  // vinculação de alguns follows é ruim, mas derrubar a autenticação inteira
+  // por causa dela seria muito pior. A pessoa reencontra o botão "Seguir" e
+  // clica de novo; já um login que falha não tem contorno.
+  try {
+    await reconcileFollowsOnLogin(authorId);
+  } catch (error) {
+    console.error(
+      '[oauth] follows anônimos não puderam ser vinculados à conta:',
+      error instanceof Error ? error.message : error,
+    );
+  }
+
+  // A ÂNCORA VEM DE QUEM INICIOU O LOGIN, não daqui.
+  //
+  // Antes esta rota concatenava `#comentarios` fixo, porque comentar era o
+  // único motivo de existir login. Agora o leitor também entra pelo botão
+  // "Seguir" e pelo cabeçalho — e mandá-lo para uma âncora de comentários que
+  // talvez nem exista na página seria um salto sem explicação. O convite de
+  // login do bloco de comentários passou a incluir a própria âncora no
+  // `returnTo` (ver comment-section.tsx).
+  return NextResponse.redirect(absolute(returnTo));
 }
 
 /**

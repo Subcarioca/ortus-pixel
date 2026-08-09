@@ -45,6 +45,8 @@ import Image from 'next/image';
 import { CATEGORIES, catClass, catToken, heatClass, routes } from '@subcarioca/core';
 
 import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/site';
+import { homeAdSlots } from '@/lib/ads';
+import { AdSlot } from '@/components/ad-slot';
 import { ArticleCard } from '@/components/article-card';
 import { HeatBadge } from '@/components/heat-badge';
 import { HeatBar, TrendTag } from '@/components/heat-bar';
@@ -84,6 +86,11 @@ export default async function HomePage() {
   ]);
 
   const [leadStory, ...secondaryHot] = home.hero;
+
+  // Resolvido uma vez, no topo: a política comercial da home não muda no meio
+  // da renderização, e consultá-la em dois pontos do JSX abriria espaço para
+  // aplicar metade dela.
+  const homeAds = homeAdSlots();
 
   return (
     <>
@@ -271,6 +278,12 @@ export default async function HomePage() {
           </section>
         )}
 
+        {/* Leaderboard DEPOIS do ranking (design §7.1, linha "Home").
+            Fica fora da <section> do ranking de propósito: dentro dela, o
+            anúncio seria lido como parte do bloco editorial — exatamente o que
+            a §7 existe para impedir. */}
+        {homeAds.afterTrending && <AdSlot slot={homeAds.afterTrending} />}
+
         {/* ---------- FEED CRONOLÓGICO ---------- */}
         {home.feed.length > 0 && (
           <section className="section" aria-labelledby="ultimas-titulo">
@@ -287,6 +300,11 @@ export default async function HomePage() {
                 <ArticleCard key={item.id} item={item} variant="grid" />
               ))}
             </div>
+
+            {/* Retângulo no FIM da grade — nunca no meio dela. Um slot entre
+                cards quebraria a leitura da grade e competiria com o conteúdo
+                que a pessoa veio ver; aqui, ela já rolou a home inteira. */}
+            {homeAds.endOfFeed && <AdSlot slot={homeAds.endOfFeed} />}
           </section>
         )}
 

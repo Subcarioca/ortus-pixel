@@ -73,6 +73,14 @@
   },
   "dynamicRoutes": [
     {
+      "page": "/api/admin/articles/[id]",
+      "regex": "^/api/admin/articles/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/articles/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
       "page": "/api/admin/topics/[id]",
       "regex": "^/api/admin/topics/([^/]+?)(?:/)?$",
       "routeKeys": {
@@ -163,6 +171,12 @@
       "namedRegex": "^/admin/comentarios(?:/)?$"
     },
     {
+      "page": "/admin/materias",
+      "regex": "^/admin/materias(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/materias(?:/)?$"
+    },
+    {
       "page": "/admin/precisao",
       "regex": "^/admin/precisao(?:/)?$",
       "routeKeys": {},
@@ -175,6 +189,12 @@
       "namedRegex": "^/ads\\.txt(?:/)?$"
     },
     {
+      "page": "/busca",
+      "regex": "^/busca(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/busca(?:/)?$"
+    },
+    {
       "page": "/em-alta",
       "regex": "^/em\\-alta(?:/)?$",
       "routeKeys": {},
@@ -185,6 +205,12 @@
       "regex": "^/metodologia(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/metodologia(?:/)?$"
+    },
+    {
+      "page": "/minha-conta",
+      "regex": "^/minha\\-conta(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/minha\\-conta(?:/)?$"
     },
     {
       "page": "/newsletter/confirmado",

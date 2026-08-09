@@ -152,10 +152,12 @@ export default async function ArticlePage({
   // Comentários e sessão em paralelo com as relacionadas: são consultas
   // independentes, e em série a página esperaria a soma dos tempos.
   const [related, comments, session] = await Promise.all([
-    getRelatedArticles(
-      article.id,
-      article.franchises.map((f) => f.slug),
-    ),
+    getRelatedArticles({
+      id: article.id,
+      franchiseSlugs: article.franchises.map((f) => f.slug),
+      categorySlug: article.category.slug,
+      subcategorySlug: article.subcategorySlug,
+    }),
     getArticleComments(article.id),
     getReaderSession(),
   ]);

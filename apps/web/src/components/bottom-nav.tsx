@@ -38,7 +38,10 @@ export function BottomNav() {
         <span className="ico" aria-hidden="true" />
         Meus hubs
       </Link>
-      <Link href={routes.newsletter()}>
+      {/* Passou a apontar para a área do leitor de verdade. Antes levava à
+          landing da newsletter — o destino possível quando "conta" ainda não
+          existia no produto, e que agora seria uma promessa quebrada. */}
+      <Link href={routes.account()}>
         <span className="ico" aria-hidden="true" />
         Conta
       </Link>

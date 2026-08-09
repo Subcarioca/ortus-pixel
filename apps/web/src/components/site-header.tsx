@@ -2,6 +2,8 @@ import Link from 'next/link';
 
 import { routes, type CategoryDefinition } from '@subcarioca/core';
 
+import { SearchForm } from './search-form';
+
 /**
  * Cabeçalho do site.
  *
@@ -45,6 +47,19 @@ export function SiteHeader({ categories }: { categories: readonly CategoryDefini
         </nav>
 
         <div className="header__actions">
+          <SearchForm variant="header" />
+
+          {/* Abaixo de 768px não cabe campo de busca no cabeçalho (ver
+              `.header__search` no CSS): sobra este atalho para a página, onde o
+              campo ocupa a largura inteira. */}
+          <Link
+            href={routes.search()}
+            className="icon-btn header__search-link"
+            aria-label="Buscar no site"
+          >
+            <span className="ico" aria-hidden="true" />
+          </Link>
+
           {/*
             "Em alta" recebe tratamento de destaque no header porque é a
             página-manifesto do produto: é ela que comunica o diferencial de
@@ -53,6 +68,24 @@ export function SiteHeader({ categories }: { categories: readonly CategoryDefini
           <Link href={routes.trending()} className="btn-hot-nav">
             <span className="live-dot" aria-hidden="true" />
             Em alta
+          </Link>
+
+          {/*
+            ENTRADA DA CONTA DO LEITOR — e o motivo de ela ser um ÍCONE NEUTRO,
+            e não um botão "Entrar" em destaque:
+
+            ler o Ortus Pixel não exige conta, e um convite de login competindo
+            com a manchete comunicaria o contrário. Quem nunca vai logar não
+            precisa ser lembrado disso em toda página; quem já logou encontra a
+            própria área onde ela sempre esteve.
+
+            O rótulo é o mesmo nos dois estados (logado ou não) porque o header
+            é CACHEADO junto do resto do HTML — descobrir aqui se há sessão
+            tornaria todas as páginas do site dinâmicas. A página /minha-conta,
+            essa sim, é dinâmica e mostra o estado real.
+          */}
+          <Link href={routes.account()} className="icon-btn" aria-label="Minha conta">
+            <span className="ico" aria-hidden="true" />
           </Link>
         </div>
       </div>

@@ -84,6 +84,9 @@ export default async function AdminPage() {
           pipeline: vínculo de afiliado e moderação.
         */}
         <nav className="admin-actions">
+          <Link href={routes.adminArticles()} className="link-more">
+            Matérias
+          </Link>
           <Link href={routes.adminAffiliates()} className="link-more">
             Afiliados
           </Link>

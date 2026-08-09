@@ -43,6 +43,7 @@ import { catClass, routes } from '@subcarioca/core';
 
 import { DISCORD_INVITE_URL } from '@/lib/site';
 import { ArticleCard } from '@/components/article-card';
+import { FollowButton } from '@/components/follow-button';
 import { BreadcrumbJsonLd, CollectionJsonLd } from '@/components/json-ld';
 import { PushOptIn } from '@/components/push-opt-in';
 import { getFranchiseHub } from '@/server/queries';
@@ -197,9 +198,7 @@ export default async function FranchiseHubPage({
             (comunidade). Colocá-las juntas deixa o próximo passo sempre visível.
           */}
           <div className="hub-actions">
-            <button type="button" className="btn btn--primary">
-              Seguir {franchise.name}
-            </button>
+            <FollowButton franchiseSlug={franchise.slug} franchiseName={franchise.name} />
             <a
               href={DISCORD_INVITE_URL}
               className="btn btn--discord"

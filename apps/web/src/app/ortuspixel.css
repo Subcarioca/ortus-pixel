@@ -332,6 +332,24 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 800; line-height
   .header__nav a[aria-current="page"] { color: var(--ink); border-color: var(--brand); }
 }
 .header__actions { display: flex; align-items: center; gap: var(--s-2); margin-left: auto; }
+
+/* --- Busca no cabeçalho ----------------------------------------------------
+   O CAMPO só aparece a partir de 768px. Abaixo disso, o header tem 4 elementos
+   disputando uma linha de 56px, e um input espremido ali seria pior que
+   inexistente: sobra o botão de lupa (`.icon-btn`), que leva à página de busca
+   onde o campo tem a largura inteira.
+
+   Não é um componente novo do design system — é o `.input` de sempre em versão
+   compacta, dentro de um contêiner de 2 colunas. Por isso são poucas linhas:
+   toda a aparência já vem de `.input` e `.icon-btn`.                          */
+.header__search { display: none; }
+@media (min-width: 768px) {
+  .header__search { display: flex; align-items: center; gap: 6px; }
+  .header__search .input { min-height: 38px; padding: 8px 14px; width: 15rem; font-size: var(--fs-sm); }
+  /* Abaixo de 768px o botão de lupa substitui o campo; acima, o campo já tem
+     um submit próprio e o atalho ficaria redundante. */
+  .header__search-link { display: none; }
+}
 @media (min-width: 1024px) { .nav-toggle { display: none; } }
 .icon-btn {
   width: 40px; height: 40px; display: grid; place-items: center;

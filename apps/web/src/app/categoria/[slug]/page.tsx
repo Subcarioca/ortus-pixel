@@ -27,6 +27,7 @@
  */
 
 import type { Metadata } from 'next';
+import { Fragment } from 'react';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
@@ -40,6 +41,8 @@ import {
   subcategoriesOf,
 } from '@subcarioca/core';
 
+import { categoryRailSlot, feedAdSlot } from '@/lib/ads';
+import { AdSlot } from '@/components/ad-slot';
 import { ArticleCard } from '@/components/article-card';
 import { BreadcrumbJsonLd, CollectionJsonLd } from '@/components/json-ld';
 import { HeatBar } from '@/components/heat-bar';
@@ -135,6 +138,7 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
 
   const { category, articles, trending, upcomingReleases } = data;
   const subcategories = subcategoriesOf(slug);
+  const railSlot = categoryRailSlot();
 
   return (
     <>
@@ -230,10 +234,22 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
                 />
               </div>
 
+              {/* SLOT IN-FEED a cada 6 cards (design §7.1, linha "Categoria").
+                  O índice usado é o ABSOLUTO na listagem, e não o da fatia:
+                  reiniciar a contagem aqui colocaria o primeiro anúncio logo
+                  abaixo da newsletter, empilhando dois blocos não editoriais.
+                  Como a grade tem 2 colunas, um slot a cada 6 cai sempre no
+                  começo de uma linha nova — a "linha completa" que a regra pede. */}
               <div className="grid g-sm-2">
-                {articles.slice(6).map((item) => (
-                  <ArticleCard key={item.id} item={item} variant="grid" />
-                ))}
+                {articles.slice(6).map((item, index) => {
+                  const adSlot = feedAdSlot(index + 6);
+                  return (
+                    <Fragment key={item.id}>
+                      {adSlot && <AdSlot slot={adSlot} />}
+                      <ArticleCard item={item} variant="grid" />
+                    </Fragment>
+                  );
+                })}
               </div>
             </>
           )}
@@ -295,6 +311,12 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
               </ul>
             </section>
           )}
+
+          {/* ÚLTIMO box da barra lateral, sempre — depois do ranking e dos
+              lançamentos. A ordem é a regra 2 do design §7.0: o comercial nunca
+              precede o editorial na coluna. `sticky` acompanha a rolagem da
+              grade, que é longa. */}
+          {railSlot && <AdSlot slot={railSlot} sticky />}
         </aside>
       </div>
     </>

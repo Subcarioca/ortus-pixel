@@ -491,6 +491,32 @@ model Article {
   pushNotifications PushNotification[]
   comments          Comment[]
 
+  /// Vetor de busca (full-text do Postgres), mantido pelo BANCO.
+  ///
+  /// É uma COLUNA GERADA (`GENERATED ALWAYS AS ... STORED`), definida no SQL da
+  /// migração porque o Prisma não modela coluna gerada. Consequências, todas
+  /// desejadas:
+  ///   - impossível ficar dessincronizada: não existe caminho de escrita que
+  ///     esqueça de atualizá-la (o erro clássico de manter índice de busca à
+  ///     mão é publicar por outra rota e o artigo sumir da busca);
+  ///   - `STORED` em vez de recalcular na consulta: o ranking não paga
+  ///     `to_tsvector` do corpo inteiro a cada busca.
+  ///
+  /// `Unsupported` porque o Prisma Client não tem tipo para `tsvector`. Isso é
+  /// uma VANTAGEM aqui: a coluna não aparece em nenhum `select`, então não há
+  /// risco de despejar o vetor no JSON de uma listagem. A busca a lê por
+  /// `$queryRaw` parametrizado — ver apps/web/src/server/search.ts.
+  ///
+  /// Os pesos (A=título, B=resumo, C=corpo) são o que faz um artigo cujo TÍTULO
+  /// casa vencer outro que só menciona o termo de passagem no meio do texto.
+  /// `@default(dbgenerated())` não é enfeite: sem ele, o Prisma enxerga a
+  /// expressão da coluna gerada como um "default" que falta no schema e passa a
+  /// emitir `ALTER COLUMN "searchVector" DROP DEFAULT` em toda migração futura —
+  /// comando que o Postgres REJEITA em coluna gerada. Ou seja: sem esta linha, a
+  /// próxima migração de qualquer outra tabela quebraria, por um motivo sem
+  /// nenhuma relação aparente com o que estivesse sendo alterado.
+  searchVector Unsupported("tsvector")? @default(dbgenerated())
+
   // Índice da home e das páginas de categoria: publicados, mais recentes.
   @@index([status, publishedAt(sort: Desc)])
   // Índice do hero/trending: publicados, maior score.
@@ -500,6 +526,10 @@ model Article {
   @@index([subcategoryId, status, publishedAt(sort: Desc)])
   @@index([topicId])
   @@index([authorId])
+  // GIN é o tipo de índice para `tsvector`: o tempo de busca acompanha a
+  // quantidade de linhas que CASAM, não o tamanho da tabela. Sem ele, cada
+  // busca vira varredura completa com `to_tsvector` por linha.
+  @@index([searchVector], type: Gin)
 }
 
 model ArticleFranchise {
@@ -840,17 +870,54 @@ model PushDelivery {
 }
 
 /// Leitor que segue uma franquia — sinal de retenção e base de segmentação.
+///
+/// SEGUIR NÃO EXIGE LOGIN. Ler o site nunca exigiu cadastro, e "crie uma conta
+/// para seguir" é onde a intenção morre. Por isso existem DOIS sujeitos
+/// possíveis para o mesmo follow:
+///
+///   - `visitorId`       — cookie anônimo. Sempre presente, inclusive para quem
+///                         está logado (é o que permite seguir antes de logar e
+///                         manter o follow depois).
+///   - `commentAuthorId` — preenchido quando há sessão de leitor. É o que faz o
+///                         follow sobreviver à troca de aparelho e à limpeza de
+///                         cookies, e o que a página /minha-conta lista.
+///
+/// POR QUE UMA TABELA SÓ, E NÃO UMA PARA CADA CASO: "quem segue esta franquia"
+/// e a contagem de seguidores viveriam de UNION entre duas tabelas para sempre,
+/// e a migração de anônimo para logado (no login) viraria mover linha entre
+/// tabelas em vez de um UPDATE de coluna.
+///
+/// AS DUAS CHAVES ÚNICAS FUNCIONAM PORQUE, NO POSTGRES, NULL É DISTINTO DE NULL
+/// dentro de um índice único. Consequência prática, que é exatamente o que
+/// queremos e o que evitou índice parcial + CHECK escritos à mão:
+///   - `[franchiseId, visitorId]`       impede o mesmo cookie seguir duas vezes;
+///   - `[franchiseId, commentAuthorId]` impede a mesma CONTA seguir duas vezes,
+///     e ao mesmo tempo NÃO restringe as linhas anônimas — cada uma tem
+///     `commentAuthorId` nulo, e nulos não colidem entre si.
 model FranchiseFollow {
   id          String @id @default(cuid())
   franchiseId String
   franchise   Franchise @relation(fields: [franchiseId], references: [id], onDelete: Cascade)
 
-  /// Identificador anônimo do visitante (cookie primário), quando não há login.
+  /// Identificador anônimo do visitante (cookie primário). Continua obrigatório
+  /// mesmo para leitor logado: é a origem do follow e o que permite reconciliar
+  /// o que foi seguido antes do login.
   visitorId String
+
+  /// Conta do leitor, quando ele está logado.
+  ///
+  /// `Cascade`: apagar a conta apaga os follows junto. Não é detalhe de
+  /// arrumação — é o direito de eliminação da LGPD funcionando por construção,
+  /// e não por alguém lembrar de limpar a tabela certa depois.
+  commentAuthorId String?
+  commentAuthor   CommentAuthor? @relation(fields: [commentAuthorId], references: [id], onDelete: Cascade)
+
   createdAt DateTime @default(now())
 
   @@unique([franchiseId, visitorId])
+  @@unique([franchiseId, commentAuthorId])
   @@index([visitorId])
+  @@index([commentAuthorId])
 }
 
 // =============================================================================
@@ -911,6 +978,9 @@ model CommentAuthor {
 
   comments Comment[]
   sessions CommentSession[]
+  /// Franquias seguidas. É o único dado de PREFERÊNCIA que guardamos do leitor —
+  /// e ele é declarado por ele, não inferido de comportamento.
+  follows  FranchiseFollow[]
 
   createdAt  DateTime @default(now())
   lastSeenAt DateTime @default(now())

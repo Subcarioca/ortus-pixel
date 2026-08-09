@@ -68,7 +68,12 @@ export function CommentSection({
       {session ? (
         <CommentForm articleId={articleId} displayName={session.displayName} />
       ) : (
-        <CommentLogin providers={providers} returnTo={returnTo} />
+        /* A âncora `#comentarios` faz parte do destino de retorno, e é montada
+           AQUI porque é aqui que se sabe para onde a pessoa quer voltar. A rota
+           de callback do OAuth não concatena mais âncora nenhuma: ela também
+           atende o login vindo do cabeçalho e do botão "Seguir", onde cair em
+           `#comentarios` seria um salto sem sentido. */
+        <CommentLogin providers={providers} returnTo={`${returnTo}#comentarios`} />
       )}
 
       {comments.length === 0 ? (

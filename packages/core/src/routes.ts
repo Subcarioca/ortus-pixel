@@ -91,6 +91,17 @@ export const routes = {
 
   trending: () => ROUTE_PREFIXES.trending,
   methodology: () => '/metodologia',
+
+  /**
+   * Conta do leitor e busca. As duas rotas ainda NÃO existem como página — o
+   * header já aponta para elas porque o espaço visual foi construído antes do
+   * back-end (login e busca estão sendo implementados em paralelo). Ficam aqui,
+   * e não escritas à mão no componente, para que o dia em que a URL mudar seja
+   * um `sed` num arquivo e não uma caça a strings pelo projeto.
+   */
+  account: () => '/conta',
+  search: (query?: string) => (query ? `/busca?q=${encodeURIComponent(query)}` : '/busca'),
+
   newsletter: () => '/newsletter',
   newsroom: () => '/redacao',
   author: (slug: string) => `${ROUTE_PREFIXES.author}/${slug}`,
@@ -132,6 +143,7 @@ export const RESERVED_SLUGS = new Set([
   'contato',
   'busca',
   'search',
+  'conta',
   'sitemap',
   'sitemap.xml',
   'robots.txt',

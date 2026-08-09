@@ -52,6 +52,19 @@ import { HEAT_LABELS, heatClass } from '@subcarioca/core';
 interface HeatBadgeProps {
   heat: Heat;
   size?: 'sm' | 'lg';
+  /**
+   * Texto no lugar do rótulo da faixa.
+   *
+   * Existe por causa de um erro editorial concreto: a faixa mais fria se chama
+   * "Guia" — o que é verdade quando o conteúdo É um guia, e falso para toda
+   * notícia que simplesmente esfriou. O site chamava de "Guia" um breaking de
+   * anteontem, afirmando ao leitor que aquilo "vale a qualquer momento".
+   *
+   * Quem chama passa o nome do FORMATO ("Notícia", "Análise", "Lista"). A COR
+   * continua sendo a da faixa: a temperatura não sumiu, só parou de emprestar
+   * uma palavra que não era dela.
+   */
+  label?: string;
 }
 
 /**
@@ -66,7 +79,7 @@ interface HeatBadgeProps {
  * No lugar dele entrou `TrendTag` ("Disparando", "Subindo", "Esfriando"), que
  * comunica melhor e não vaza a metodologia. Ver components/heat-bar.tsx.
  */
-export function HeatBadge({ heat, size = 'sm' }: HeatBadgeProps) {
+export function HeatBadge({ heat, size = 'sm', label }: HeatBadgeProps) {
   return (
     <span
       // O badge é o único bloco em que as QUATRO faixas têm modificador, então
@@ -75,15 +88,16 @@ export function HeatBadge({ heat, size = 'sm' }: HeatBadgeProps) {
       // `.heatbar`, `.rank` e `.score`, e ter um único caminho evita que o
       // próximo bloco de temperatura nasça com a interpolação ingênua de novo.
       className={`${heatClass('heat', heat)}${size === 'lg' ? ' heat--lg' : ''}`}
-      // O rótulo textual já está no conteúdo; o `title` acrescenta contexto no
-      // hover para quem quiser entender o que a faixa significa.
+      // O `title` continua anunciando a FAIXA mesmo quando o texto visível é
+      // outro: quem quiser entender a cor tem a resposta no hover, e a
+      // informação de temperatura não se perde ao trocar o rótulo.
       title={`Faixa de popularidade: ${HEAT_LABELS[heat]}`}
     >
       {/* Ponto pulsante exclusivo do "quente". */}
       {heat === 'hot' && <span className="live-dot" aria-hidden="true" />}
 
       {/* Rótulo textual — o que garante a leitura sem depender da cor. */}
-      <span>{HEAT_LABELS[heat]}</span>
+      <span>{label ?? HEAT_LABELS[heat]}</span>
     </span>
   );
 }

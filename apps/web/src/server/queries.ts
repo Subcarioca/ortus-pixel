@@ -34,9 +34,12 @@ import { unstable_cache } from 'next/cache';
 
 import {
   applyHeatCap,
+  EVERGREEN_FORMATS,
   heatForBand,
   heatLevelForHeat,
   isCategorySlug,
+  MAX_HOT_ITEMS_ON_HOME,
+  TREND_UP_DELTA,
   trendForDelta,
   type ContentCardData,
   type ContentFormat,
@@ -234,63 +237,182 @@ function toCardData(row: CardRow): ContentCardData {
 // =============================================================================
 
 /**
+ * Nível da cascata que produziu o hero. A home usa isto para escolher o RÓTULO
+ * do destaque — e só ele muda; o layout é o mesmo nos quatro casos.
+ *
+ *   'hot'    existe algo na faixa de urgência  → "Urgente"
+ *   'rise'   nada urgente, mas algo subindo    → "Destaque de hoje"
+ *   'latest' nada quente: a matéria mais nova  → "Última publicada"
+ *   'none'   nenhuma matéria publicada         → estado vazio de verdade
+ */
+export type HomeHeroKind = 'hot' | 'rise' | 'latest' | 'none';
+
+/** Cards da seção-âncora "Mais repercutido agora". */
+const HOME_FEED_SIZE = 12;
+
+/**
  * Dados da home.
  *
- * DECISÃO: uma única função cacheada devolve hero + trending + feed, em vez de
- * três funções separadas. Motivo: as três listas precisam ser MUTUAMENTE
- * EXCLUSIVAS (o hero não pode reaparecer no feed logo abaixo). Com queries
- * separadas, a exclusão teria de ser feita na página, misturando regra de
- * negócio com renderização — e falharia silenciosamente quando os caches
- * expirassem em momentos diferentes.
+ * =============================================================================
+ * O PRINCÍPIO QUE ESTA FUNÇÃO SEGUE
+ * =============================================================================
+ *
+ *   O SCORE DETERMINA A HIERARQUIA, NUNCA A EXISTÊNCIA.
+ *
+ * A versão anterior condicionava TODA seção a uma faixa de score: o hero exigia
+ * algo acima do limiar de urgência, o feed excluía a faixa mais fria, os guias
+ * eram "o que tem score baixo". A consequência não era um caso de borda — era o
+ * comportamento na maior parte do tempo: num site que publica poucas matérias
+ * por dia, nenhuma delas passa de 80, e a home renderizava "Nada urgente no
+ * momento" com o acervo inteiro escondido logo abaixo, no banco.
+ *
+ * Agora a temperatura escolhe QUAL matéria vai para o topo e em que ORDEM as
+ * outras aparecem; o conteúdo aparece de qualquer forma.
+ *
+ * -----------------------------------------------------------------------------
+ * A ORDEM DA HOME É POR REPERCUSSÃO — decisão do dono do produto
+ * -----------------------------------------------------------------------------
+ * Até aqui a seção abaixo do hero era CRONOLÓGICA, seguindo a regra antiga do
+ * design ("a temperatura muda o peso, não a ordem cronológica"). O dono do
+ * produto reviu essa regra: a home deve estampar a matéria de maior
+ * popularidade no topo e seguir em ordem DECRESCENTE DE SCORE, com a data
+ * apenas como desempate.
+ *
+ * O que isso troca, para quem for reavaliar depois: ganha-se a promessa de que
+ * a home é sempre "o que mais está repercutindo agora"; perde-se a garantia de
+ * que o que acabou de sair aparece no topo. Como score leva horas para subir,
+ * uma matéria recém-publicada entra na home em posição baixa e sobe conforme
+ * repercute. Quem quiser o corte cronológico tem a página de cada editoria, que
+ * continua ordenada por `publishedAt`.
+ *
+ * O ordenamento não afeta a regra de nunca ficar vazia: a seção continua sem
+ * NENHUM filtro de faixa — entra tudo o que está publicado, na ordem nova.
+ *
+ * DECISÃO DE ESTRUTURA: uma única função cacheada com três consultas em
+ * paralelo. Como a home inteira passou a ser ordenada por score, o hero, o
+ * ranking e a grade saem todos do MESMO lote (`home:scored`) — o que também
+ * garante, de graça, que nenhum card apareça em dois blocos. As outras duas
+ * consultas existem porque pedem ordem diferente: a do degrau "Última
+ * publicada" (a mais recente, que pode não estar entre os 40 maiores scores) e
+ * a dos guias (por formato).
  */
 const getHomeDataCached = unstable_cache(
   async () => {
-    // Buscamos um lote único e particionamos em memória. Para ~40 linhas isso é
-    // muito mais barato que três idas ao banco, e garante a exclusividade.
-    const articles = await safeQuery(
-      'home:articles',
-      () =>
-        prisma.article.findMany({
-          where: { status: 'published', publishedAt: { not: null } },
-          select: CARD_SELECT,
-          orderBy: [{ currentScore: 'desc' }, { publishedAt: 'desc' }],
-          take: 40,
-        }),
-      [],
-    );
-
-    const cards = articles.map(toCardData);
+    const [scoredRows, newestRows, guideRows] = await Promise.all([
+      // Lote único por REPERCUSSÃO: alimenta o hero, o ranking e a grade.
+      // `publishedAt` como segundo critério não é detalhe: score empata com
+      // frequência (o motor trabalha com poucas casas), e sem desempate estável
+      // a ordem da home mudaria a cada consulta, com cards trocando de lugar
+      // entre duas visitas sem nada ter mudado no site.
+      safeQuery(
+        'home:scored',
+        () =>
+          prisma.article.findMany({
+            where: { status: 'published', publishedAt: { not: null } },
+            select: CARD_SELECT,
+            orderBy: [{ currentScore: 'desc' }, { publishedAt: 'desc' }],
+            take: 40,
+          }),
+        [],
+      ),
+      // A mais recente, e só ela: serve ao terceiro degrau do hero ("Última
+      // publicada"). Consulta própria porque num acervo grande a matéria mais
+      // nova pode estar fora dos 40 maiores scores — justamente por ser nova.
+      safeQuery(
+        'home:newest',
+        () =>
+          prisma.article.findMany({
+            where: { status: 'published', publishedAt: { not: null } },
+            select: CARD_SELECT,
+            orderBy: { publishedAt: 'desc' },
+            take: 1,
+          }),
+        [],
+      ),
+      // "Guias e essenciais" por FORMATO. Ordenado por data (e não por
+      // audiência) porque num acervo novo `viewCount` é zero em tudo — ordenar
+      // por ele produziria uma ordem arbitrária disfarçada de curadoria.
+      safeQuery(
+        'home:guides',
+        () =>
+          prisma.article.findMany({
+            where: {
+              status: 'published',
+              publishedAt: { not: null },
+              format: { in: [...EVERGREEN_FORMATS] },
+            },
+            select: CARD_SELECT,
+            orderBy: { publishedAt: 'desc' },
+            take: 4,
+          }),
+        [],
+      ),
+    ]);
 
     // Aplica o teto de 3 "quentes" simultâneos (regra do design): página
     // inteira vermelha = nada é urgente.
     const withHeat = applyHeatCap(
-      articles.map((a) => ({ ...a, currentBand: a.currentBand as ScoreBand })),
+      scoredRows.map((a) => ({ ...a, currentBand: a.currentBand as ScoreBand })),
     );
 
-    const adjusted = cards.map((card, index) => ({
-      ...card,
-      heat: withHeat[index]?.heat ?? card.heat,
+    const scored = scoredRows.map((row, index) => ({
+      ...toCardData(row),
+      heat: withHeat[index]?.heat ?? heatForBand(row.currentBand as ScoreBand),
     }));
 
-    const hero = adjusted.filter((c) => c.heat === 'hot').slice(0, 3);
+    const newest = newestRows.map(toCardData);
+
+    // ---------------------------------------------------------------------
+    // HERO EM CASCATA — degradação graciosa em quatro níveis
+    // ---------------------------------------------------------------------
+    // Cada degrau é uma AFIRMAÇÃO DIFERENTE, e é por isso que o rótulo muda
+    // junto: chamar de "Urgente" a matéria mais recente de um dia parado seria
+    // mentir para o leitor, e o leitor descobre na segunda visita.
+    const hot = scored.filter((c) => c.heat === 'hot').slice(0, MAX_HOT_ITEMS_ON_HOME);
+    // O mesmo teto de 3 vale para o degrau seguinte, pela mesma razão: mais que
+    // isso deixa de ser destaque e vira lista.
+    const rise = scored.filter((c) => c.heat === 'rise').slice(0, MAX_HOT_ITEMS_ON_HOME);
+
+    let heroKind: HomeHeroKind = 'none';
+    let hero: ContentCardData[] = [];
+
+    if (hot.length > 0) {
+      heroKind = 'hot';
+      hero = hot;
+    } else if (rise.length > 0) {
+      heroKind = 'rise';
+      hero = rise;
+    } else if (newest.length > 0 && newest[0]) {
+      heroKind = 'latest';
+      hero = [newest[0]];
+    }
+
     const heroIds = new Set(hero.map((h) => h.id));
 
-    const trending = adjusted
+    const trending = scored
       .filter((c) => !heroIds.has(c.id) && (c.heat === 'hot' || c.heat === 'rise'))
       .slice(0, 6);
     const trendingIds = new Set(trending.map((t) => t.id));
 
-    // O feed é CRONOLÓGICO, não por score. Decisão do design: "a temperatura
-    // muda o peso, não a ordem cronológica" — quem rola a home espera ver o que
-    // saiu por último.
-    const feed = adjusted
-      .filter((c) => !heroIds.has(c.id) && !trendingIds.has(c.id) && c.heat !== 'ever')
-      .sort((a, b) => (b.publishedAt?.getTime() ?? 0) - (a.publishedAt?.getTime() ?? 0))
-      .slice(0, 12);
+    // A grade é a CONTINUAÇÃO da mesma ordem: hero (1º) → lista numerada (os
+    // que estão quentes) → grade (todo o resto, ainda em score decrescente).
+    //
+    // Por isso ela exclui o ranking, e não só o hero. Enquanto a seção era
+    // cronológica, repetir um card fazia sentido — eram duas leituras
+    // diferentes do acervo, uma por horário e outra por temperatura. Agora as
+    // duas leem na MESMA ordem, e os seis primeiros cards da grade seriam,
+    // literalmente, os seis itens da lista logo acima.
+    //
+    // Nada some da página por causa disso: o que sai da grade está visível no
+    // bloco anterior. O que continua valendo é a regra que motivou a reforma —
+    // NENHUM filtro de faixa aqui, entra tudo o que está publicado.
+    const feed = scored
+      .filter((c) => !heroIds.has(c.id) && !trendingIds.has(c.id))
+      .slice(0, HOME_FEED_SIZE);
 
-    const evergreen = adjusted.filter((c) => c.heat === 'ever').slice(0, 4);
+    const evergreen = guideRows.map(toCardData);
 
-    return { hero, trending, feed, evergreen };
+    return { hero, heroKind, trending, feed, evergreen };
   },
   ['home-data'],
   {
@@ -327,6 +449,22 @@ export const getTickerItems = withDateRevival(getTickerItemsCached);
 // EM ALTA (ranking ao vivo)
 // =============================================================================
 
+/**
+ * Corte da faixa "em alta". Continua existindo — mudou o que ele decide.
+ *
+ * ANTES: decidia se a LISTA existia (`ranking = cards.filter(score >= 60)`).
+ * Num dia calmo o resultado era uma página de ranking sem ranking nenhum —
+ * um site provando publicamente que não tem o que mostrar.
+ *
+ * AGORA: decide onde cai o DEGRAU dentro de uma lista que sempre existe.
+ * Ranking é ordem relativa; ordem relativa não depende de limiar absoluto. Com
+ * dois artigos publicados, o 1º ainda é o 1º.
+ */
+const TRENDING_STEP_SCORE = 60;
+
+/** Tamanho do ranking público. */
+const TRENDING_SIZE = 20;
+
 const getTrendingRankingCached = unstable_cache(
   async () => {
     const articles = await safeQuery(
@@ -335,49 +473,72 @@ const getTrendingRankingCached = unstable_cache(
         prisma.article.findMany({
           where: { status: 'published', publishedAt: { not: null } },
           select: CARD_SELECT,
-          orderBy: { currentScore: 'desc' },
-          take: 30,
+          orderBy: [{ currentScore: 'desc' }, { publishedAt: 'desc' }],
+          take: TRENDING_SIZE,
         }),
       [],
     );
 
-    const cards = articles.map(toCardData);
+    const ranking = articles.map(toCardData);
 
     const stats = await safeQuery(
       'trending:stats',
       async () => {
-        const [hotCount, risingCount, todayCount, lastRun] = await Promise.all([
-          prisma.article.count({ where: { status: 'published', currentBand: 'HOT' } }),
-          prisma.article.count({ where: { status: 'published', currentBand: 'RISING' } }),
-          prisma.article.count({
-            where: {
-              status: 'published',
-              publishedAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-            },
-          }),
-          // "Atualizado há X min" — prova de que o site está vivo (design §3).
-          prisma.pipelineRun.findFirst({
-            where: { status: 'completed' },
-            orderBy: { finishedAt: 'desc' },
-            select: { finishedAt: true },
-          }),
-        ]);
+        const startOfToday = new Date(new Date().setHours(0, 0, 0, 0));
+        const startOfWeek = new Date(Date.now() - 7 * 24 * 3_600_000);
+
+        const [hotCount, risingCount, todayCount, trackedCount, movingCount, weekCount, lastRun] =
+          await Promise.all([
+            prisma.article.count({ where: { status: 'published', currentBand: 'HOT' } }),
+            prisma.article.count({ where: { status: 'published', currentBand: 'RISING' } }),
+            prisma.article.count({
+              where: { status: 'published', publishedAt: { gte: startOfToday } },
+            }),
+            // --- Trio alternativo, para o dia calmo. Ver o comentário da página.
+            prisma.article.count({ where: { status: 'published' } }),
+            // Mesmo limiar que vira o rótulo "Subindo" no card: se a página diz
+            // que N estão subindo, é o mesmo N que o leitor vê marcado na lista.
+            prisma.article.count({
+              where: { status: 'published', scoreDelta1h: { gte: TREND_UP_DELTA } },
+            }),
+            prisma.article.count({
+              where: { status: 'published', publishedAt: { gte: startOfWeek } },
+            }),
+            // "Atualizado há X min" — prova de que o site está vivo (design §3).
+            prisma.pipelineRun.findFirst({
+              where: { status: 'completed' },
+              orderBy: { finishedAt: 'desc' },
+              select: { finishedAt: true },
+            }),
+          ]);
 
         return {
           hotCount,
           risingCount,
           todayCount,
+          trackedCount,
+          movingCount,
+          weekCount,
           lastUpdatedAt: lastRun?.finishedAt ?? null,
         };
       },
-      { hotCount: 0, risingCount: 0, todayCount: 0, lastUpdatedAt: null as Date | null },
+      {
+        hotCount: 0,
+        risingCount: 0,
+        todayCount: 0,
+        trackedCount: 0,
+        movingCount: 0,
+        weekCount: 0,
+        lastUpdatedAt: null as Date | null,
+      },
     );
 
     return {
-      // Acima de 60: o que está "pegando".
-      ranking: cards.filter((c) => c.score >= 60),
-      // Degrau explícito abaixo de 60 (decisão do design).
-      belowThreshold: cards.filter((c) => c.score < 60).slice(0, 10),
+      ranking,
+      // Quantos itens do ranking estão acima do corte. É por aqui que a página
+      // sabe em que posição desenhar o degrau — o número 60 não atravessa a
+      // fronteira da apresentação (ADR 0009: o score não é público).
+      hotZoneCount: ranking.filter((c) => c.score >= TRENDING_STEP_SCORE).length,
       stats,
     };
   },

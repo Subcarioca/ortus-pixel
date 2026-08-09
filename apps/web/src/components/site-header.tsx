@@ -46,6 +46,35 @@ export function SiteHeader({ categories }: { categories: readonly CategoryDefini
 
         <div className="header__actions">
           {/*
+            SLOT DE BUSCA — espaço construído antes do back-end.
+            TODO: busca funcional entra via /api/search (outro agente).
+
+            O campo já envia `q` por GET para /busca, que ainda não existe como
+            página. É de propósito: o dia em que a rota subir, a busca funciona
+            sem tocar no header. Ficar com um <input> inerte (ou desabilitado)
+            seria pior — um campo que não responde ao Enter é um controle
+            quebrado, e controle quebrado custa mais confiança do que a ausência
+            do recurso (Nielsen #1).
+
+            Só aparece a partir de 1024px, junto com o menu de editorias: abaixo
+            disso o cabeçalho tem 3 elementos disputando 360px, e a busca no
+            celular pede tela própria em vez de um campo espremido.
+          */}
+          <form className="header__search" role="search" action={routes.search()} method="get">
+            <label htmlFor="busca-topo" className="sr-only">
+              Buscar no site
+            </label>
+            <input
+              id="busca-topo"
+              type="search"
+              name="q"
+              className="input"
+              placeholder="Buscar…"
+              autoComplete="off"
+            />
+          </form>
+
+          {/*
             "Em alta" recebe tratamento de destaque no header porque é a
             página-manifesto do produto: é ela que comunica o diferencial de
             "sabemos o que está bombando agora".
@@ -53,6 +82,18 @@ export function SiteHeader({ categories }: { categories: readonly CategoryDefini
           <Link href={routes.trending()} className="btn-hot-nav">
             <span className="live-dot" aria-hidden="true" />
             Em alta
+          </Link>
+
+          {/*
+            ENTRAR — conta do leitor. A rota /conta está sendo construída em
+            paralelo; o link já aponta para ela via `routes.account()`.
+
+            `.btn--ghost` e não `.btn--primary`: o carmim de marca no header
+            competiria com o "Em alta", que é a ação que o produto de fato quer
+            promover. Login é serviço, não chamada.
+          */}
+          <Link href={routes.account()} className="btn btn--ghost btn--sm">
+            Entrar
           </Link>
         </div>
       </div>

@@ -30,7 +30,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 import type { ContentCardData } from '@subcarioca/core';
-import { catClass, catToken, routes } from '@subcarioca/core';
+import { catClass, catToken, EVERGREEN_FORMATS, FORMAT_LABELS, routes } from '@subcarioca/core';
 
 import { HeatBadge } from './heat-badge';
 import { HeatBar, TrendTag } from './heat-bar';
@@ -38,7 +38,16 @@ import { RelativeTime } from './relative-time';
 
 interface ArticleCardProps {
   item: ContentCardData;
-  variant?: 'grid' | 'row' | 'lead';
+  /**
+   * `ever` força a anatomia de evergreen independentemente da temperatura.
+   *
+   * Existe porque "Guias e essenciais" passou a ser selecionada por FORMATO
+   * (guia, lista, comparativo) e não mais por faixa de score: um guia publicado
+   * hoje pode estar em qualquer temperatura, e ainda assim precisa do card sem
+   * imagem e do filete verde — é o tratamento que diz "isto vale a qualquer
+   * momento", que é justamente o que a seção promete.
+   */
+  variant?: 'grid' | 'row' | 'lead' | 'ever';
   /** Posição no ranking, exibida na página Em Alta. */
   rank?: number;
   /**
@@ -57,24 +66,46 @@ interface ArticleCardProps {
  * Usá-lo sozinho produziria um card sem fundo, sem borda e sem padding. O
  * pódio é, portanto, um card de grade com título grande.
  */
-const VARIANT_CLASS: Record<'grid' | 'row' | 'lead', string> = {
+const VARIANT_CLASS: Record<'grid' | 'row' | 'lead' | 'ever', string> = {
   grid: 'card--grid',
   row: 'card--row',
   lead: 'card--grid card--lead',
+  ever: 'card--ever',
 };
 
 export function ArticleCard({ item, variant = 'grid', rank, priority = false }: ArticleCardProps) {
-  // Evergreen não compete: sem imagem grande e sem horário, mostrando tempo de
-  // leitura. Decisão do design para proteger a hierarquia da temperatura.
-  const isEvergreen = item.heat === 'ever';
+  const isEvergreenFormat = (EVERGREEN_FORMATS as readonly string[]).includes(item.format);
+
+  /*
+    QUEM MERECE A ANATOMIA DE EVERGREEN — e por que a regra mudou.
+
+    Evergreen não compete: sem imagem grande, sem horário, mostrando tempo de
+    leitura. É decisão do design, para proteger a hierarquia da temperatura.
+
+    O critério ANTIGO era só `heat === 'ever'`, ou seja, score baixo. Enquanto o
+    feed da home excluía a faixa fria, isso nunca aparecia; agora que "Últimas
+    notícias" mostra tudo, apareceria — e mostraria uma notícia de anteontem sem
+    foto e SEM DATA numa seção cronológica, tratando-a como material perene.
+
+    Perene é propriedade do FORMATO. Uma notícia que esfriou continua sendo
+    notícia: card normal, com capa e com data.
+  */
+  const isEvergreen = variant === 'ever' || (item.heat === 'ever' && isEvergreenFormat);
+
+  // Na faixa mais fria o badge diz o FORMATO, não a faixa: "Guia" só é verdade
+  // quando o conteúdo é um guia. Ver o comentário da prop `label` no HeatBadge.
+  const badgeLabel =
+    variant === 'ever' || item.heat === 'ever' ? FORMAT_LABELS[item.format] : undefined;
 
   // Evergreen tem anatomia própria no design: sem imagem, sem .card__body e
   // com filete verde à esquerda (`.card--ever` já traz o padding). Tratá-lo no
   // mesmo JSX dos demais exigiria três ternários aninhados no meio do markup.
   if (isEvergreen) {
     return (
-      <article className="card card--ever">
-        <HeatBadge heat={item.heat} />
+      <article className={`card ${VARIANT_CLASS.ever}`}>
+        {/* Na seção de guias o verde é do BLOCO (o filete do `.card--ever`),
+            então o badge acompanha, mesmo que o guia esteja quente hoje. */}
+        <HeatBadge heat={variant === 'ever' ? 'ever' : item.heat} label={badgeLabel} />
         <h3 className="card__title">
           <Link href={item.url}>{item.title}</Link>
         </h3>
@@ -123,7 +154,7 @@ export function ArticleCard({ item, variant = 'grid', rank, priority = false }: 
 
       <div className="card__body">
         <div className="card__head">
-          <HeatBadge heat={item.heat} />
+          <HeatBadge heat={item.heat} label={badgeLabel} />
           <HeatBar heat={item.heat} level={item.heatLevel} size="sm" />
           <TrendTag trend={item.trend} />
           <Link href={routes.category(item.category.slug)} className={catClass(item.category.slug)}>

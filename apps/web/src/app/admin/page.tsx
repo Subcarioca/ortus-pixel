@@ -25,7 +25,7 @@
 
 import Link from 'next/link';
 
-import { SCORE_BANDS, bandForScore, routes } from '@subcarioca/core';
+import { CATEGORIES, SCORE_BANDS, bandForScore, routes } from '@subcarioca/core';
 import { prisma } from '@subcarioca/db';
 
 import { AdminLogin } from '@/components/admin/admin-login';
@@ -44,7 +44,7 @@ export default async function AdminPage() {
     return <AdminLogin />;
   }
 
-  const [topics, publishRate, lastRun] = await Promise.all([
+  const [topics, publishRate, lastRun, authors] = await Promise.all([
     prisma.topic.findMany({
       where: { status: { in: ['new', 'assigned'] } },
       orderBy: { currentScore: 'desc' },
@@ -64,7 +64,10 @@ export default async function AdminPage() {
       where: { status: 'completed' },
       orderBy: { finishedAt: 'desc' },
     }),
+    prisma.author.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
   ]);
+
+  const categoryOptions = CATEGORIES.map((c) => ({ slug: c.slug, name: c.name }));
 
   const hotTopics = topics.filter((t) => t.currentBand === 'HOT');
 
@@ -169,6 +172,8 @@ export default async function AdminPage() {
             {topics.map((topic) => (
               <TopicRow
                 key={topic.id}
+                categories={categoryOptions}
+                authors={authors}
                 topic={{
                   id: topic.id,
                   title: topic.title,
@@ -189,6 +194,7 @@ export default async function AdminPage() {
                   sourceUrl: topic.sourceUrl,
                   sourceTier: topic.sourceTier,
                   categoryName: topic.category?.name ?? null,
+                  categorySlug: topic.category?.slug ?? null,
                   franchises: topic.franchises.map((f) => f.franchise.name),
                   becameHotAt: topic.becameHotAt,
                   claimedAt: topic.claimedAt,

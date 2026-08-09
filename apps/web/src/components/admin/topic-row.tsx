@@ -26,8 +26,11 @@ import {
 
 import { HeatBadge } from '../heat-badge';
 import { ScoreValue } from './score-value';
+import { ArticleCreateForm } from './article-create-form';
 
 interface TopicRowProps {
+  categories: { slug: string; name: string }[];
+  authors: { id: string; name: string }[];
   topic: {
     id: string;
     title: string;
@@ -47,6 +50,7 @@ interface TopicRowProps {
     sourceUrl: string | null;
     sourceTier: string;
     categoryName: string | null;
+    categorySlug: string | null;
     franchises: string[];
     becameHotAt: Date | null;
     claimedAt: Date | null;
@@ -55,8 +59,9 @@ interface TopicRowProps {
   };
 }
 
-export function TopicRow({ topic }: TopicRowProps) {
+export function TopicRow({ topic, categories, authors }: TopicRowProps) {
   const [expanded, setExpanded] = useState(false);
+  const [creatingArticle, setCreatingArticle] = useState(false);
   const [overrideValue, setOverrideValue] = useState('');
   const [overrideReason, setOverrideReason] = useState('');
   const [isPending, startTransition] = useTransition();
@@ -207,6 +212,17 @@ export function TopicRow({ topic }: TopicRowProps) {
           </button>
         )}
 
+        {topic.status !== 'published' && topic.status !== 'dismissed' && (
+          <button
+            type="button"
+            className="btn btn--primary btn--sm"
+            onClick={() => setCreatingArticle(!creatingArticle)}
+            aria-expanded={creatingArticle}
+          >
+            {creatingArticle ? 'Cancelar matéria' : 'Criar matéria'}
+          </button>
+        )}
+
         <button
           type="button"
           className="btn btn--ghost btn--sm"
@@ -225,6 +241,21 @@ export function TopicRow({ topic }: TopicRowProps) {
           Descartar
         </button>
       </div>
+
+      {/* ---------- CRIAR MATÉRIA A PARTIR DESTE TÓPICO ---------- */}
+      {creatingArticle && (
+        <div className="admin-row__detail">
+          <ArticleCreateForm
+            topicId={topic.id}
+            defaultTitle={topic.title}
+            defaultExcerpt={topic.summary}
+            defaultCategorySlug={topic.categorySlug}
+            categories={categories}
+            authors={authors}
+            onDone={() => setCreatingArticle(false)}
+          />
+        </div>
+      )}
 
       {/* ---------- DETALHE: DECOMPOSIÇÃO DO SCORE ---------- */}
       {expanded && (

@@ -1476,11 +1476,18 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
 .admin-form { display: grid; gap: var(--s-3); }
 @media (min-width: 768px) { .admin-form--cols { grid-template-columns: repeat(2, 1fr); } }
 .admin-form label { display: grid; gap: 4px; font-size: var(--fs-xs); color: var(--ink-2); }
-.admin-form input, .admin-form select {
+.admin-form input, .admin-form select, .admin-form textarea {
   background: var(--surface-1); color: var(--ink);
   border: 1px solid var(--line); border-radius: var(--r-sm); padding: 9px var(--s-3);
   font: inherit; font-size: var(--fs-sm); min-height: 40px;
 }
+.admin-form textarea { resize: vertical; min-height: 120px; width: 100%; }
+/* Campo que deve ocupar as duas colunas do grid desktop (título, corpo,
+   TL;DR) — em telas < 768px o grid já é 1 coluna, então isto não faz nada. */
+.admin-form__full { grid-column: 1 / -1; }
+.admin-tldr { display: grid; gap: var(--s-2); }
+.admin-tldr__row { display: flex; gap: var(--s-2); align-items: center; }
+.admin-tldr__row input { flex: 1; }
 .admin-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
 .input--sm { padding: 6px var(--s-2); min-height: 34px; max-width: 7rem; font-size: var(--fs-sm); }
 

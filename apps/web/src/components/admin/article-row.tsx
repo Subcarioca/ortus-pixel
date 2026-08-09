@@ -142,11 +142,11 @@ export function ArticleRow({ article, categories, authors }: ArticleRowProps) {
         ) : (
           <>
             <span className="admin-row__warning" role="alert">
-              Apagar “{article.title}”? Isso remove também
+              Apagar “{article.title}”?
               {article.commentCount > 0
-                ? ` os ${article.commentCount} comentários da matéria e `
-                : ' '}
-              não pode ser desfeito.
+                ? ` Isso também remove os ${article.commentCount} comentários da matéria.`
+                : ''}{' '}
+              Não pode ser desfeito.
             </span>
             <button type="button" className="btn btn--hot btn--sm" onClick={remove} disabled={busy}>
               {busy ? 'Apagando…' : 'Apagar definitivamente'}

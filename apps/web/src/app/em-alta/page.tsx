@@ -3,20 +3,16 @@
  * PÁGINA "EM ALTA" — o ranking ao vivo por score
  * =============================================================================
  *
- * É a página-manifesto do produto: expõe publicamente o mecanismo de curadoria.
- * Também atende ao requisito do briefing de "página/API de Trending que exponha
- * o ranking ao vivo por score".
+ * É a página-manifesto do produto: mostra o que está bombando agora, com cara
+ * de seleção editorial — não de saída de algoritmo. Também atende ao requisito
+ * do briefing de "página/API de Trending" (a ORDEM ao vivo é a informação),
+ * sem nunca framear isso como "ranking calculado por score" pro leitor.
  *
- * DECISÃO DE PRODUTO RESOLVIDA (era a pendência §7.3 do design; ver ADR 0009):
- * o score numérico NÃO é mais exibido publicamente. Esta página continua sendo
- * o ranking ao vivo — a ORDEM é a informação, e ela permanece intacta —, mas o
- * número de 0 a 100 ficou restrito ao /admin.
- *
- * O que se perde: um pouco de transparência ("por que este está em 1º?").
- * O que se compensa: a caixa "Como calculamos o score" e a página /metodologia
- * continuam explicando o MÉTODO. A diferença é entre publicar a receita e
- * publicar o resultado de cada prova — a primeira constrói E-E-A-T, a segunda
- * entrega calibração de graça para o concorrente.
+ * DECISÃO DE PRODUTO (ver ADR 0009 + decisão posterior de reposicionamento): o
+ * número de 0 a 100 nunca é exibido publicamente, e a própria PALAVRA
+ * "algoritmo"/"score"/"cálculo" também não aparece nesta página — só em
+ * /admin, de uso interno. A ordem é apresentada como "o que está bombando
+ * agora", curada e atualizada pela redação, não como resultado de fórmula.
  *
  * -----------------------------------------------------------------------------
  * RE-SKIN v0.3
@@ -57,17 +53,15 @@ export const revalidate = 60;
  * a marca duas vezes no mesmo <title>.
  *
  * CORREÇÃO DE CONFORMIDADE (ADR 0009) junto com o reposicionamento: a descrição
- * anterior dizia que o ranking era "ordenado pelo nosso score de popularidade".
- * Era uma promessa que a página não cumpre mais — e não deve cumprir: o número
- * de 0 a 100 é interno ao /admin, e anunciá-lo na SERP criaria a expectativa de
- * encontrá-lo na página (frustração do leitor) além de entregar ao concorrente
- * a informação de que existe um número calibrável. O que a descrição vende
- * agora é o que a página de fato entrega: a ORDEM, ao vivo.
+ * evita qualquer linguagem de "ranking calculado"/"score" — não é uma promessa
+ * que a página deva cumprir pro leitor. O que a descrição vende é o que a
+ * página de fato entrega pra quem lê: o que está bombando, ao vivo, selecionado
+ * pela redação.
  */
 export const metadata: Metadata = {
   title: 'Em Alta — O Que Está Bombando no Universo Nerd',
   description:
-    'Ranking ao vivo do que está bombando agora: games, cinema, animes e tech, atualizado em tempo real. Sem número de score exposto, sem clickbait — só o que importa.',
+    'O que está bombando agora no universo nerd: games, cinema, animes e tech, selecionado e atualizado pela redação em tempo real. Sem clickbait — só o que importa.',
   alternates: { canonical: routes.trending() },
 };
 
@@ -102,8 +96,8 @@ export default async function TrendingPage() {
 
           <h1 className="article__title">Em alta agora</h1>
           <p className="hub-hero__desc">
-            Ranking recalculado continuamente a partir de buscas, redes sociais e
-            repercussão. <Link href={routes.methodology()}>Entenda o cálculo</Link>.
+            Selecionado e atualizado continuamente pela redação, acompanhando buscas, redes
+            sociais e repercussão em tempo real.
           </p>
 
           <dl className="hub-stats">
@@ -232,11 +226,11 @@ export default async function TrendingPage() {
             </li>
           </ul>
           <p className="form-hint">
-            O que <em>não</em> entra na conta: anúncio, link de afiliado e parceria
-            comercial. Nunca.
+            O que <em>nunca</em> influencia essa seleção: anúncio, link de afiliado e parceria
+            comercial.
           </p>
           <Link href={routes.methodology()} className="link-more">
-            Metodologia completa
+            Como escolhemos o que publicar
           </Link>
         </section>
 

@@ -1,81 +1,61 @@
 /**
  * =============================================================================
- * PÁGINA DE METODOLOGIA — como o score é calculado
+ * PÁGINA "COMO ESCOLHEMOS O QUE PUBLICAR" — processo editorial
  * =============================================================================
  *
- * Esta página tem TRÊS funções, e nenhuma delas é decorativa:
+ * DECISÃO DE PRODUTO: esta página antes descrevia o mecanismo de pontuação
+ * interno (sinais, pesos, faixas de 0–100) publicamente. Trocamos a moldura de
+ * propósito: o leitor não precisa saber que existe um sistema de pontuação por
+ * trás — precisa confiar que alguém está de fato acompanhando, verificando e
+ * decidindo o que importa. A curadoria deve ler como julgamento editorial
+ * humano, não como saída de algoritmo. O conteúdo de bastidor (sinais, faixas,
+ * pesos) continua existindo — só não é mais exposto nesta página; vive só em
+ * /admin, de uso interno da redação.
  *
- *  1. E-E-A-T: explicar publicamente o método é um sinal forte de
- *     confiabilidade. Um número de 0 a 100 sem explicação parece inventado —
- *     com explicação, vira credencial editorial.
- *  2. SEO: é conteúdo evergreen único, que ninguém mais tem.
- *  3. Produto: diferencia a Ortus Pixel dos concorrentes, que publicam "achando"
- *     o que vai bombar.
- *
- * O QUE EXPOMOS E O QUE NÃO EXPOMOS: descrevemos os SINAIS e as FAIXAS, mas não
- * os pesos exatos, os limiares de corte nem as fórmulas de normalização. É o
- * equilíbrio entre transparência (que gera confiança) e proteger a calibração,
- * que é o ativo construído ao longo de meses.
+ * O que se mantém desta versão anterior: o valor de SEO/E-E-A-T de uma página
+ * institucional explicando padrões editoriais — só que contado em termos de
+ * processo humano (o que verificamos, o que priorizamos, quando não publicamos),
+ * não de fórmula.
  */
 
 import type { Metadata } from 'next';
 
-import { SCORE_BANDS, absoluteUrl, routes } from '@subcarioca/core';
+import { absoluteUrl, routes } from '@subcarioca/core';
 
 import { BreadcrumbJsonLd } from '@/components/json-ld';
 
 export const metadata: Metadata = {
-  title: 'Como calculamos o score de popularidade',
+  title: 'Como escolhemos o que publicar',
   description:
-    'Entenda a metodologia por trás do score de 0 a 100 que ordena as notícias da Ortus Pixel: quais sinais usamos, como eles são combinados e o que cada faixa significa.',
+    'Como a redação da Ortus Pixel decide o que vira notícia, o que é prioridade e o que é apurado antes de ir ao ar.',
   alternates: { canonical: routes.methodology() },
 };
 
-const SIGNALS = [
+const PRINCIPLES = [
   {
-    name: 'Aceleração de busca',
+    name: 'Velocidade de verdade, não de achismo',
     description:
-      'O sinal mais importante. Comparamos o volume de buscas das últimas horas com o período imediatamente anterior. O que nos interessa não é o tamanho do interesse, mas a VELOCIDADE com que ele cresce — é isso que revela um assunto explodindo antes que ele vire manchete em todo lugar.',
+      'Acompanhamos buscas, redes sociais e o que as próprias fontes (estúdios, distribuidoras, desenvolvedoras) publicam, o dia inteiro. O objetivo é perceber cedo quando um assunto está pegando de verdade — não adivinhar.',
   },
   {
-    name: 'Volume de busca',
+    name: 'Fonte antes de velocidade',
     description:
-      'Quantas pessoas procuram o termo. Pesa menos do que a aceleração de propósito: "Star Wars" tem volume gigante todo dia, e isso não é notícia.',
+      'Um comunicado oficial da Rockstar não tem o mesmo peso que um post anônimo em fórum. Só publicamos como fato confirmado o que realmente foi confirmado; o resto é tratado como rumor, com a devida ressalva.',
   },
   {
-    name: 'Repercussão em redes sociais',
+    name: 'O que já foi dito em todo lugar não é prioridade',
     description:
-      'Menções, upvotes, comentários e compartilhamentos no Reddit, no X e no YouTube. Comentário vale mais que curtida, porque exige mais esforço — e portanto indica mobilização real.',
+      'Acompanhamos o que os grandes portais já publicaram. Preferimos gastar nosso tempo explicando direito o que pouca gente ainda cobriu, em vez de repetir manchete.',
   },
   {
-    name: 'Trending nativo das plataformas',
+    name: 'Contexto do seu fandom',
     description:
-      'Presença nos trending topics do YouTube, nos assuntos do momento do X e no topo dos subreddits de cada fandom.',
+      'Sabemos que quem acompanha games não necessariamente acompanha anime, e vice-versa. Priorizamos o que faz sentido pra quem já está aqui, não o que dá clique fácil pra qualquer um.',
   },
   {
-    name: 'Autoridade da fonte',
+    name: 'Assunto sensível passa por gente, sempre',
     description:
-      'Um anúncio oficial da Rockstar não é a mesma coisa que um post anônimo em fórum. Classificamos cada fonte em níveis, e isso muda tanto a urgência quanto o tratamento editorial: fato confirmado se publica; rumor se apura.',
-  },
-  {
-    name: 'Proximidade de lançamento',
-    description:
-      'Mantemos uma base própria de datas de estreias de filmes, séries, jogos e temporadas de anime. Uma notícia a três dias de um lançamento confirmado vale mais do que a mesma notícia a oito meses.',
-  },
-  {
-    name: 'Concorrência já publicada',
-    description:
-      'Monitoramos em tempo real o que os grandes portais já publicaram. Quanto menos gente cobriu, maior a janela de oportunidade — e maior a urgência de sermos os primeiros a explicar direito.',
-  },
-  {
-    name: 'Afinidade da nossa audiência',
-    description:
-      'Como os leitores da Ortus Pixel historicamente reagem a cada franquia. É o único sinal que nenhum concorrente consegue reproduzir, porque depende do comportamento da nossa própria base.',
-  },
-  {
-    name: 'Gatilhos editoriais sensíveis',
-    description:
-      'Identificamos temas delicados (morte de personagem, cancelamento, vazamento, polêmica). Eles NÃO aumentam o score de forma relevante — ao contrário: acionam revisão humana obrigatória e bloqueiam qualquer automação.',
+      'Morte de personagem, cancelamento, vazamento não confirmado ou qualquer polêmica nunca vira publicação ou notificação automática. Esses casos são sempre apurados e decididos por um jornalista antes de irem ao ar.',
   },
 ];
 
@@ -85,94 +65,55 @@ export default function MethodologyPage() {
       <BreadcrumbJsonLd
         items={[
           { name: 'Home', url: routes.home() },
-          { name: 'Metodologia', url: routes.methodology() },
+          { name: 'Como escolhemos o que publicar', url: routes.methodology() },
         ]}
       />
 
-      {/* Página de texto corrido, sem sidebar: só o `.container`. Antes era
-          `.article-layout`, a grade de três colunas do artigo — e como esta
-          página tem um único filho, a partir de 1180px o texto inteiro caía na
-          coluna de 56px reservada ao trilho de compartilhamento. Ver a nota
-          longa em app/[categoria]/[slug]/page.tsx. O `.article` já limita a
-          medida a 44rem sozinho, que é o que uma página de leitura precisa. */}
       <div className="container">
         <article className="article">
-          <h1 className="article__title">Como calculamos o score de popularidade</h1>
+          <h1 className="article__title">Como escolhemos o que publicar</h1>
           <p className="article__dek">
-            Toda notícia da Ortus Pixel recebe uma nota de 0 a 100 que indica o quanto o assunto
-            está em ascensão neste momento. Ela define o que vai para o topo da home, o que
-            entra em &ldquo;Em alta&rdquo; e o que dispara alerta na redação.
+            A Ortus Pixel acompanha games, cinema, séries, anime, HQs e tech o tempo todo. O que
+            chega até você é decidido pela redação — não por sorte, e não sem critério.
           </p>
 
           <div className="prose">
-            <h2 id="o-que-medimos">O que medimos</h2>
+            <h2 id="o-que-guia">O que guia nossas decisões</h2>
             <p>
-              O score combina nove sinais independentes. Nenhum deles decide sozinho: a nota
-              final é uma média ponderada, calibrada continuamente comparando o que previmos com
-              o desempenho real das matérias.
+              Nenhum critério decide sozinho o que publicar. A redação cruza vários sinais do que
+              está acontecendo agora com o bom senso editorial de quem acompanha cada fandom de
+              perto.
             </p>
 
             <dl className="methodology-list">
-              {SIGNALS.map((signal) => (
-                <div key={signal.name}>
+              {PRINCIPLES.map((item) => (
+                <div key={item.name}>
                   <dt>
-                    <strong>{signal.name}</strong>
+                    <strong>{item.name}</strong>
                   </dt>
-                  <dd>{signal.description}</dd>
+                  <dd>{item.description}</dd>
                 </div>
               ))}
             </dl>
 
-            <h2 id="faixas">O que cada faixa significa</h2>
-            <table className="admin-table">
-              <thead>
-                <tr>
-                  <th scope="col">Faixa</th>
-                  <th scope="col">Pontuação</th>
-                  <th scope="col">O que acontece</th>
-                </tr>
-              </thead>
-              <tbody>
-                {SCORE_BANDS.map((band) => (
-                  <tr key={band.band}>
-                    <th scope="row">{band.label}</th>
-                    <td>
-                      {band.min}–{band.max}
-                    </td>
-                    <td>{band.description}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            <h2 id="humano">O algoritmo não decide sozinho</h2>
+            <h2 id="humano">Uma pessoa decide, sempre</h2>
             <p>
-              O score é uma <strong>ferramenta de priorização</strong>, não um editor. Toda
-              decisão de publicação passa por um jornalista, que pode discordar da nota e
-              sobrepô-la manualmente a qualquer momento — registrando o motivo.
+              Nenhuma matéria vai ao ar sem passar por um jornalista. Sinais e monitoramento
+              ajudam a redação a perceber cedo o que está crescendo — mas a decisão final de
+              publicar, como tratar e quando, é sempre humana.
             </p>
             <p>
               Assuntos sensíveis (vazamentos não confirmados, polêmicas, mortes de personagem)
-              nunca disparam publicação ou notificação automática, por mais alta que seja a
-              pontuação. Nesses casos, o sistema apenas avisa a redação de que algo está
-              crescendo — e a checagem é feita por gente.
+              nunca são publicados ou notificados automaticamente. Esses casos são sempre
+              apurados por gente antes de irem ao ar.
             </p>
 
-            <h2 id="atualizacao">O score muda depois da publicação</h2>
+            <h2 id="atualizacao">Cobertura viva</h2>
             <p>
-              Recalculamos a nota continuamente, inclusive de matérias já publicadas. Um trailer
-              que viraliza três horas depois de sair pode subir sozinho para o topo da home. É
-              por isso que a ordem da página <a href={routes.trending()}>Em alta</a> muda ao
-              longo do dia.
-            </p>
-
-            <h2 id="erros">Onde erramos</h2>
-            <p>
-              Nenhum modelo de previsão acerta sempre. Medimos sistematicamente a correlação
-              entre o score previsto e a audiência real de cada matéria, e usamos esse resultado
-              para recalibrar os pesos. Quando um sinal externo fica indisponível, o cálculo
-              segue com os demais e a confiança da estimativa cai — preferimos uma nota honesta
-              e menos precisa a uma nota falsamente exata.
+              Acompanhamos o desenrolar das notícias ao longo do dia — um trailer que viraliza
+              horas depois de sair pode virar destaque, e atualizamos a matéria conforme a
+              história muda. É por isso que a página{' '}
+              <a href={routes.trending()}>Em alta</a> muda ao longo do dia.
             </p>
           </div>
         </article>

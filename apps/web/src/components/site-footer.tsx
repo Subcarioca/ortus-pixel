@@ -88,12 +88,12 @@ export function SiteFooter({ categories }: { categories: readonly CategoryDefini
                 <Link href={routes.newsroom()}>Nossa redação</Link>
               </li>
               {/*
-                A página de metodologia é diferencial editorial E de SEO:
-                explicar publicamente como o score é calculado reforça E-E-A-T
-                (transparência é sinal de confiabilidade) e diferencia o produto.
+                Página institucional de processo editorial: reforça E-E-A-T
+                (mostra que existe critério) sem expor mecanismo interno de
+                pontuação — a curadoria deve ler como julgamento humano.
               */}
               <li>
-                <Link href={routes.methodology()}>Como calculamos o score</Link>
+                <Link href={routes.methodology()}>Como escolhemos o que publicar</Link>
               </li>
             </ul>
           </nav>

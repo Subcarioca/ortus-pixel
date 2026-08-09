@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Proposta — Home Ortus Pixel em 4 estados</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../apps/web/src/app/ortuspixel.css">
+<style>
+  /* ------- CROMO DO PROTÓTIPO (não faz parte do produto) ------- */
+  .protobar{position:sticky;top:0;z-index:99;background:#111;color:#fff;font:600 12px/1 Inter,sans-serif}
+  .protobar__inner{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 16px}
+  .protobar button{font:inherit;padding:7px 12px;border-radius:999px;border:1px solid #444;background:transparent;color:#bbb;cursor:pointer}
+  .protobar button[aria-pressed="true"]{background:#E0284A;border-color:#E0284A;color:#fff}
+  .protobar span{opacity:.55;margin-right:6px}
+  .note-proto{margin:16px auto;max-width:1180px;padding:12px 16px;border-left:3px solid #E0284A;
+    background:rgba(224,40,74,.06);font:400 14px/1.5 Inter,sans-serif;color:var(--ink-2)}
+  .note-proto b{color:var(--ink)}
+  [data-state]{display:none}
+  [data-state].is-on{display:block}
+</style>
+</head>
+<body>
+<script src="assets/ortuspixel.js"></script>
+
+<div class="protobar"><div class="container protobar__inner">
+  <span>Home — estados</span>
+  <button data-go="a" aria-pressed="false">A · com urgente (hoje: raro)</button>
+  <button data-go="b" aria-pressed="true">B · SEM urgente (o dia normal)</button>
+  <button data-go="c" aria-pressed="false">C · dia 1, acervo pequeno</button>
+  <button data-go="d" aria-pressed="false">D · vazio de verdade</button>
+  <button data-go="e" aria-pressed="false">E · /em-alta sem faixa quente</button>
+</div></div>
+
+<!-- ============================================================ ESTADO A -->
+<div data-state="a">
+  <div class="note-proto"><b>Estado A — existe pelo menos 1 artigo acima do limiar de urgência.</b>
+    É a home que o design previu e a única que o código atual sabe montar. Nada muda aqui: a proposta
+    é <i>aditiva</i>, não substitui o comportamento quente.</div>
+
+  <div class="ticker"><div class="container ticker__inner">
+    <span class="ticker__label"><span class="live-dot"></span> Urgente</span>
+    <ul class="ticker__list"><li><a href="#">Rockstar confirma data de GTA VI e libera o trailer 3</a></li></ul>
+  </div></div>
+
+  <div class="container">
+    <section class="hero-layout">
+      <article class="hero">
+        <div class="hero__media"><div class="thumb" data-c="games"></div><div class="hero__overlay"></div></div>
+        <div class="hero__body">
+          <div class="card__head">
+            <span class="heat heat--hot heat--lg"><svg class="ico"><use href="#i-flame"></use></svg> Urgente</span>
+            <span class="heatbar heatbar--hot" data-on="4" role="img" aria-label="Temperatura: urgente"><i></i><i></i><i></i><i></i></span>
+            <span class="trend trend--up"><svg class="ico"><use href="#i-trending-up"></use></svg> Disparando</span>
+            <a class="cat cat--games" href="#">Games</a>
+          </div>
+          <h1 class="hero__title"><a href="#">Rockstar confirma data de GTA VI e libera o trailer 3</a></h1>
+          <p class="hero__dek">A data saiu em um post de 40 segundos e derrubou o site da própria Rockstar. Reunimos o que foi confirmado e o que continua rumor.</p>
+          <footer class="hero__foot"><span class="meta">há 12 min</span><a class="chip chip--hot" href="#">GTA VI</a></footer>
+        </div>
+      </article>
+      <div class="stack">
+        <article class="card card--grid"><a href="#">
+          <div class="thumb" data-c="cinema"><span class="thumb__tag heat heat--hot"><svg class="ico"><use href="#i-flame"></use></svg> Urgente</span></div>
+          <div class="card__body"><span class="cat cat--cinema">Cinema &amp; Séries</span>
+          <h3 class="card__title">Marvel revela o elenco completo de “Guerras Secretas”</h3>
+          <div class="meta"><span>há 41 min</span></div></div></a></article>
+        <article class="card card--grid"><a href="#">
+          <div class="thumb" data-c="anime"><span class="thumb__tag heat heat--hot"><svg class="ico"><use href="#i-flame"></use></svg> Urgente</span></div>
+          <div class="card__body"><span class="cat cat--anime">Anime &amp; Mangá</span>
+          <h3 class="card__title">Temporada final de Jujutsu Kaisen ganha trailer</h3>
+          <div class="meta"><span>há 1 h</span></div></div></a></article>
+      </div>
+    </section>
+    <p class="note">… daqui para baixo a página segue igual ao estado B.</p>
+  </div>
+</div>
+
+<!-- ============================================================ ESTADO B -->
+<div data-state="b" class="is-on">
+  <div class="note-proto"><b>Estado B — nenhuma notícia acima do limiar. É o dia normal do site.</b>
+    Hoje esta é a tela que mostra “Nada urgente no momento” e mais nada.
+    Na proposta, o hero <b>rebaixa em cascata</b> (pega o mais quente disponível, ou o mais recente)
+    e o feed “Últimas notícias” passa a ser <b>incondicional</b>. A home nunca fica sem conteúdo.</div>
+
+  <div class="container">
+    <!-- HERO REBAIXADO: rótulo honesto, sem fingir urgência -->
+    <section class="hero-layout">
+      <article class="hero">
+        <div class="hero__media"><div class="thumb" data-c="cinema"></div><div class="hero__overlay"></div></div>
+        <div class="hero__body">
+          <div class="card__head">
+            <span class="heat heat--rise heat--lg">Destaque de hoje</span>
+            <span class="heatbar heatbar--rise" data-on="3" role="img" aria-label="Temperatura: em alta"><i></i><i></i><i></i><i></i></span>
+            <span class="trend trend--up"><svg class="ico"><use href="#i-trending-up"></use></svg> Subindo</span>
+            <a class="cat cat--cinema" href="#">Cinema &amp; Séries</a>
+          </div>
+          <h1 class="hero__title"><a href="#">O que o novo teaser de “Duna: Parte Três” esconde nos 8 segundos finais</a></h1>
+          <p class="hero__dek">Nenhuma bomba hoje — mas este é o assunto que mais cresceu nas últimas 6 horas. Explicamos quadro a quadro.</p>
+          <footer class="hero__foot"><span class="meta">há 2 h</span><a class="chip" href="#">Duna</a></footer>
+        </div>
+      </article>
+      <div class="stack">
+        <article class="card card--grid"><a href="#">
+          <div class="thumb" data-c="games"></div>
+          <div class="card__body"><span class="cat cat--games">Games</span>
+          <h3 class="card__title">Silksong recebe patch que reescreve o final do capítulo 3</h3>
+          <div class="meta"><span>há 3 h</span><span class="meta__sep"></span><span class="trend trend--up"><svg class="ico"><use href="#i-trending-up"></use></svg> Subindo</span></div></div></a></article>
+        <article class="card card--grid"><a href="#">
+          <div class="thumb" data-c="tech"></div>
+          <div class="card__body"><span class="cat cat--tech">Tech</span>
+          <h3 class="card__title">Nvidia antecipa anúncio da linha RTX para a semana que vem</h3>
+          <div class="meta"><span>há 4 h</span></div></div></a></article>
+      </div>
+    </section>
+
+    <!-- EM ALTA AGORA (mantida; só aparece se houver massa suficiente) -->
+    <section class="section">
+      <div class="section-head">
+        <div><h2 class="section-title">Em alta agora</h2>
+          <p class="section-sub"><span class="live-dot"></span> Ranking recalculado continuamente</p></div>
+        <a class="link-more" href="#">Ver ranking completo</a>
+      </div>
+      <ol class="rank-list">
+        <li><a class="rank rank--rise" href="#"><span class="rank__pos">01</span>
+          <span><span class="rank__title">Silksong recebe patch que reescreve o final do capítulo 3</span>
+          <span class="rank__meta meta"><span class="cat cat--games">Games</span><span class="meta__sep"></span><span>há 3 h</span></span></span>
+          <span class="score score--rise"><span class="heatbar heatbar--rise" data-on="3" role="img" aria-label="Temperatura: em alta"><i></i><i></i><i></i><i></i></span>
+          <span class="trend trend--up"><svg class="ico"><use href="#i-trending-up"></use></svg> Subindo</span></span></a></li>
+        <li><a class="rank" href="#"><span class="rank__pos">02</span>
+          <span><span class="rank__title">One Piece: o capítulo desta semana muda a linha do tempo de Wano</span>
+          <span class="rank__meta meta"><span class="cat cat--anime">Anime &amp; Mangá</span><span class="meta__sep"></span><span>há 5 h</span></span></span>
+          <span class="score"><span class="heatbar" data-on="2" role="img" aria-label="Temperatura: relevante"><i></i><i></i><i></i><i></i></span>
+          <span class="trend"><svg class="ico"><use href="#i-trending-up"></use></svg> Estável</span></span></a></li>
+        <li><a class="rank" href="#"><span class="rank__pos">03</span>
+          <span><span class="rank__title">Nvidia antecipa anúncio da linha RTX para a semana que vem</span>
+          <span class="rank__meta meta"><span class="cat cat--tech">Tech</span><span class="meta__sep"></span><span>há 4 h</span></span></span>
+          <span class="score"><span class="heatbar" data-on="2" role="img" aria-label="Temperatura: relevante"><i></i><i></i><i></i><i></i></span>
+          <span class="trend"><svg class="ico"><use href="#i-trending-up"></use></svg> Novo</span></span></a></li>
+      </ol>
+    </section>
+
+    <!-- ÚLTIMAS NOTÍCIAS — A SEÇÃO-ÂNCORA. Sem filtro de faixa. -->
+    <section class="section">
+      <div class="section-head">
+        <div><h2 class="section-title">Últimas notícias</h2>
+          <p class="section-sub">Tudo o que publicamos, do mais novo para o mais antigo.</p></div>
+        <a class="link-more" href="#">Ver todas</a>
+      </div>
+      <div class="grid g-sm-2 g-md-3">
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="hq"></div>
+          <div class="card__body"><span class="cat cat--hq">HQs</span>
+          <h3 class="card__title">DC anuncia relançamento da linha Batman com equipe criativa nova</h3>
+          <div class="meta"><span>há 6 h</span></div></div></a></article>
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="eventos"></div>
+          <div class="card__body"><span class="cat cat--eventos">Eventos</span>
+          <h3 class="card__title">CCXP divulga as primeiras atrações confirmadas do palco principal</h3>
+          <div class="meta"><span>há 8 h</span></div></div></a></article>
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="games"></div>
+          <div class="card__body"><span class="cat cat--games">Games</span>
+          <h3 class="card__title">Análise: o remake que ninguém pediu acertou justamente onde importa</h3>
+          <div class="meta"><span>há 10 h</span></div></div></a></article>
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="tech"></div>
+          <div class="card__body"><span class="cat cat--tech">Tech</span>
+          <h3 class="card__title">O que muda no seu PC com a nova versão do Windows</h3>
+          <div class="meta"><span>ontem</span></div></div></a></article>
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="cinema"></div>
+          <div class="card__body"><span class="cat cat--cinema">Cinema &amp; Séries</span>
+          <h3 class="card__title">A série que a crítica odiou e o público transformou em fenômeno</h3>
+          <div class="meta"><span>ontem</span></div></div></a></article>
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="anime"></div>
+          <div class="card__body"><span class="cat cat--anime">Anime &amp; Mangá</span>
+          <h3 class="card__title">Cronograma das estreias da próxima temporada, semana a semana</h3>
+          <div class="meta"><span>ontem</span></div></div></a></article>
+      </div>
+    </section>
+
+    <!-- POR EDITORIA — atende ao instinto "editorias deveria ser a home",
+         mas entregando CONTEÚDO, não um menu de links. -->
+    <section class="section">
+      <div class="section-head">
+        <div><h2 class="section-title"><span class="cat cat--games"></span> Games</h2></div>
+        <a class="link-more" href="#">Tudo em Games</a>
+      </div>
+      <div class="grid g-sm-2 g-md-3">
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="games"></div>
+          <div class="card__body"><h3 class="card__title">Silksong recebe patch que reescreve o final do capítulo 3</h3>
+          <div class="meta"><span>há 3 h</span></div></div></a></article>
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="games"></div>
+          <div class="card__body"><h3 class="card__title">Análise: o remake que ninguém pediu acertou onde importa</h3>
+          <div class="meta"><span>há 10 h</span></div></div></a></article>
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="games"></div>
+          <div class="card__body"><h3 class="card__title">Os 7 indies que passaram batido este mês e merecem sua atenção</h3>
+          <div class="meta"><span>ontem</span></div></div></a></article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div><h2 class="section-title"><span class="cat cat--cinema"></span> Cinema &amp; Séries</h2></div>
+        <a class="link-more" href="#">Tudo em Cinema &amp; Séries</a>
+      </div>
+      <div class="grid g-sm-2 g-md-3">
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="cinema"></div>
+          <div class="card__body"><h3 class="card__title">O que o novo teaser de “Duna: Parte Três” esconde nos 8s finais</h3>
+          <div class="meta"><span>há 2 h</span></div></div></a></article>
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="cinema"></div>
+          <div class="card__body"><h3 class="card__title">A série que a crítica odiou e o público transformou em fenômeno</h3>
+          <div class="meta"><span>ontem</span></div></div></a></article>
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="cinema"></div>
+          <div class="card__body"><h3 class="card__title">Guia: em que ordem assistir antes de “Guerras Secretas”</h3>
+          <div class="meta"><span>há 2 dias</span></div></div></a></article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div><h2 class="section-title">Seus universos</h2>
+        <p class="section-sub">Siga uma franquia e receba só o que importa dela.</p></div>
+        <a class="link-more" href="#">Ver todos os hubs</a>
+      </div>
+      <div class="fandoms">
+        <a class="fandom" href="#"><span class="fandom__ico">GTA</span>GTA VI<span class="fandom__n">12.480</span></a>
+        <a class="fandom" href="#"><span class="fandom__ico">OP</span>One Piece<span class="fandom__n">9.204</span></a>
+        <a class="fandom" href="#"><span class="fandom__ico">ZEL</span>Zelda<span class="fandom__n">7.611</span></a>
+        <a class="fandom" href="#"><span class="fandom__ico">MCU</span>Marvel<span class="fandom__n">6.980</span></a>
+      </div>
+    </section>
+
+    <section class="section cta-news">
+      <div>
+        <p class="cta-news__kicker">Newsletter</p>
+        <h2>O resumo do dia nerd no seu e-mail</h2>
+        <p>Uma edição por dia, com o que realmente importou. Sem spam.</p>
+        </div><div><form class="form-inline"><input class="input" type="email" placeholder="seu@email.com" aria-label="E-mail">
+        <button class="btn btn--primary" type="button">Quero receber</button></form>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div><h2 class="section-title">Guias e essenciais</h2>
+        <p class="section-sub">Conteúdo que não vence: listas definitivas, explicações e comparativos.</p></div>
+      </div>
+      <div class="grid g-sm-2 g-lg-4">
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="cinema"></div>
+          <div class="card__body"><span class="heat heat--ever">Guia</span>
+          <h3 class="card__title">Em que ordem assistir tudo antes de “Guerras Secretas”</h3></div></a></article>
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="tech"></div>
+          <div class="card__body"><span class="heat heat--ever">Comparativo</span>
+          <h3 class="card__title">Qual placa de vídeo comprar em cada faixa de preço</h3></div></a></article>
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="anime"></div>
+          <div class="card__body"><span class="heat heat--ever">Lista</span>
+          <h3 class="card__title">Os 20 animes que definiram a década</h3></div></a></article>
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="games"></div>
+          <div class="card__body"><span class="heat heat--ever">Guia</span>
+          <h3 class="card__title">Como começar em Elden Ring sem se frustrar nas 5 primeiras horas</h3></div></a></article>
+      </div>
+    </section>
+
+    <nav class="section" aria-label="Todas as editorias">
+      <h2 class="section-title">Editorias</h2>
+      <div class="filters">
+        <a class="chip" href="#"><span class="cat cat--games"></span>Games</a>
+        <a class="chip" href="#"><span class="cat cat--cinema"></span>Cinema &amp; Séries</a>
+        <a class="chip" href="#"><span class="cat cat--anime"></span>Anime &amp; Mangá</a>
+        <a class="chip" href="#"><span class="cat cat--hq"></span>HQs</a>
+        <a class="chip" href="#"><span class="cat cat--tech"></span>Tech</a>
+        <a class="chip" href="#"><span class="cat cat--eventos"></span>Eventos</a>
+      </div>
+    </nav>
+  </div>
+</div>
+
+<!-- ============================================================ ESTADO C -->
+<div data-state="c">
+  <div class="note-proto"><b>Estado C — o “dia 1”: poucos artigos, todos com score baixo.</b>
+    É exatamente o seu caso hoje. No código atual isto renderiza uma home vazia, porque o feed
+    exclui a faixa mais fria e o hero exige score alto. Na proposta, com <b>4 artigos</b> a home
+    já parece um portal.</div>
+
+  <div class="container">
+    <section>
+      <article class="hero">
+        <div class="hero__media"><div class="thumb" data-c="tech"></div><div class="hero__overlay"></div></div>
+        <div class="hero__body">
+          <div class="card__head">
+            <span class="heat heat--base heat--lg">Última publicada</span>
+            <a class="cat cat--tech" href="#">Tech</a>
+          </div>
+          <h1 class="hero__title"><a href="#">Nvidia antecipa anúncio da linha RTX para a semana que vem</a></h1>
+          <p class="hero__dek">Sem badge de temperatura porque não há temperatura para mostrar — e inventar uma seria mentir para o leitor.</p>
+          <footer class="hero__foot"><span class="meta">há 4 h</span></footer>
+        </div>
+      </article>
+    </section>
+
+    <section class="section">
+      <div class="section-head"><div><h2 class="section-title">Últimas notícias</h2></div></div>
+      <div class="grid g-sm-2 g-md-3">
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="games"></div>
+          <div class="card__body"><span class="cat cat--games">Games</span>
+          <h3 class="card__title">Silksong recebe patch que reescreve o final do capítulo 3</h3>
+          <div class="meta"><span>há 6 h</span></div></div></a></article>
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="anime"></div>
+          <div class="card__body"><span class="cat cat--anime">Anime &amp; Mangá</span>
+          <h3 class="card__title">Cronograma das estreias da próxima temporada</h3>
+          <div class="meta"><span>ontem</span></div></div></a></article>
+        <article class="card card--grid"><a href="#"><div class="thumb" data-c="cinema"></div>
+          <div class="card__body"><span class="cat cat--cinema">Cinema &amp; Séries</span>
+          <h3 class="card__title">Guia: em que ordem assistir antes de “Guerras Secretas”</h3>
+          <div class="meta"><span>há 2 dias</span></div></div></a></article>
+      </div>
+    </section>
+
+    <section class="section cta-news">
+      <div>
+        <p class="cta-news__kicker">Newsletter</p>
+        <h2>Chegou cedo. Quer ser avisado?</h2>
+        <p>O Ortus Pixel está começando. Deixe seu e-mail e receba o resumo diário assim que a cobertura engrenar.</p>
+        </div><div><form class="form-inline"><input class="input" type="email" placeholder="seu@email.com" aria-label="E-mail">
+        <button class="btn btn--primary" type="button">Quero receber</button></form>
+      </div>
+    </section>
+
+    <nav class="section" aria-label="Todas as editorias">
+      <h2 class="section-title">Editorias</h2>
+      <div class="filters">
+        <a class="chip" href="#"><span class="cat cat--games"></span>Games</a>
+        <a class="chip" href="#"><span class="cat cat--cinema"></span>Cinema &amp; Séries</a>
+        <a class="chip" href="#"><span class="cat cat--anime"></span>Anime &amp; Mangá</a>
+        <a class="chip" href="#"><span class="cat cat--hq"></span>HQs</a>
+        <a class="chip" href="#"><span class="cat cat--tech"></span>Tech</a>
+        <a class="chip" href="#"><span class="cat cat--eventos"></span>Eventos</a>
+      </div>
+    </nav>
+  </div>
+</div>
+
+<!-- ============================================================ ESTADO D -->
+<div data-state="d">
+  <div class="note-proto"><b>Estado D — zero artigos publicados. O único caso em que a home pode ficar vazia.</b>
+    Repare no vocabulário: nada de “limiar de urgência”. A mensagem fala do MUNDO
+    (Nielsen #2) e oferece <b>duas saídas reais</b> em vez de um link para outra página vazia (Nielsen #9).</div>
+  <div class="container">
+    <section class="empty-state">
+      <h1>Estamos preparando as primeiras matérias</h1>
+      <p>O Ortus Pixel acabou de entrar no ar. A cobertura de games, cinema, anime e tech
+        começa nos próximos dias — e quem assinar agora recebe a primeira edição.</p>
+    </section>
+    <section class="section cta-news">
+      <div>
+        <p class="cta-news__kicker">Newsletter</p>
+        <h2>Seja avisado quando a cobertura começar</h2>
+        </div><div><form class="form-inline"><input class="input" type="email" placeholder="seu@email.com" aria-label="E-mail">
+        <button class="btn btn--primary" type="button">Me avise</button></form>
+      </div>
+    </section>
+    <nav class="section" aria-label="Todas as editorias">
+      <h2 class="section-title">O que vamos cobrir</h2>
+      <div class="filters">
+        <a class="chip" href="#"><span class="cat cat--games"></span>Games</a>
+        <a class="chip" href="#"><span class="cat cat--cinema"></span>Cinema &amp; Séries</a>
+        <a class="chip" href="#"><span class="cat cat--anime"></span>Anime &amp; Mangá</a>
+        <a class="chip" href="#"><span class="cat cat--hq"></span>HQs</a>
+        <a class="chip" href="#"><span class="cat cat--tech"></span>Tech</a>
+        <a class="chip" href="#"><span class="cat cat--eventos"></span>Eventos</a>
+      </div>
+    </nav>
+  </div>
+</div>
+
+<!-- ============================================================ ESTADO E -->
+<div data-state="e">
+  <div class="note-proto"><b>Estado E — /em-alta sem nenhum item na faixa quente.</b>
+    Hoje a página exibe “Urgentes agora 0 · Em alta 0 · Publicadas hoje 0” em números enormes:
+    uma prova pública de site morto. Ranking é <b>ordem relativa</b>, não limiar absoluto —
+    então a lista sempre existe, e o corte vira um <b>degrau visual dentro dela</b>.</div>
+  <div class="container layout-2col">
+    <div>
+      <header class="hub-hero">
+        <div class="card__head">
+          <span class="heat heat--rise heat--lg">Ritmo calmo</span>
+          <span class="meta">atualizado há 4 min</span>
+        </div>
+        <h1 class="article__title">Em alta agora</h1>
+        <p class="hub-hero__desc">Ranking recalculado continuamente a partir de buscas, redes sociais e
+          repercussão. <a href="#">Entenda o cálculo</a>.</p>
+        <dl class="hub-stats">
+          <div><dt class="hub-stat__lbl">Acompanhando agora</dt><dd class="hub-stat__num">37</dd></div>
+          <div><dt class="hub-stat__lbl">Subiram nas últimas 24h</dt><dd class="hub-stat__num">9</dd></div>
+          <div><dt class="hub-stat__lbl">Publicadas na semana</dt><dd class="hub-stat__num">21</dd></div>
+        </dl>
+      </header>
+
+      <article class="card card--lead">
+        <a href="#"><div class="thumb" data-c="cinema"></div>
+        <div class="card__body">
+          <div class="card__head"><span class="rank__pos">01</span>
+            <span class="heat heat--rise">Em alta</span><a class="cat cat--cinema" href="#">Cinema &amp; Séries</a></div>
+          <h2 class="card__title">O que o novo teaser de “Duna: Parte Três” esconde nos 8 segundos finais</h2>
+          <div class="meta"><span>há 2 h</span><span class="meta__sep"></span>
+          <span class="trend trend--up"><svg class="ico"><use href="#i-trending-up"></use></svg> Subindo</span></div>
+        </div></a>
+      </article>
+
+      <ol class="rank-list">
+        <li><a class="rank rank--rise" href="#"><span class="rank__pos">02</span>
+          <span><span class="card__head"><span class="heat heat--rise">Em alta</span></span>
+          <span class="rank__title">Silksong recebe patch que reescreve o final do capítulo 3</span>
+          <span class="rank__meta meta"><span class="cat cat--games">Games</span><span class="meta__sep"></span><span>há 3 h</span></span></span>
+          <span class="score score--rise"><span class="heatbar heatbar--rise" data-on="3" role="img" aria-label="Temperatura: em alta"><i></i><i></i><i></i><i></i></span></span></a></li>
+        <li><a class="rank" href="#"><span class="rank__pos">03</span>
+          <span><span class="card__head"><span class="heat heat--base">Relevante</span></span>
+          <span class="rank__title">Nvidia antecipa anúncio da linha RTX para a semana que vem</span>
+          <span class="rank__meta meta"><span class="cat cat--tech">Tech</span><span class="meta__sep"></span><span>há 4 h</span></span></span>
+          <span class="score"><span class="heatbar" data-on="2" role="img" aria-label="Temperatura: relevante"><i></i><i></i><i></i><i></i></span></span></a></li>
+      </ol>
+
+      <section class="section">
+        <div class="divider divider--step"><h2>Fim do “em alta” · fluxo normal</h2></div>
+        <div class="grid g-sm-2">
+          <article class="card card--grid"><a href="#"><div class="thumb" data-c="hq"></div>
+            <div class="card__body"><span class="cat cat--hq">HQs</span>
+            <h3 class="card__title">DC anuncia relançamento da linha Batman</h3>
+            <div class="meta"><span>há 6 h</span></div></div></a></article>
+          <article class="card card--grid"><a href="#"><div class="thumb" data-c="eventos"></div>
+            <div class="card__body"><span class="cat cat--eventos">Eventos</span>
+            <h3 class="card__title">CCXP divulga as primeiras atrações do palco principal</h3>
+            <div class="meta"><span>há 8 h</span></div></div></a></article>
+        </div>
+      </section>
+
+      <p class="note">Nenhum anúncio ou link de afiliado entra entre as posições do ranking.
+        A ordem aqui é 100% temperatura.</p>
+    </div>
+    <aside class="sidebar">
+      <section class="side-box">
+        <h2>Como montamos este ranking</h2>
+        <p class="form-hint">Cada notícia é avaliada continuamente por velocidade de busca,
+          repercussão em redes, autoridade da fonte e proximidade de lançamentos.</p>
+        <ul class="side-list">
+          <li><span class="heat heat--hot">Urgente</span> vai ao ar agora</li>
+          <li><span class="heat heat--rise">Em alta</span> subindo rápido</li>
+          <li><span class="heat heat--base">Relevante</span> fluxo normal</li>
+          <li><span class="heat heat--ever">Guia</span> vale a qualquer momento</li>
+        </ul>
+        <a class="link-more" href="#">Metodologia completa</a>
+      </section>
+    </aside>
+  </div>
+</div>
+
+<script>
+  const btns = document.querySelectorAll('.protobar button');
+  btns.forEach(b => b.addEventListener('click', () => {
+    btns.forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    document.querySelectorAll('[data-state]').forEach(s =>
+      s.classList.toggle('is-on', s.dataset.state === b.dataset.go));
+    window.scrollTo(0, 0);
+  }));
+</script>
+</body>
+</html>

@@ -513,6 +513,12 @@ Sem entrar em spoilers pesados, o capítulo conecta pontas soltas do arco anteri
       breaking: false,
       views: 15600,
       pv24: 3200,
+      // O formato estava caindo no padrão 'breaking' porque a chave faltava —
+      // uma lista de "os 15 melhores" não é notícia perecível. Agora que a home
+      // seleciona "Guias e essenciais" por FORMATO (e não mais por score baixo),
+      // o dado errado deixaria a seção vazia justamente com o conteúdo que ela
+      // existe para mostrar.
+      format: 'listicle',
       content: `Mundo aberto virou sinônimo de jogo grande — mas tamanho não é tudo.
 
 ## 1. The Legend of Zelda: Tears of the Kingdom

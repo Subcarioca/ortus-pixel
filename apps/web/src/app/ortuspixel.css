@@ -1446,6 +1446,24 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
 .empty-state :is(h1, h2, h3) { font-size: var(--fs-h3); color: var(--ink); }
 .empty-state a { border-bottom: 2px solid var(--brand-line); font-weight: 600; }
 
+/* BUSCA NO CABEÇALHO.
+   Não existe no protótipo — o design foi desenhado antes de a busca e a conta
+   de leitor entrarem no escopo. O campo reaproveita `.input` inteiro (mesma
+   pílula, mesma borda, mesmo foco de marca) e só ajusta a ALTURA: os 48px do
+   `.input` são medida de alvo de toque em formulário, e dentro de uma barra de
+   64px eles encostam nas duas bordas.
+   Aparece a partir de 1024px, o mesmo breakpoint do `.header__nav`: abaixo
+   disso o cabeçalho não tem largura sobrando, e a busca no celular merece tela
+   própria em vez de um campo de 90px. */
+.header__search { display: none; }
+@media (min-width: 1024px) {
+  .header__search { display: block; flex: 0 1 15rem; min-width: 0; }
+}
+.header__search .input { min-height: 38px; padding: 8px var(--s-4); font-size: var(--fs-sm); }
+/* O X nativo do `type="search"` no WebKit desalinha a pílula e some no tema
+   escuro; o `Esc` continua limpando o campo. */
+.header__search .input::-webkit-search-cancel-button { display: none; }
+
 /* --------------------------------------------------------------------------
    17.2 PAINEL EDITORIAL (/admin) — não prototipado, é ferramenta interna
    -------------------------------------------------------------------------- */

@@ -212,6 +212,37 @@ export function isContentFormat(value: unknown): value is ContentFormat {
   return typeof value === 'string' && CONTENT_FORMATS.includes(value as ContentFormat);
 }
 
+/** Nome de cada formato para o leitor. */
+export const FORMAT_LABELS: Record<ContentFormat, string> = {
+  breaking: 'Notícia',
+  live: 'Ao vivo',
+  trailer: 'Trailer',
+  review: 'Análise',
+  listicle: 'Lista',
+  theory: 'Teoria',
+  comparison: 'Comparativo',
+  guide: 'Guia',
+};
+
+/**
+ * Os formatos que compõem "Guias e essenciais" na home.
+ *
+ * A seção era montada por FAIXA DE SCORE (`heat === 'ever'`, ou seja, score
+ * abaixo de 40), e isso produzia um erro editorial, não estético: um breaking
+ * que não repercutiu cai para essa faixa em algumas horas e aparecia sob o
+ * rótulo "Guia" — o site afirmando que uma notícia perecível "vale a qualquer
+ * momento". Evergreen é uma propriedade do CONTEÚDO (como ele foi escrito), não
+ * da audiência que ele teve.
+ *
+ * A faixa continua existindo e continua valendo para o TRATAMENTO visual do
+ * card; ela só deixou de ser o critério de seleção da seção.
+ */
+export const EVERGREEN_FORMATS = [
+  'guide',
+  'listicle',
+  'comparison',
+] as const satisfies readonly ContentFormat[];
+
 /**
  * REGRA DE NEGÓCIO DO DESIGN: teto de 3 conteúdos "quentes" simultâneos na home.
  *

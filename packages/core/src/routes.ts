@@ -106,6 +106,7 @@ export const routes = {
   account: () => '/minha-conta',
 
   methodology: () => '/metodologia',
+
   newsletter: () => '/newsletter',
   newsroom: () => '/redacao',
   author: (slug: string) => `${ROUTE_PREFIXES.author}/${slug}`,

@@ -7,7 +7,7 @@
  *   1. Ticker vermelho (só score >= 90)
  *   2. Hero — ocupa a dobra inteira no mobile
  *   3. "Em alta agora" — LISTA NUMERADA, não carrossel
- *   4. Feed cronológico por editoria
+ *   4. Feed cronológico por editoria  ← SUPERADO: ver "ordenada por repercussão"
  *   5. "Seus universos" (chips de fandom) — ANTES da newsletter
  *   6. Newsletter
  *   7. Evergreen
@@ -36,6 +36,48 @@
  * ele é só `display:grid; gap`. As colunas vêm de `.g-sm-2` / `.g-md-3` /
  * `.g-lg-4`, que são utilitários com media query. Sem eles, todo feed do site
  * renderizava em uma coluna só, inclusive no desktop.
+ *
+ * -----------------------------------------------------------------------------
+ * REFORMA v0.4 — "o score determina a hierarquia, nunca a existência"
+ * -----------------------------------------------------------------------------
+ * Todas as seções desta página eram condicionadas a uma faixa de score, e o
+ * resultado é que a home ficava vazia no estado NORMAL do site: um portal que
+ * publica poucas matérias por dia quase nunca tem algo acima do limiar de
+ * urgência, e mesmo assim tem o que mostrar.
+ *
+ * Três mudanças, todas de seleção — nenhuma de layout:
+ *
+ *  1. HERO EM CASCATA. Urgente → em alta ("Destaque de hoje") → mais recente
+ *     ("Última publicada") → estado vazio de verdade. O rótulo muda junto com o
+ *     degrau porque cada nível é uma afirmação diferente sobre a matéria, e
+ *     chamar de "Urgente" o que não é seria mentir para o leitor (Nielsen #2).
+ *  2. "MAIS REPERCUTIDO AGORA" É A SEÇÃO-ÂNCORA, sem filtro de faixa. Com UMA
+ *     matéria publicada a home já é um portal.
+ *  3. "GUIAS E ESSENCIAIS" seleciona por FORMATO. Antes selecionava por score
+ *     baixo, e por isso um breaking que não repercutiu aparecia rotulado como
+ *     "Guia" — incorreção editorial, não questão de gosto.
+ *
+ * O que NÃO entrou, e por quê: os blocos "3 cards por editoria" da proposta.
+ * Com menos de 5 publicações por dia, as mesmas matérias que já estão no hero e
+ * na seção-âncora reapareceriam pela terceira vez — a home pareceria maior e
+ * seria mais pobre.
+ *
+ * -----------------------------------------------------------------------------
+ * A HOME INTEIRA É ORDENADA POR REPERCUSSÃO (decisão do dono do produto)
+ * -----------------------------------------------------------------------------
+ * A seção-âncora nasceu CRONOLÓGICA, seguindo a regra antiga do design ("a
+ * temperatura muda o peso, não a ordem cronológica"). Essa regra foi revista: a
+ * home estampa a matéria de maior popularidade no topo e segue em score
+ * decrescente até o fim da grade, com a data servindo só de desempate.
+ *
+ * A página passou a ser, de cima a baixo, UMA lista ordenada por repercussão:
+ * hero (1º) → "Em alta agora" (a faixa quente, em lista numerada) → a grade
+ * (todo o resto). É por isso que a grade exclui os itens do ranking: com a
+ * ordem igual nos dois blocos, os primeiros cards seriam uma cópia da lista
+ * imediatamente acima.
+ *
+ * O corte cronológico não desapareceu do site — ele vive nas páginas de
+ * editoria, que continuam ordenadas por data de publicação.
  */
 
 import type { Metadata } from 'next';
@@ -53,6 +95,30 @@ import { HeatBar, TrendTag } from '@/components/heat-bar';
 import { NewsletterForm } from '@/components/newsletter-form';
 import { RelativeTime } from '@/components/relative-time';
 import { getHomeData, getTickerItems, getTopFranchises } from '@/server/queries';
+
+/**
+ * =============================================================================
+ * SLOTS COMERCIAIS DA HOME
+ * =============================================================================
+ *
+ * A REGRA QUE MANDA AQUI: o hero é ZONA LIVRE DE ANÚNCIO, seja qual for o nível
+ * da cascata que o produziu. Nada comercial antes dele, ao lado dele ou logo
+ * depois dele. Quem chega na home vê primeiro o que o site considera a matéria
+ * do momento — se a primeira coisa entre o topo e o conteúdo for um retângulo,
+ * a hierarquia editorial que a página inteira defende deixa de ser crível.
+ *
+ * Os specs em si vêm de `homeAdSlots()` (`lib/ads.ts`), que já devolve `null`
+ * sem Publisher ID configurado. As duas guardas que impedem o anúncio de
+ * escorregar para debaixo do hero vivem no JSX, não aqui:
+ *
+ *  - o leaderboard só renderiza com `home.trending.length > 0` — sem ranking,
+ *    sem slot;
+ *  - o retângulo do fim da grade exige uma grade com corpo (`MIN_CARDS`). Num
+ *    dia de 2 cards, o "fim da grade" fica a um palmo do hero.
+ */
+
+/** Abaixo disso, "fim da grade" ainda é perto demais do hero. */
+const GRID_END_AD_MIN_CARDS = 4;
 
 /**
  * A home é dinâmica por natureza (o score muda), mas servida de cache.
@@ -91,6 +157,10 @@ export default async function HomePage() {
   // da renderização, e consultá-la em dois pontos do JSX abriria espaço para
   // aplicar metade dela.
   const homeAds = homeAdSlots();
+
+  // O único vazio legítimo do site: nada publicado. Todos os outros "vazios"
+  // que a home exibia até aqui eram vazios FABRICADOS por filtro de score.
+  const isFirstDay = home.heroKind === 'none';
 
   return (
     <>
@@ -156,9 +226,40 @@ export default async function HomePage() {
                 {/* `.card__head` é a linha de badges do design, reaproveitada
                     pelo hero no protótipo — não existe `.hero__head`. */}
                 <div className="card__head">
-                  <HeatBadge heat={leadStory.heat} size="lg" />
-                  <HeatBar heat={leadStory.heat} level={leadStory.heatLevel} />
-                  <TrendTag trend={leadStory.trend} />
+                  {/*
+                    O RÓTULO DA CASCATA.
+
+                    "Urgente" é o badge padrão de temperatura e vem do
+                    componente. Os outros dois são texto próprio desta página,
+                    porque nomeiam a POSIÇÃO na home ("é o destaque de hoje"),
+                    não a faixa do artigo — `HeatBadge` diria "Em alta", que é
+                    verdade sobre o score e falso sobre o papel dele aqui.
+
+                    "Última publicada" usa a cor neutra (`base`) de propósito:
+                    quando não há temperatura para mostrar, inventar uma seria
+                    exatamente o clickbait que o resto do design evita.
+                  */}
+                  {home.heroKind === 'hot' ? (
+                    <HeatBadge heat={leadStory.heat} size="lg" />
+                  ) : (
+                    <span
+                      className={`${heatClass('heat', home.heroKind === 'rise' ? 'rise' : 'base')} heat--lg`}
+                    >
+                      {home.heroKind === 'rise' ? 'Destaque de hoje' : 'Última publicada'}
+                    </span>
+                  )}
+
+                  {/* Termômetro e tendência só aparecem quando MEDEM alguma
+                      coisa. No degrau "mais recente" não há movimento medido —
+                      um termômetro no mínimo ao lado do destaque principal diz
+                      "isto aqui é irrelevante", que não é a mensagem. */}
+                  {home.heroKind !== 'latest' && (
+                    <>
+                      <HeatBar heat={leadStory.heat} level={leadStory.heatLevel} />
+                      <TrendTag trend={leadStory.trend} />
+                    </>
+                  )}
+
                   <Link
                     href={routes.category(leadStory.category.slug)}
                     className={catClass(leadStory.category.slug)}
@@ -201,14 +302,28 @@ export default async function HomePage() {
             )}
           </section>
         ) : (
-          // ESTADO VAZIO — o mais comum do dia, e por isso previsto no layout.
-          // Um portal sem notícia quente agora é normal; a página não pode
-          // parecer quebrada por causa disso.
+          /*
+            ESTADO VAZIO DE VERDADE — só quando não há NENHUMA matéria publicada.
+
+            A mensagem anterior ("Nenhuma notícia cruzou o limiar de urgência")
+            errava duas vezes. Primeiro porque aparecia com o site cheio de
+            conteúdo, escondendo o acervo atrás de um filtro. Segundo porque
+            falava a língua do SISTEMA: "limiar de urgência" é vocabulário do
+            nosso pipeline, e o leitor não faz ideia do que é — só entende que
+            algo não deu certo (Nielsen #2 e #9).
+
+            Aqui a página assume o que de fato acontece — o site é novo — e
+            oferece DUAS saídas reais: a newsletter logo abaixo (que continua
+            renderizada, incondicionalmente) e a lista de editorias no fim, que
+            mostra o escopo da cobertura. Nenhum link para outra página que
+            também estaria vazia; isso seria trocar um beco sem saída por outro.
+          */
           <section className="empty-state">
-            <h1>Nada urgente no momento</h1>
+            <h1>Estamos preparando as primeiras matérias</h1>
             <p>
-              Nenhuma notícia cruzou o limiar de urgência agora. Veja o que está subindo em{' '}
-              <Link href={routes.trending()}>Em alta</Link>.
+              O {SITE_NAME} acabou de entrar no ar. A cobertura de games, cinema, anime e
+              tech começa nos próximos dias: deixe seu e-mail aqui embaixo para receber a
+              primeira edição, ou veja <Link href="#editorias">o que vamos cobrir</Link>.
             </p>
           </section>
         )}
@@ -281,16 +396,37 @@ export default async function HomePage() {
         {/* Leaderboard DEPOIS do ranking (design §7.1, linha "Home").
             Fica fora da <section> do ranking de propósito: dentro dela, o
             anúncio seria lido como parte do bloco editorial — exatamente o que
-            a §7 existe para impedir. */}
-        {homeAds.afterTrending && <AdSlot slot={homeAds.afterTrending} />}
+            a §7 existe para impedir. Ainda assim, guardado por
+            `home.trending.length > 0`: sem ranking, sem slot — o mesmo motivo
+            que já valia quando o slot vivia dentro da seção. */}
+        {home.trending.length > 0 && homeAds.afterTrending && (
+          <AdSlot slot={homeAds.afterTrending} />
+        )}
 
-        {/* ---------- FEED CRONOLÓGICO ---------- */}
+        {/* ---------- MAIS REPERCUTIDO AGORA: a seção-âncora ----------
+            Incondicional em relação à FAIXA (entra tudo o que foi publicado,
+            de qualquer temperatura) e ordenada por REPERCUSSÃO, do maior score
+            para o menor. É a seção que garante que a home nunca fique sem
+            conteúdo — a única condição que sobrou é a trivial: existir ao menos
+            um card depois de tirar o hero e o ranking.
+
+            O nome mudou junto com a ordem, e não é preciosismo: "Últimas
+            notícias" acima de uma lista que não está em ordem cronológica é uma
+            promessa que a seção não cumpre — o leitor lê o título, assume que o
+            primeiro card é o mais recente e forma uma ideia errada do que
+            acabou de sair (Nielsen #2). O subtítulo diz o critério em uma linha,
+            porque ordem de lista é informação invisível até ser explicada. */}
         {home.feed.length > 0 && (
-          <section className="section" aria-labelledby="ultimas-titulo">
+          <section className="section" aria-labelledby="repercussao-titulo">
             <div className="section-head">
-              <h2 id="ultimas-titulo" className="section-title">
-                Últimas notícias
-              </h2>
+              <div>
+                <h2 id="repercussao-titulo" className="section-title">
+                  Mais repercutido agora
+                </h2>
+                <p className="section-sub">
+                  Ordenado pela repercussão do momento, não pelo horário de publicação.
+                </p>
+              </div>
             </div>
             {/* `g-sm-2 g-md-3`: 1 coluna no celular, 2 a partir de 640px e 3 a
                 partir de 900px — a mesma grade das editorias da home no
@@ -303,8 +439,12 @@ export default async function HomePage() {
 
             {/* Retângulo no FIM da grade — nunca no meio dela. Um slot entre
                 cards quebraria a leitura da grade e competiria com o conteúdo
-                que a pessoa veio ver; aqui, ela já rolou a home inteira. */}
-            {homeAds.endOfFeed && <AdSlot slot={homeAds.endOfFeed} />}
+                que a pessoa veio ver; aqui, ela já rolou a home inteira.
+                `GRID_END_AD_MIN_CARDS`: abaixo disso, "fim da grade" ainda
+                fica perto demais do hero. */}
+            {home.feed.length >= GRID_END_AD_MIN_CARDS && homeAds.endOfFeed && (
+              <AdSlot slot={homeAds.endOfFeed} />
+            )}
           </section>
         )}
 
@@ -356,16 +496,29 @@ export default async function HomePage() {
           </section>
         )}
 
-        {/* ---------- NEWSLETTER ---------- */}
+        {/* ---------- NEWSLETTER ----------
+            No dia zero ela é a ÚNICA saída útil da página, então o texto muda:
+            prometer "uma edição por dia, com o que importou" antes de existir
+            uma edição é uma promessa que o site ainda não pode cumprir. */}
         <section className="section">
           <NewsletterForm
-            title="O resumo do dia nerd no seu e-mail"
-            description="Uma edição por dia, com o que realmente importou. Sem spam."
+            title={
+              isFirstDay
+                ? 'Seja avisado quando a cobertura começar'
+                : 'O resumo do dia nerd no seu e-mail'
+            }
+            description={
+              isFirstDay
+                ? 'Deixe seu e-mail e receba a primeira edição assim que ela sair.'
+                : 'Uma edição por dia, com o que realmente importou. Sem spam.'
+            }
             source="home"
           />
         </section>
 
-        {/* ---------- EVERGREEN ---------- */}
+        {/* ---------- GUIAS E ESSENCIAIS ----------
+            Seleção por FORMATO (guia, lista, comparativo), não por faixa de
+            score — ver o cabeçalho do arquivo e core/presentation.ts. */}
         {home.evergreen.length > 0 && (
           <section className="section" aria-labelledby="guias-titulo">
             <div className="section-head">
@@ -379,10 +532,12 @@ export default async function HomePage() {
               </div>
             </div>
             {/* Evergreen usa 4 colunas a partir de 1100px: os cards são só
-                filete + título, então cabem mais por linha sem apertar. */}
+                filete + título, então cabem mais por linha sem apertar.
+                `variant="ever"` força essa anatomia mesmo quando o guia está
+                quente — aqui o card promete perenidade, não temperatura. */}
             <div className="grid g-sm-2 g-lg-4">
               {home.evergreen.map((item) => (
-                <ArticleCard key={item.id} item={item} variant="grid" />
+                <ArticleCard key={item.id} item={item} variant="ever" />
               ))}
             </div>
           </section>
@@ -391,8 +546,12 @@ export default async function HomePage() {
         {/* Ordem das editorias = ordem das personas (design §3).
             `.filters` é o carrossel de chips do design: rola na horizontal no
             celular (sem barra visível) e quebra em linhas no desktop. */}
-        <nav className="section" aria-label="Todas as editorias">
-          <h2 className="section-title">Editorias</h2>
+        <nav className="section" id="editorias" aria-label="Todas as editorias">
+          {/* No dia zero o título muda de rótulo de navegação para promessa de
+              escopo: sem acervo, "Editorias" é um menu de páginas vazias; "O
+              que vamos cobrir" é a informação que o visitante de fato procura
+              — e é a segunda saída do estado vazio lá de cima. */}
+          <h2 className="section-title">{isFirstDay ? 'O que vamos cobrir' : 'Editorias'}</h2>
           <div className="filters">
             {CATEGORIES.map((category) => (
               <Link

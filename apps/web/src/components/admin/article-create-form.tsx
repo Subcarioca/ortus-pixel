@@ -18,6 +18,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { readAdminResponse } from './admin-response';
 import { FORMAT_OPTIONS, formatRequiresTldr } from './article-format-options';
 
 interface ArticleCreateFormProps {
@@ -88,15 +89,20 @@ export function ArticleCreateForm({
         }),
       });
 
-      const data = (await response.json()) as { ok: boolean; message?: string; slug?: string };
-      setMessage(data.message ?? (data.ok ? 'Feito.' : 'Falhou.'));
+      const data = await readAdminResponse(response);
+      setMessage(data.message);
 
+      // O formulário só fecha quando deu certo. Em qualquer falha ele
+      // permanece aberto com tudo preenchido — inclusive quando a sessão
+      // expirou no meio: basta reentrar em outra aba e clicar de novo.
       if (data.ok) {
         router.refresh();
         onDone();
       }
     } catch {
-      setMessage('Erro de conexão.');
+      // Só chega aqui quando o `fetch` sequer completou: rede caída, servidor
+      // fora do ar. Qualquer resposta HTTP, mesmo 500, é tratada acima.
+      setMessage('Não foi possível falar com o servidor. Nada foi salvo; o texto continua aqui.');
     } finally {
       setBusy(null);
     }

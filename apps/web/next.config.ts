@@ -2,6 +2,8 @@ import path from 'node:path';
 
 import type { NextConfig } from 'next';
 
+import { ALLOWED_IMAGE_HOSTS } from './src/lib/image-hosts';
+
 /**
  * SAÍDA `standalone` — LIGADA SOB DEMANDA, NÃO POR PADRÃO.
  *
@@ -56,12 +58,13 @@ const nextConfig: NextConfig = {
     formats: ['image/avif', 'image/webp'],
     // Larguras alinhadas aos breakpoints do design system (design/README.md §6).
     deviceSizes: [320, 560, 640, 768, 900, 1024, 1180, 1280],
-    remotePatterns: [
-      { protocol: 'https', hostname: 'images.ortuspixel.test' },
-      { protocol: 'https', hostname: '**.ytimg.com' },
-      // Placeholder de imagens do seed local — trocar pelo CDN real em produção.
-      { protocol: 'https', hostname: 'picsum.photos' },
-    ],
+    // A lista vive em `src/lib/image-hosts.ts` porque o painel editorial também
+    // precisa dela: é ela que decide se a URL de capa colada pelo editor é
+    // aceitável ANTES de publicar. Ver o cabeçalho daquele arquivo.
+    remotePatterns: ALLOWED_IMAGE_HOSTS.map((hostname) => ({
+      protocol: 'https' as const,
+      hostname,
+    })),
   },
 
   /**

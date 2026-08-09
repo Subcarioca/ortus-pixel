@@ -27,6 +27,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { readAdminResponse } from './admin-response';
 import { FORMAT_OPTIONS, formatRequiresTldr } from './article-format-options';
 
 export interface EditableArticle {
@@ -97,15 +98,17 @@ export function ArticleEditForm({ article, categories, authors, onDone }: Articl
         }),
       });
 
-      const data = (await response.json()) as { ok: boolean; message?: string };
-      setMessage(data.message ?? (data.ok ? 'Feito.' : 'Falhou.'));
+      const data = await readAdminResponse(response);
+      setMessage(data.message);
 
+      // Fecha só no sucesso: se a matéria foi apagada em outra aba, ou a sessão
+      // caiu, o texto editado continua na tela para ser copiado ou reenviado.
       if (data.ok) {
         router.refresh();
         onDone();
       }
     } catch {
-      setMessage('Erro de conexão.');
+      setMessage('Não foi possível falar com o servidor. Nada foi salvo; o texto continua aqui.');
     } finally {
       setBusy(null);
     }

@@ -26,15 +26,10 @@ import { cookies } from 'next/headers';
 import { revalidateTag } from 'next/cache';
 
 import { prisma } from '@subcarioca/db';
-import {
-  CONTENT_FORMATS,
-  estimateReadingMinutes,
-  isCategorySlug,
-  validateTldrRequirement,
-  type ContentFormat,
-} from '@subcarioca/core';
+import { estimateReadingMinutes } from '@subcarioca/core';
 
 import { ADMIN_SESSION_COOKIE } from '@/server/admin-auth';
+import { parseArticleInput } from '@/server/article-input';
 import { getClientIp, hashPersonalData, safeCompare } from '@/server/security';
 import { CACHE_TAGS } from '@/server/queries';
 
@@ -72,6 +67,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const payload = body as Record<string, unknown>;
 
+  // A existência vem ANTES da validação do formulário: se a matéria já foi
+  // apagada, apontar vírgula no resumo é ruído — não há mais o que salvar.
   const existing = await prisma.article.findUnique({
     where: { id },
     select: {
@@ -87,107 +84,82 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   });
 
   if (!existing) {
-    return NextResponse.json({ ok: false, message: 'Matéria não encontrada.' }, { status: 404 });
+    return NextResponse.json({ ok: false, message: ARTICLE_GONE_MESSAGE }, { status: 404 });
   }
 
-  const title = text(payload.title, 8, 180);
-  const excerpt = text(payload.excerpt, 20, 300);
-  const content = text(payload.content, 40, 20_000);
-  const categorySlugValue = typeof payload.categorySlug === 'string' ? payload.categorySlug : '';
-  const format: ContentFormat = CONTENT_FORMATS.includes(payload.format as ContentFormat)
-    ? (payload.format as ContentFormat)
-    : 'breaking';
-  const publish = payload.publish === true;
-
-  const tldr = Array.isArray(payload.tldr)
-    ? payload.tldr
-        .filter((v): v is string => typeof v === 'string' && v.trim().length > 0)
-        .map((v) => v.trim())
-    : [];
-
-  if (!title || !excerpt || !content) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message:
-          'Título (8-180), resumo (20-300) e corpo (mín. 40 caracteres) são obrigatórios.',
-      },
-      { status: 400 },
-    );
+  const parsed = await parseArticleInput(payload);
+  if (!parsed.ok) {
+    return NextResponse.json({ ok: false, message: parsed.message }, { status: 400 });
   }
 
-  if (!isCategorySlug(categorySlugValue)) {
-    return NextResponse.json({ ok: false, message: 'Categoria inválida.' }, { status: 400 });
-  }
-
-  const authorId = validId(payload.authorId);
-  if (!authorId) {
-    return NextResponse.json({ ok: false, message: 'Selecione um autor.' }, { status: 400 });
-  }
-
-  const tldrCheck = validateTldrRequirement(format, tldr);
-  if (!tldrCheck.valid) {
-    return NextResponse.json({ ok: false, message: tldrCheck.message }, { status: 400 });
-  }
-
-  const [category, author] = await Promise.all([
-    prisma.category.findUnique({ where: { slug: categorySlugValue }, select: { id: true, slug: true } }),
-    prisma.author.findUnique({ where: { id: authorId }, select: { id: true } }),
-  ]);
-
-  if (!category) {
-    return NextResponse.json({ ok: false, message: 'Categoria não encontrada.' }, { status: 400 });
-  }
-  if (!author) {
-    return NextResponse.json({ ok: false, message: 'Autor não encontrado.' }, { status: 400 });
-  }
+  const input = parsed.data;
+  const { publish, category } = input;
 
   const wasPublished = existing.status === 'published';
   const now = new Date();
 
-  await prisma.$transaction(async (tx) => {
-    await tx.article.update({
-      where: { id },
-      data: {
-        // `slug` deliberadamente ausente — ver o bloco no topo do arquivo.
-        title,
-        excerpt,
-        content,
-        status: publish ? 'published' : 'draft',
-        categoryId: category.id,
-        authorId: author.id,
-        format,
-        tldr,
-        coverImageUrl: text(payload.coverImageUrl, 1, 2000),
-        coverImageAlt: text(payload.coverImageAlt, 1, 200),
-        isBreaking: payload.isBreaking === true,
-        hasSpoiler: payload.hasSpoiler === true,
-        readingMinutes: estimateReadingMinutes(content),
-        // `publishedAt` só é definido na PRIMEIRA publicação. Reescrevê-lo a
-        // cada save faria uma correção de texto "republicar" a matéria: ela
-        // pularia para o topo do feed cronológico e reapareceria como novidade
-        // para quem já tinha lido.
-        publishedAt: publish ? (existing.publishedAt ?? now) : existing.publishedAt,
-        // Mesma lógica para o score congelado: ele é o "previsto" do KPI de
-        // precisão e, uma vez gravado, não pode ser reescrito (ver schema).
-        scoreAtPublish:
-          publish && existing.scoreAtPublish === null
-            ? existing.currentScore
-            : existing.scoreAtPublish,
-      },
-    });
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.article.update({
+        where: { id },
+        data: {
+          // `slug` deliberadamente ausente — ver o bloco no topo do arquivo.
+          title: input.title,
+          excerpt: input.excerpt,
+          content: input.content,
+          status: publish ? 'published' : 'draft',
+          categoryId: category.id,
+          authorId: input.authorId,
+          format: input.format,
+          tldr: input.tldr,
+          coverImageUrl: input.coverImageUrl,
+          coverImageAlt: input.coverImageAlt,
+          isBreaking: input.isBreaking,
+          hasSpoiler: input.hasSpoiler,
+          readingMinutes: estimateReadingMinutes(input.content),
+          // `publishedAt` só é definido na PRIMEIRA publicação. Reescrevê-lo a
+          // cada save faria uma correção de texto "republicar" a matéria: ela
+          // pularia para o topo do feed cronológico e reapareceria como novidade
+          // para quem já tinha lido.
+          publishedAt: publish ? (existing.publishedAt ?? now) : existing.publishedAt,
+          // Mesma lógica para o score congelado: ele é o "previsto" do KPI de
+          // precisão e, uma vez gravado, não pode ser reescrito (ver schema).
+          scoreAtPublish:
+            publish && existing.scoreAtPublish === null
+              ? existing.currentScore
+              : existing.scoreAtPublish,
+        },
+      });
 
-    await tx.auditLog.create({
-      data: {
-        action: publish ? 'article.updated_published' : 'article.updated_draft',
-        entityType: 'Article',
-        entityId: id,
-        before: { title: existing.title, status: existing.status, categorySlug: existing.category.slug },
-        after: { title, status: publish ? 'published' : 'draft', categorySlug: category.slug },
-        ipHash: hashPersonalData(getClientIp(request.headers)),
-      },
+      await tx.auditLog.create({
+        data: {
+          action: publish ? 'article.updated_published' : 'article.updated_draft',
+          entityType: 'Article',
+          entityId: id,
+          before: {
+            title: existing.title,
+            status: existing.status,
+            categorySlug: existing.category.slug,
+          },
+          after: {
+            title: input.title,
+            status: publish ? 'published' : 'draft',
+            categorySlug: category.slug,
+          },
+          ipHash: hashPersonalData(getClientIp(request.headers)),
+        },
+      });
     });
-  });
+  } catch (error) {
+    // A matéria pode ter sido apagada em outra aba entre a leitura acima e a
+    // gravação. Sem este tratamento o editor recebia um 500 sem corpo, que a
+    // tela traduzia como "Erro de conexão." — a pior mensagem possível, porque
+    // sugere tentar de novo uma operação que nunca vai funcionar.
+    if (isRecordNotFound(error)) {
+      return NextResponse.json({ ok: false, message: ARTICLE_GONE_MESSAGE }, { status: 409 });
+    }
+    throw error;
+  }
 
   // INVALIDAÇÃO — inclui a categoria ANTIGA, e é aí que mora o detalhe:
   // se o editor moveu a matéria de Games para Tech, a listagem de Games
@@ -239,49 +211,60 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   });
 
   if (!existing) {
-    return NextResponse.json({ ok: false, message: 'Matéria não encontrada.' }, { status: 404 });
+    return NextResponse.json({ ok: false, message: ARTICLE_GONE_MESSAGE }, { status: 404 });
   }
 
-  await prisma.$transaction(async (tx) => {
-    // A auditoria é gravada ANTES da remoção e guarda o conteúdo essencial da
-    // linha. `AuditLog` não tem chave estrangeira para `Article` justamente
-    // para sobreviver a este momento: sem isso, apagar a matéria apagaria
-    // também o registro de que ela existiu, e "quem apagou aquela matéria?"
-    // ficaria sem resposta.
-    await tx.auditLog.create({
-      data: {
-        action: 'article.deleted',
-        entityType: 'Article',
-        entityId: id,
-        before: {
-          title: existing.title,
-          slug: existing.slug,
-          status: existing.status,
-          categorySlug: existing.category.slug,
+  try {
+    await prisma.$transaction(async (tx) => {
+      // A auditoria é gravada ANTES da remoção e guarda o conteúdo essencial da
+      // linha. `AuditLog` não tem chave estrangeira para `Article` justamente
+      // para sobreviver a este momento: sem isso, apagar a matéria apagaria
+      // também o registro de que ela existiu, e "quem apagou aquela matéria?"
+      // ficaria sem resposta.
+      await tx.auditLog.create({
+        data: {
+          action: 'article.deleted',
+          entityType: 'Article',
+          entityId: id,
+          before: {
+            title: existing.title,
+            slug: existing.slug,
+            status: existing.status,
+            categorySlug: existing.category.slug,
+          },
+          ipHash: hashPersonalData(getClientIp(request.headers)),
         },
-        ipHash: hashPersonalData(getClientIp(request.headers)),
-      },
-    });
+      });
 
-    // Comentários, notificações e vínculos de oferta saem em cascata (schema).
-    await tx.article.delete({ where: { id } });
+      // Comentários, notificações e vínculos de oferta saem em cascata (schema).
+      await tx.article.delete({ where: { id } });
 
-    // O tópico de origem volta para a fila.
-    //
-    // Ele foi marcado como 'published' quando a matéria foi criada. Se a
-    // matéria some e nenhuma outra derivada dele resta, deixá-lo 'published'
-    // significaria um tópico que se declara coberto sem nenhuma cobertura — ele
-    // sumiria da fila da redação e o assunto seria perdido em silêncio.
-    if (existing.topicId) {
-      const remaining = await tx.article.count({ where: { topicId: existing.topicId } });
-      if (remaining === 0) {
-        await tx.topic.update({
-          where: { id: existing.topicId },
-          data: { status: 'assigned' },
-        });
+      // O tópico de origem volta para a fila.
+      //
+      // Ele foi marcado como 'published' quando a matéria foi criada. Se a
+      // matéria some e nenhuma outra derivada dele resta, deixá-lo 'published'
+      // significaria um tópico que se declara coberto sem nenhuma cobertura — ele
+      // sumiria da fila da redação e o assunto seria perdido em silêncio.
+      if (existing.topicId) {
+        const remaining = await tx.article.count({ where: { topicId: existing.topicId } });
+        if (remaining === 0) {
+          await tx.topic.update({
+            where: { id: existing.topicId },
+            data: { status: 'assigned' },
+          });
+        }
       }
+    });
+  } catch (error) {
+    // Dois cliques em "Apagar definitivamente" vindos de abas diferentes (ou de
+    // dois editores) chegam juntos: um apaga, o outro encontra a linha já
+    // removida. O segundo não é uma falha do sistema — é a mesma intenção
+    // cumprida duas vezes, e a resposta precisa dizer isso em vez de estourar.
+    if (isRecordNotFound(error)) {
+      return NextResponse.json({ ok: false, message: ARTICLE_GONE_MESSAGE }, { status: 409 });
     }
-  });
+    throw error;
+  }
 
   revalidateTag(CACHE_TAGS.article(existing.slug));
   revalidateTag(CACHE_TAGS.category(existing.category.slug));
@@ -292,12 +275,20 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   return NextResponse.json({ ok: true, message: 'Matéria apagada.' });
 }
 
-function text(value: unknown, min: number, max: number): string | null {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  return trimmed.length >= min && trimmed.length <= max ? trimmed : null;
-}
+/**
+ * Uma frase só para "a matéria não está mais lá", usada tanto quando a leitura
+ * inicial não a encontra quanto quando ela some no meio da gravação. Quem está
+ * do outro lado da tela não distingue os dois casos — e nem precisa: o que
+ * muda a ação dele é saber que outra aba já apagou.
+ */
+const ARTICLE_GONE_MESSAGE =
+  'Esta matéria não existe mais — ela pode ter sido apagada em outra aba. Recarregue a lista.';
 
-function validId(value: unknown): string | null {
-  return typeof value === 'string' && /^[a-z0-9]{10,40}$/i.test(value) ? value : null;
+/**
+ * P2025 é o código do Prisma para "o registro exigido pela operação não existe".
+ * Só ele é convertido em resposta amigável; qualquer outro erro continua subindo
+ * para virar 500 e aparecer no log, como deve ser.
+ */
+function isRecordNotFound(error: unknown): boolean {
+  return (error as { code?: string })?.code === 'P2025';
 }

@@ -21,6 +21,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import { readAdminResponse } from './admin-response';
 import { ArticleEditForm, type EditableArticle } from './article-edit-form';
 
 export interface AdminArticleRowData extends EditableArticle {
@@ -56,7 +57,7 @@ export function ArticleRow({ article, categories, authors }: ArticleRowProps) {
 
     try {
       const response = await fetch(`/api/admin/articles/${article.id}`, { method: 'DELETE' });
-      const data = (await response.json()) as { ok: boolean; message?: string };
+      const data = await readAdminResponse(response);
 
       if (data.ok) {
         // A linha some da lista quando o servidor recarregar os dados. Não
@@ -65,11 +66,19 @@ export function ArticleRow({ article, categories, authors }: ArticleRowProps) {
         // sempre que a exclusão falhasse.
         router.refresh();
       } else {
-        setMessage(data.message ?? 'Não foi possível apagar.');
+        setMessage(data.message);
         setConfirmingDelete(false);
+        // Se a matéria já não existe (outra aba apagou), esta linha virou um
+        // fantasma: recarregar a lista a remove em vez de deixar na tela um
+        // botão que só repetiria o mesmo erro.
+        //
+        // Só nesses dois casos, e de propósito. Numa sessão expirada (401) o
+        // recarregamento traria a tela de login por cima da mensagem que acabou
+        // de explicar o que aconteceu — trocando a explicação por um susto.
+        if (response.status === 404 || response.status === 409) router.refresh();
       }
     } catch {
-      setMessage('Erro de conexão.');
+      setMessage('Não foi possível falar com o servidor. A matéria não foi apagada.');
       setConfirmingDelete(false);
     } finally {
       setBusy(false);

@@ -16,16 +16,10 @@ import { cookies } from 'next/headers';
 import { revalidateTag } from 'next/cache';
 
 import { prisma } from '@subcarioca/db';
-import {
-  CONTENT_FORMATS,
-  estimateReadingMinutes,
-  isCategorySlug,
-  slugify,
-  validateTldrRequirement,
-  type ContentFormat,
-} from '@subcarioca/core';
+import { estimateReadingMinutes, slugify } from '@subcarioca/core';
 
 import { ADMIN_SESSION_COOKIE } from '@/server/admin-auth';
+import { parseArticleInput } from '@/server/article-input';
 import { getClientIp, hashPersonalData, safeCompare } from '@/server/security';
 import { CACHE_TAGS } from '@/server/queries';
 
@@ -173,115 +167,127 @@ export async function POST(
       // Transforma um tópico da fila numa matéria de verdade. É a peça que
       // faltava entre "o pipeline descobriu e pontuou" e "o leitor consegue
       // ler" — até aqui, esse passo só existia manualmente, direto no banco.
-      const title = text(payload.title, 8, 180);
-      const excerpt = text(payload.excerpt, 20, 300);
-      const content = text(payload.content, 40, 20_000);
-      const categorySlugValue = typeof payload.categorySlug === 'string' ? payload.categorySlug : '';
-      const format: ContentFormat = CONTENT_FORMATS.includes(payload.format as ContentFormat)
-        ? (payload.format as ContentFormat)
-        : 'breaking';
-      const publish = payload.publish === true;
+      const parsed = await parseArticleInput(payload);
+      if (!parsed.ok) {
+        return NextResponse.json({ ok: false, message: parsed.message }, { status: 400 });
+      }
 
-      const tldr = Array.isArray(payload.tldr)
-        ? payload.tldr.filter((v): v is string => typeof v === 'string' && v.trim().length > 0).map((v) => v.trim())
-        : [];
+      const input = parsed.data;
+      const { publish, category } = input;
 
-      if (!title || !excerpt || !content) {
+      // Título sem NENHUMA letra ou número latino (só emoji, pontuação ou
+      // escrita não-latina) faz `slugify` devolver string vazia — e uma matéria
+      // com slug vazio é publicada com sucesso e fica inalcançável: a URL
+      // resultante é a da categoria. O sufixo do laço abaixo cuida da unicidade.
+      const baseSlug = slugify(input.title) || 'materia';
+      const now = new Date();
+
+      let outcome: { slug: string } | 'already-covered' | null = null;
+
+      for (let attempt = 0; attempt < 5 && outcome === null; attempt += 1) {
+        // Primeira tentativa com o slug limpo; as seguintes com sufixo curto —
+        // mais amigável para o editor do que rejeitar e pedir outro título.
+        const slug =
+          attempt === 0 ? baseSlug : `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`;
+
+        try {
+          outcome = await prisma.$transaction(async (tx) => {
+            // TRAVA CONTRA MATÉRIA DUPLICADA — quem garante é o banco, não a
+            // tela. A fila esconde o botão "Criar matéria" de um tópico já
+            // coberto, mas isso só vale para a aba que recarregou: com o
+            // formulário aberto em duas abas (ou dois editores no mesmo
+            // tópico), o segundo envio criava uma SEGUNDA matéria do mesmo
+            // assunto, publicada, sem nenhum aviso.
+            //
+            // O `updateMany` com a condição no `where` resolve isso em uma
+            // operação atômica: no Postgres, o segundo UPDATE espera o primeiro
+            // terminar e então reavalia o filtro contra a linha já atualizada,
+            // encontrando zero registros. Um `findUnique` seguido de `update`
+            // teria uma janela entre ler e escrever — que é exatamente onde as
+            // duas requisições simultâneas passavam.
+            const claimed = await tx.topic.updateMany({
+              where: { id, status: { not: 'published' } },
+              data: { status: 'published' },
+            });
+
+            if (claimed.count === 0) return 'already-covered' as const;
+
+            const created = await tx.article.create({
+              data: {
+                slug,
+                title: input.title,
+                excerpt: input.excerpt,
+                content: input.content,
+                status: publish ? 'published' : 'draft',
+                categoryId: category.id,
+                authorId: input.authorId,
+                topicId: id,
+                format: input.format,
+                tldr: input.tldr,
+                coverImageUrl: input.coverImageUrl,
+                coverImageAlt: input.coverImageAlt,
+                isBreaking: input.isBreaking,
+                hasSpoiler: input.hasSpoiler,
+                readingMinutes: estimateReadingMinutes(input.content),
+                currentScore: topic.currentScore,
+                scoreAtPublish: publish ? topic.currentScore : null,
+                publishedAt: publish ? now : null,
+              },
+            });
+
+            await tx.auditLog.create({
+              data: {
+                action: publish ? 'article.published' : 'article.drafted',
+                entityType: 'Article',
+                entityId: created.id,
+                after: { title: input.title, slug, categorySlug: category.slug, publish },
+                ipHash,
+              },
+            });
+
+            return { slug: created.slug };
+          });
+        } catch (error) {
+          // Duas matérias com o mesmo título enviadas ao mesmo tempo passam as
+          // duas por qualquer verificação prévia de slug e colidem só na
+          // gravação. Aqui a colisão vira uma nova tentativa com outro sufixo;
+          // antes, virava um 500 sem corpo e um "Erro de conexão." na tela.
+          if (isSlugTaken(error)) continue;
+          throw error;
+        }
+      }
+
+      if (outcome === 'already-covered') {
         return NextResponse.json(
-          { ok: false, message: 'Título (8-180), resumo (20-300) e corpo (mín. 40 caracteres) são obrigatórios.' },
-          { status: 400 },
+          {
+            ok: false,
+            message:
+              'Este tópico já virou matéria — provavelmente em outra aba. Recarregue a fila e edite a matéria existente em Matérias.',
+          },
+          { status: 409 },
         );
       }
 
-      if (!isCategorySlug(categorySlugValue)) {
-        return NextResponse.json({ ok: false, message: 'Categoria inválida.' }, { status: 400 });
-      }
-
-      const authorId = validId(payload.authorId);
-      if (!authorId) {
-        return NextResponse.json({ ok: false, message: 'Selecione um autor.' }, { status: 400 });
-      }
-
-      const tldrCheck = validateTldrRequirement(format, tldr);
-      if (!tldrCheck.valid) {
-        return NextResponse.json({ ok: false, message: tldrCheck.message }, { status: 400 });
-      }
-
-      const [category, author] = await Promise.all([
-        prisma.category.findUnique({ where: { slug: categorySlugValue }, select: { id: true, slug: true } }),
-        prisma.author.findUnique({ where: { id: authorId }, select: { id: true } }),
-      ]);
-
-      if (!category) {
-        return NextResponse.json({ ok: false, message: 'Categoria não encontrada.' }, { status: 400 });
-      }
-      if (!author) {
-        return NextResponse.json({ ok: false, message: 'Autor não encontrado.' }, { status: 400 });
-      }
-
-      // Slug único: tenta o direto, senão anexa um sufixo curto — mais
-      // amigável pro editor do que rejeitar e pedir pra digitar de novo.
-      const baseSlug = slugify(title);
-      let slug = baseSlug;
-      for (let attempt = 0; attempt < 5; attempt += 1) {
-        const clash = await prisma.article.findUnique({ where: { slug }, select: { id: true } });
-        if (!clash) break;
-        slug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`;
-      }
-
-      const now = new Date();
-      const article = await prisma.$transaction(async (tx) => {
-        const created = await tx.article.create({
-          data: {
-            slug,
-            title,
-            excerpt,
-            content,
-            status: publish ? 'published' : 'draft',
-            categoryId: category.id,
-            authorId: author.id,
-            topicId: id,
-            format,
-            tldr,
-            coverImageUrl: text(payload.coverImageUrl, 1, 2000),
-            coverImageAlt: text(payload.coverImageAlt, 1, 200),
-            isBreaking: payload.isBreaking === true,
-            hasSpoiler: payload.hasSpoiler === true,
-            readingMinutes: estimateReadingMinutes(content),
-            currentScore: topic.currentScore,
-            scoreAtPublish: publish ? topic.currentScore : null,
-            publishedAt: publish ? now : null,
+      if (outcome === null) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: 'Não foi possível gerar um endereço único para esta matéria. Tente outro título.',
           },
-        });
-
-        await tx.topic.update({
-          where: { id },
-          data: { status: 'published' },
-        });
-
-        await tx.auditLog.create({
-          data: {
-            action: publish ? 'article.published' : 'article.drafted',
-            entityType: 'Article',
-            entityId: created.id,
-            after: { title, slug, categorySlug: category.slug, publish },
-            ipHash,
-          },
-        });
-
-        return created;
-      });
+          { status: 409 },
+        );
+      }
 
       if (publish) {
         revalidateTag(CACHE_TAGS.home);
         revalidateTag(CACHE_TAGS.trending);
         revalidateTag(CACHE_TAGS.category(category.slug));
-        revalidateTag(CACHE_TAGS.article(slug));
+        revalidateTag(CACHE_TAGS.article(outcome.slug));
       }
 
       return NextResponse.json({
         ok: true,
-        slug,
+        slug: outcome.slug,
         categorySlug: category.slug,
         message: publish ? 'Matéria publicada.' : 'Rascunho salvo.',
       });
@@ -312,12 +318,19 @@ export async function POST(
   }
 }
 
-function text(value: unknown, min: number, max: number): string | null {
-  if (typeof value !== 'string') return null;
-  const trimmed = value.trim();
-  return trimmed.length >= min && trimmed.length <= max ? trimmed : null;
-}
+/**
+ * O slug candidato já pertence a outra matéria?
+ *
+ * P2002 é o código do Prisma para violação de índice único. Checamos também o
+ * campo: um P2002 em outra coluna não pode ser confundido com colisão de slug e
+ * repetido cinco vezes em silêncio — ele precisa subir e virar erro de verdade.
+ */
+function isSlugTaken(error: unknown): boolean {
+  const known = error as { code?: string; meta?: { target?: unknown } };
+  if (known?.code !== 'P2002') return false;
 
-function validId(value: unknown): string | null {
-  return typeof value === 'string' && /^[a-z0-9]{10,40}$/i.test(value) ? value : null;
+  const target = known.meta?.target;
+  return Array.isArray(target)
+    ? target.includes('slug')
+    : typeof target === 'string' && target.includes('slug');
 }

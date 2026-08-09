@@ -25,6 +25,8 @@
  * navegador novo.
  */
 
+import { isAllowedImageHost } from './image-hosts';
+
 /**
  * Protocolos aceitos em links de conteúdo editorial.
  *
@@ -46,11 +48,18 @@ const CONTENT_PROTOCOLS = ['http:', 'https:', 'mailto:'];
  */
 const AFFILIATE_PROTOCOLS = ['https:'];
 
+/**
+ * Protocolos aceitos em imagem de capa. Só HTTPS: a capa é carregada em toda
+ * página que lista a matéria, e uma imagem em `http:` numa página HTTPS é
+ * bloqueada como conteúdo misto pelo navegador — o leitor veria um buraco.
+ */
+const IMAGE_PROTOCOLS = ['https:'];
+
 export interface SafeUrlResult {
   /** URL normalizada e segura, ou `null` se reprovada. */
   href: string | null;
   /** Motivo da reprovação — útil para mensagem de erro no painel editorial. */
-  reason?: 'invalid' | 'protocol' | 'insecure';
+  reason?: 'invalid' | 'protocol' | 'insecure' | 'host';
 }
 
 /**
@@ -98,6 +107,23 @@ export function safeContentUrl(raw: unknown): SafeUrlResult {
 /** Link comercial de afiliado. Só HTTPS. */
 export function safeAffiliateUrl(raw: unknown): SafeUrlResult {
   return parseWithProtocols(raw, AFFILIATE_PROTOCOLS);
+}
+
+/**
+ * Imagem de capa. Além do protocolo, checa o HOST contra a lista que o
+ * `next/image` conhece.
+ *
+ * A checagem de host não é preciosismo de segurança: uma capa de host não
+ * declarado faz o `next/image` LANÇAR na renderização, e a página do leitor
+ * responde 500 — inclusive as páginas que só mostram o card da matéria. Recusar
+ * no painel troca um site fora do ar por uma mensagem de erro no formulário.
+ */
+export function safeImageUrl(raw: unknown): SafeUrlResult {
+  const result = parseWithProtocols(raw, IMAGE_PROTOCOLS);
+  if (!result.href) return result;
+
+  const { hostname } = new URL(result.href);
+  return isAllowedImageHost(hostname) ? result : { href: null, reason: 'host' };
 }
 
 /**

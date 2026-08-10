@@ -1,45 +1,43 @@
 // Entry file de verdade (é isto que o hPanel chama). Antes de carregar o Next
 // — e, por tabela, o Prisma — restaura o cliente Prisma já gerado (motor
-// debian-openssl-1.1.x incluído) de `vendor/` para `node_modules/`.
+// debian-openssl-1.1.x incluído) de `vendor/` para `node_modules/` E para
+// `/tmp/prisma-engines/`.
 //
-// POR QUE ISTO PRECISA VIVER AQUI E NÃO NUM POSTINSTALL:
-// medido em produção via rota de diagnóstico: o `npm install` do Hostinger
-// roda dentro de `hbuilds/source/`, mas o processo de verdade sobe a partir
-// de `hbuilds/versions/<uuid>/nodejs/` — um diretório DIFERENTE, promovido a
-// partir do primeiro em algum momento que não necessariamente espera o
-// `postinstall` terminar. Um script de postinstall corrige o lugar errado.
+// HISTÓRICO (por que isto existe nesta forma específica):
+//   1. `npm install` do Hostinger roda em `hbuilds/source/`, mas o processo
+//      sobe de `hbuilds/versions/<uuid>/nodejs/` — diretório diferente. Um
+//      postinstall corrige o lugar errado. Corrigido fazendo a restauração
+//      aqui, no entry file real.
+//   2. Múltiplos processos sobem quase ao mesmo tempo do mesmo diretório;
+//      `copyFileSync` direto no destino final não é atômico. Corrigido
+//      escrevendo em nome temporário e usando `renameSync` (atômico em POSIX).
+//   3. MESMO ASSIM o erro persistiu. Confirmado via rota de diagnóstico: o
+//      arquivo final está no lugar certo, com o TAMANHO EXATO do original
+//      (21782408 bytes) — não é mais ausência nem corrupção de conteúdo.
+//      Isso deixa duas explicações: (a) o arquivo perdeu a permissão de
+//      execução na cópia, ou (b) o diretório está montado com `noexec`
+//      (prática comum de segurança em hospedagem compartilhada) e o SO
+//      recusa `dlopen()` nele mesmo com permissão correta.
 //
-// Este arquivo, ao contrário, É o processo que sobe a partir do diretório
-// final — `__dirname` aqui É `hbuilds/versions/<uuid>/nodejs`, sempre.
-//
-// -----------------------------------------------------------------------
-// POR QUE A CÓPIA PRECISA SER ATÔMICA (achado depois de ver o mesmo build
-// funcionar e falhar sem NENHUMA mudança de código entre as tentativas):
-// -----------------------------------------------------------------------
-// O host sobe MAIS DE UM processo Node a partir do mesmo diretório quase ao
-// mesmo tempo (visível no log: vários "✓ Ready" em milissegundos de
-// diferença). Se dois processos executam este arquivo simultaneamente,
-// `fs.copyFileSync` direto no destino final deixa uma janela em que o
-// arquivo existe mas está PELA METADE — e o outro processo, tentando
-// carregar o Prisma naquele instante exato, lê um `.so.node` truncado e
-// trava com erro. Como o `PrismaClient` só tenta carregar o engine uma vez
-// por processo, esse processo fica quebrado pelo resto da vida dele —
-// exatamente o padrão observado (funciona numa requisição, falha na
-// seguinte, sem nenhum determinismo aparente).
-//
-// A correção: escrever cada arquivo num nome temporário e só então
-// `fs.renameSync` para o nome final. Em sistemas POSIX, `rename` dentro do
-// mesmo sistema de arquivos é atômico — quem lê o destino enxerga o arquivo
-// ANTERIOR (ou nada, na primeira vez) ou o COMPLETO, nunca um estado parcial.
+// Por isso: (a) forçamos chmod 755 explicitamente após cada cópia — não dá
+// para assumir que `copyFileSync` preserva o bit de execução; e (b) copiamos
+// o motor TAMBÉM para `/tmp/prisma-engines/`, que é um caminho de busca que
+// o PRÓPRIO Prisma já verifica nativamente (existe precisamente para
+// ambientes onde o diretório de deploy não permite executar binários, como
+// AWS Lambda) — `/tmp` normalmente não tem essa restrição.
 const fs = require('fs');
 const path = require('path');
 
-function copyFileAtomic(src, dest) {
-  // Nome temporário único por processo: dois processos escrevendo ao mesmo
-  // tempo não pisam no arquivo temporário um do outro, só disputam o
-  // `rename` final — e `rename` não tem estado parcial, só "antes" ou "depois".
+function copyFileAtomic(src, dest, mode) {
   const tmp = `${dest}.tmp-${process.pid}-${Date.now()}`;
   fs.copyFileSync(src, tmp);
+  if (mode !== undefined) {
+    try {
+      fs.chmodSync(tmp, mode);
+    } catch (e) {
+      console.error(`[server.js] chmod falhou em ${tmp}:`, e);
+    }
+  }
   fs.renameSync(tmp, dest);
 }
 
@@ -51,22 +49,41 @@ function copyRecursive(src, dest) {
     if (entry.isDirectory()) {
       copyRecursive(s, d);
     } else {
-      copyFileAtomic(s, d);
+      // O motor de consulta (.so.node) precisa do bit de execução para o
+      // dlopen(); os demais arquivos (JS, .d.ts, .wasm) não.
+      const isEngine = entry.name.endsWith('.so.node') || entry.name.endsWith('.dll.node');
+      copyFileAtomic(s, d, isEngine ? 0o755 : undefined);
     }
   }
 }
 
-const pairs = [
-  [path.join(__dirname, 'vendor', 'dot-prisma-client'), path.join(__dirname, 'node_modules', '.prisma', 'client')],
-  [path.join(__dirname, 'vendor', 'at-prisma-client'), path.join(__dirname, 'node_modules', '@prisma', 'client')],
-];
+const DOT_PRISMA_SRC = path.join(__dirname, 'vendor', 'dot-prisma-client');
+const AT_PRISMA_SRC = path.join(__dirname, 'vendor', 'at-prisma-client');
 
-for (const [src, dest] of pairs) {
-  try {
-    copyRecursive(src, dest);
-  } catch (e) {
-    console.error(`[server.js] falha ao restaurar cliente Prisma de ${src}:`, e);
+try {
+  copyRecursive(DOT_PRISMA_SRC, path.join(__dirname, 'node_modules', '.prisma', 'client'));
+} catch (e) {
+  console.error('[server.js] falha ao restaurar .prisma/client:', e);
+}
+
+try {
+  copyRecursive(AT_PRISMA_SRC, path.join(__dirname, 'node_modules', '@prisma', 'client'));
+} catch (e) {
+  console.error('[server.js] falha ao restaurar @prisma/client:', e);
+}
+
+// Fallback nativo do Prisma: copia só o(s) motor(es) para /tmp/prisma-engines.
+// Se node_modules estiver numa montagem noexec, este é o caminho que salva.
+try {
+  const TMP_ENGINES_DIR = '/tmp/prisma-engines';
+  fs.mkdirSync(TMP_ENGINES_DIR, { recursive: true });
+  for (const entry of fs.readdirSync(DOT_PRISMA_SRC, { withFileTypes: true })) {
+    if (entry.isFile() && (entry.name.endsWith('.so.node') || entry.name.endsWith('.dll.node'))) {
+      copyFileAtomic(path.join(DOT_PRISMA_SRC, entry.name), path.join(TMP_ENGINES_DIR, entry.name), 0o755);
+    }
   }
+} catch (e) {
+  console.error('[server.js] falha ao restaurar engine em /tmp/prisma-engines:', e);
 }
 
 require('./next-server.js');

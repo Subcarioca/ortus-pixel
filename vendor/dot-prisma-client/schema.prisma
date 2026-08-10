@@ -159,13 +159,32 @@ model Tag {
 // AUTORES — entidades de primeira classe por causa de E-E-A-T
 // =============================================================================
 
+/// Pessoa da redação. Model DUPLO, de propósito: é ao mesmo tempo a ASSINATURA
+/// pública da matéria ("Marina Alves, Editora-chefe") e a CONTA que entra no
+/// painel.
+///
+/// POR QUE NÃO SÃO DUAS TABELAS ("Author" público + "User" de login):
+/// separá-las obrigaria a manter um vínculo 1:1 que nada garante — o dia em que
+/// alguém criar uma conta sem autor (ou o contrário), o painel passa a ter um
+/// usuário que não consegue assinar nada, ou uma assinatura que ninguém
+/// consegue editar. Aqui, `Article.authorId` aponta para a MESMA linha que a
+/// sessão do painel identifica, e é isso que faz a regra "redator só mexe no que
+/// é dele" ser uma comparação de igualdade, e não um join especulativo.
 model Author {
   id        String  @id @default(cuid())
   slug      String  @unique
   name      String
+  /// E-mail: identidade pública E login do painel. Guardado sempre em
+  /// minúsculas (normalizado na escrita) — senão "Marina@..." e "marina@..."
+  /// viram duas contas, e o índice único não impede porque são strings
+  /// diferentes.
   email     String  @unique
   bio       String  @default("")
   avatarUrl String?
+  /// TÍTULO EDITORIAL, texto livre ("Editora-chefe", "Repórter de Games").
+  /// É apresentação: sai na assinatura da matéria e no `jobTitle` do
+  /// schema.org/Person. NÃO tem relação com permissão — quem manda no acesso é
+  /// `systemRole`, logo abaixo.
   role      String  @default("Redator")
 
   /// Links sociais e credenciais viram schema.org/Person com `sameAs`.
@@ -174,16 +193,83 @@ model Author {
   socialLinks    Json     @default("[]")
   expertiseAreas String[] @default([])
 
-  /// Papel no sistema. Controla o acesso ao painel editorial.
-  /// 'admin' | 'editor' | 'writer'
-  systemRole String  @default("writer")
-  isActive   Boolean @default(true)
+  /// NÍVEL DE ACESSO ao painel. Vocabulário fechado: 'admin' | 'redator'.
+  ///
+  /// A validação vive em `core/staff.ts` (`isAccessLevel`), no mesmo padrão de
+  /// `status`, `format` e `currentBand`: `String` no banco + union no domínio.
+  /// Não é `enum` do Prisma porque nenhum outro vocabulário fechado deste schema
+  /// é — e um enum isolado significaria duas gramáticas convivendo, com a
+  /// migração de cada valor novo mudando de natureza dependendo do campo.
+  ///
+  ///   admin   → vê e edita TUDO, gerencia contas, modera, mexe no comercial.
+  ///   redator → cria/edita/apaga apenas as matérias em que ele é o autor.
+  ///
+  /// O padrão é o MENOS privilegiado: uma conta criada por engano (ou por um
+  /// caminho de código que esqueça de passar o campo) nasce sem poder algum.
+  systemRole String @default("redator")
 
-  articles  Article[]
-  auditLogs AuditLog[]
+  /// Hash da senha no formato `scrypt$N$r$p$sal$hash` (ver packages/db/src/password.ts).
+  ///
+  /// NULO é estado legítimo e importante: significa "esta pessoa assina matéria,
+  /// mas não tem acesso ao painel". É o que permite ter um colaborador externo
+  /// como autor sem lhe dar uma conta — e é o estado em que ficam os autores que
+  /// existiam antes deste sistema. Sem senha, a rota de login recusa SEMPRE,
+  /// mesmo que o e-mail exista.
+  passwordHash String?
+
+  /// Desligar > apagar. Apagar um autor exigiria decidir o que fazer com as
+  /// matérias assinadas por ele (a FK é obrigatória em `Article.authorId`), e
+  /// "some com a assinatura de tudo que ele escreveu" nunca é a resposta certa
+  /// num veículo jornalístico. Conta inativa não entra e não aparece como opção
+  /// de autor em matéria nova; o que ela já assinou continua no ar.
+  isActive Boolean @default(true)
+
+  /// Última entrada no painel. Serve à tela de contas ("esta conta é usada?") e
+  /// a uma auditoria simples de acesso. Nulo = nunca entrou.
+  lastLoginAt DateTime?
+
+  articles      Article[]
+  auditLogs     AuditLog[]
+  staffSessions StaffSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Índice da tela de contas e da rota de login: filtramos por nível e por
+  // atividade em toda listagem administrativa.
+  @@index([systemRole, isActive])
+}
+
+/// Sessão de quem está logado no PAINEL.
+///
+/// Tabela separada de `CommentSession` (a sessão do leitor), e não uma coluna a
+/// mais nela. O motivo é o mesmo que já separava os dois cookies: um bug no
+/// login social de comentários não pode, em hipótese nenhuma, abrir a porta da
+/// redação. Com uma tabela só, "sessão de leitor" e "sessão de staff" passariam
+/// a ser distinguidas por um booleano — e um booleano esquecido num `where` é
+/// uma escalada de privilégio.
+///
+/// O mecanismo é idêntico ao de `CommentSession` (token opaco de 256 bits no
+/// cookie, SHA-256 no banco) pelas mesmas duas razões: revogação imediata
+/// (desativar uma conta apaga as linhas e o acesso morre no clique seguinte, ao
+/// contrário de um JWT, que vale até expirar) e vazamento contido (o banco só
+/// tem hashes).
+model StaffSession {
+  id        String @id @default(cuid())
+  tokenHash String @unique
+
+  authorId String
+  author   Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime
+  userAgent String?
+  ipHash    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([authorId])
+  // Suporta a limpeza periódica de sessões expiradas.
+  @@index([expiresAt])
 }
 
 // =============================================================================
@@ -381,7 +467,39 @@ model Article {
   title   String
   excerpt String @default("")
   /// Corpo em Markdown (ver ADR 0005).
+  ///
+  /// PAPEL NOVO DEPOIS DO EDITOR DE BLOCOS: quando `blocks` existe, esta coluna
+  /// deixa de ser o que o leitor vê e passa a ser uma PROJEÇÃO EM TEXTO PURO dos
+  /// blocos, gravada pelo servidor a cada salvamento. Ela continua existindo por
+  /// dois motivos concretos, e nenhum deles é nostalgia:
+  ///   1. `searchVector` é coluna GERADA a partir de title/excerpt/content — se
+  ///      o corpo saísse daqui, toda matéria escrita em blocos ficaria invisível
+  ///      na busca do site, sem nenhum erro aparecer em lugar nenhum;
+  ///   2. é a rede de segurança de renderização: `blocks` nulo (as matérias
+  ///      antigas) continua caindo no renderizador de Markdown de sempre.
   content String @default("")
+
+  /// CORPO EM BLOCOS — array ORDENADO e tipado (ver packages/core/src/blocks.ts).
+  ///
+  /// POR QUE `Json` E NÃO UMA TABELA `ArticleBlock`:
+  /// um bloco nunca é consultado sozinho. Não existe "buscar todas as citações
+  /// do site", não existe ordenar por bloco, não existe permissão por bloco. O
+  /// acesso é sempre "me dê o corpo INTEIRO desta matéria" — que em tabela
+  /// própria vira um JOIN + ORDER BY por posição em toda leitura de artigo, com
+  /// reordenação virando N updates de `position` numa transação. Em `Json` é uma
+  /// coluna a mais no `select` que a página já faz, e reordenar é reescrever um
+  /// array. O preço é não poder consultar por dentro; como nunca precisamos, o
+  /// preço é zero.
+  ///
+  /// NULO ou array vazio = matéria escrita antes do editor de blocos. A página
+  /// renderiza a partir de `content`, exatamente como sempre renderizou. Essa é
+  /// a garantia que mantém as matérias já publicadas intactas.
+  ///
+  /// A FORMA é validada na ESCRITA (server/blocks-input.ts), nunca na leitura:
+  /// dado que entra no banco já validado permite que o renderizador seja um
+  /// `switch` simples. O renderizador ainda assim degrada em silêncio para um
+  /// bloco desconhecido — banco é fronteira, e fronteira se trata com desconfiança.
+  blocks Json?
 
   /// 'suggested' | 'claimed' | 'draft' | 'in-review' | 'published' | 'archived'
   status String @default("draft")

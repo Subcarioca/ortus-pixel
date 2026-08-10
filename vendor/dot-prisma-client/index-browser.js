@@ -182,9 +182,21 @@ exports.Prisma.AuthorScalarFieldEnum = {
   socialLinks: 'socialLinks',
   expertiseAreas: 'expertiseAreas',
   systemRole: 'systemRole',
+  passwordHash: 'passwordHash',
   isActive: 'isActive',
+  lastLoginAt: 'lastLoginAt',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
+};
+
+exports.Prisma.StaffSessionScalarFieldEnum = {
+  id: 'id',
+  tokenHash: 'tokenHash',
+  authorId: 'authorId',
+  expiresAt: 'expiresAt',
+  userAgent: 'userAgent',
+  ipHash: 'ipHash',
+  createdAt: 'createdAt'
 };
 
 exports.Prisma.TopicScalarFieldEnum = {
@@ -278,6 +290,7 @@ exports.Prisma.ArticleScalarFieldEnum = {
   title: 'title',
   excerpt: 'excerpt',
   content: 'content',
+  blocks: 'blocks',
   status: 'status',
   categoryId: 'categoryId',
   subcategoryId: 'subcategoryId',
@@ -578,6 +591,7 @@ exports.Prisma.ModelName = {
   Franchise: 'Franchise',
   Tag: 'Tag',
   Author: 'Author',
+  StaffSession: 'StaffSession',
   Topic: 'Topic',
   TopicFranchise: 'TopicFranchise',
   ScoreSnapshot: 'ScoreSnapshot',

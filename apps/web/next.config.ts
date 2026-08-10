@@ -43,6 +43,16 @@ const standaloneOutput: Pick<NextConfig, 'output' | 'outputFileTracingRoot'> =
 const nextConfig: NextConfig = {
   ...standaloneOutput,
 
+  // O Prisma detecta se o próprio runtime foi bundlado checando se
+  // `__filename` bate com `runtime/library.js` — e falha com uma mensagem
+  // enganosa ("bundler não copiou o engine") quando não bate. Sem isto, o
+  // webpack tenta empacotar `@prisma/client` junto do resto (arrastado pelo
+  // `transpilePackages` de `@subcarioca/db`), e o runtime deixa de casar esse
+  // caminho. `serverExternalPackages` mantém os dois como `require()` normal
+  // em vez de conteúdo bundlado — resolvido do `node_modules` de verdade,
+  // exatamente como o Prisma espera.
+  serverExternalPackages: ['@prisma/client', '.prisma/client'],
+
   // Os pacotes do monorepo são consumidos como TypeScript-fonte (sem passo de
   // build próprio). `transpilePackages` faz o Next compilá-los junto com o app.
   // Ganho: alterar um tipo em @subcarioca/core reflete no site com hot reload,

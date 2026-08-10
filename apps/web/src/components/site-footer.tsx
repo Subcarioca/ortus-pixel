@@ -95,6 +95,21 @@ export function SiteFooter({ categories }: { categories: readonly CategoryDefini
               <li>
                 <Link href={routes.methodology()}>Como escolhemos o que publicar</Link>
               </li>
+              {/*
+                ÚNICO PONTO DE ENTRADA VISÍVEL PARA O PAINEL DA REDAÇÃO.
+                Por design, nada no header ou no bottom-nav aponta para /admin —
+                aquela área é do leitor (routes.account()), e misturar os dois
+                convidaria o leitor a tentar "entrar" achando que é a mesma coisa
+                (ver o comentário em site-header.tsx). Mas quem opera o site no
+                dia a dia também precisa de um caminho, e "decorar a URL" não é
+                esse caminho. O rodapé resolve os dois lados: aparece em toda
+                página, em ambos os breakpoints, e fica na coluna institucional —
+                discreto o bastante para não competir com a manchete, visível o
+                bastante para quem sabe o que procura.
+              */}
+              <li>
+                <Link href={routes.admin()}>Acesso da redação</Link>
+              </li>
             </ul>
           </nav>
         </div>

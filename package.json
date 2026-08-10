@@ -5,6 +5,7 @@
   "description": "Front-end da Ortus Pixel (Next.js App Router) + painel editorial.",
   "scripts": {
     "build": "echo already-built",
+    "postinstall": "node scripts/restore-prisma-client.js",
     "start": "node server.js"
   },
   "dependencies": {

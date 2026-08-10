@@ -42,6 +42,7 @@ import {
   blocksToToc,
   catClass,
   catToken,
+  formatSealClass,
   hasBlocks,
   heatForBand,
   heatLevelForHeat,
@@ -273,6 +274,13 @@ export default async function ArticlePage({
               level={heatLevelForHeat(heatForBand(article.currentBand))}
             />
             <TrendTag trend={trendForDelta(scoreDelta1h, article.publishedAt)} />
+            {/* Selo de FORMATO ao lado do de temperatura. Contorno × pílula
+                preenchida: o leitor separa "isto é um vídeo" de "isto está
+                bombando" antes mesmo de ler as palavras. Omitido em `breaking`,
+                que é o formato padrão do site — ver `formatSealClass`. */}
+            {format !== 'breaking' && (
+              <span className={formatSealClass(format)}>{FORMAT_LABELS[format]}</span>
+            )}
             <Link href={routes.category(categoria)} className={catClass(categoria)}>
               {article.category.name}
             </Link>

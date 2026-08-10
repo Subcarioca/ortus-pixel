@@ -30,7 +30,14 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 import type { ContentCardData } from '@subcarioca/core';
-import { catClass, catToken, EVERGREEN_FORMATS, FORMAT_LABELS, routes } from '@subcarioca/core';
+import {
+  catClass,
+  catToken,
+  EVERGREEN_FORMATS,
+  FORMAT_LABELS,
+  formatSealClass,
+  routes,
+} from '@subcarioca/core';
 
 import { HeatBadge } from './heat-badge';
 import { HeatBar, TrendTag } from './heat-bar';
@@ -97,6 +104,20 @@ export function ArticleCard({ item, variant = 'grid', rank, priority = false }: 
   const badgeLabel =
     variant === 'ever' || item.heat === 'ever' ? FORMAT_LABELS[item.format] : undefined;
 
+  /**
+   * O SELO DE FORMATO SÓ APARECE QUANDO O BADGE JÁ NÃO DIZ O FORMATO.
+   *
+   * Na faixa mais fria, `HeatBadge` já mostra "Guia"/"Lista" no lugar da
+   * temperatura (ver `badgeLabel` acima). Acrescentar o `.fmt` ali produziria
+   * "Guia · Guia" lado a lado — o tipo de duplicação que passa despercebida em
+   * revisão de código e é constrangedora na tela.
+   *
+   * `breaking` também fica de fora: "Notícia" é o formato PADRÃO deste site, e
+   * carimbar de notícia a maioria dos cards não distingue nada. Selo de formato
+   * existe para dizer "este é diferente".
+   */
+  const showFormatSeal = badgeLabel === undefined && item.format !== 'breaking';
+
   // Evergreen tem anatomia própria no design: sem imagem, sem .card__body e
   // com filete verde à esquerda (`.card--ever` já traz o padding). Tratá-lo no
   // mesmo JSX dos demais exigiria três ternários aninhados no meio do markup.
@@ -157,6 +178,9 @@ export function ArticleCard({ item, variant = 'grid', rank, priority = false }: 
           <HeatBadge heat={item.heat} label={badgeLabel} />
           <HeatBar heat={item.heat} level={item.heatLevel} size="sm" />
           <TrendTag trend={item.trend} />
+          {showFormatSeal && (
+            <span className={formatSealClass(item.format)}>{FORMAT_LABELS[item.format]}</span>
+          )}
           <Link href={routes.category(item.category.slug)} className={catClass(item.category.slug)}>
             {item.category.label}
           </Link>

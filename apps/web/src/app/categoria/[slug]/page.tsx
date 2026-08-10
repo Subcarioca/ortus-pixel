@@ -34,6 +34,7 @@ import Link from 'next/link';
 import {
   CATEGORIES,
   type CategorySlug,
+  type ContentFormat,
   catModifier,
   heatClass,
   isCategorySlug,
@@ -47,6 +48,7 @@ import { ArticleCard } from '@/components/article-card';
 import { BreadcrumbJsonLd, CollectionJsonLd } from '@/components/json-ld';
 import { HeatBar } from '@/components/heat-bar';
 import { NewsletterForm } from '@/components/newsletter-form';
+import { Pagination } from '@/components/pagination';
 import { getCategoryPage } from '@/server/queries';
 
 export const revalidate = 300;
@@ -92,26 +94,68 @@ const CATEGORY_SEO: Partial<Record<CategorySlug, { title: string; description: s
  * No Next 15, `params` é uma Promise (mudança para suportar renderização
  * parcial). Por isso o `await` antes de usar.
  */
+/**
+ * Sub-abas por FORMATO.
+ *
+ * O README §1 previa `/games/analises`, `/games/trailers`, `/games/guias`; a
+ * implementação usa `?formato=` em vez de segmento de URL, e o motivo está em
+ * `core/routes.ts`: formato é um RECORTE do mesmo acervo, e uma URL indexável
+ * por recorte criaria páginas quase idênticas competindo entre si na mesma
+ * consulta de busca. Sub-CATEGORIA (Hardware) é acervo próprio e por isso ganha
+ * segmento de verdade.
+ *
+ * A lista é curta de propósito: são os três recortes que o leitor de fato
+ * procura por nome ("análise de X", "trailer de Y", "guia de Z"). Oferecer as
+ * oito opções de `CONTENT_FORMATS` transformaria a linha de abas num menu.
+ */
+const FORMAT_TABS: { value: ContentFormat; label: string }[] = [
+  { value: 'review', label: 'Análises' },
+  { value: 'trailer', label: 'Trailers' },
+  { value: 'guide', label: 'Guias' },
+];
+
+/** Query string aceita na URL. Qualquer outro valor é tratado como ausente. */
+function parseFormatFilter(value: unknown): ContentFormat | null {
+  return FORMAT_TABS.some((tab) => tab.value === value) ? (value as ContentFormat) : null;
+}
+
+/** Página lida da URL. Valor inválido (0, -3, "abc", 10^9) vira 1. */
+function parsePage(value: unknown): number {
+  const page = Number(value);
+  return Number.isInteger(page) && page >= 1 && page <= 10_000 ? page : 1;
+}
+
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }): Promise<Metadata> {
   const { slug } = await params;
   if (!isCategorySlug(slug)) return {};
 
-  const data = await getCategoryPage(slug);
+  const query = await searchParams;
+  const page = parsePage(query.pagina);
+
+  const data = await getCategoryPage(slug, page, parseFormatFilter(query.formato));
   if (!data) return {};
 
   const { category } = data;
 
   const designSeo = CATEGORY_SEO[slug];
 
+  const baseTitle =
+    category.seoTitle ??
+    designSeo?.title ??
+    `${category.name} — notícias, lançamentos e novidades`;
+
   return {
-    title:
-      category.seoTitle ??
-      designSeo?.title ??
-      `${category.name} — notícias, lançamentos e novidades`,
+    // O número da página entra no TÍTULO das páginas internas. Sem isso, o
+    // Search Console reporta "títulos duplicados" para a editoria inteira — e,
+    // pior, quem vê duas linhas idênticas no histórico do navegador não sabe
+    // qual abrir.
+    title: page > 1 ? `${baseTitle} — página ${page}` : baseTitle,
     description: category.seoDescription ?? designSeo?.description ?? category.description,
     // Canonical explícito evita que variações com query string (?formato=...,
     // ?utm_source=...) sejam indexadas como páginas distintas e diluam a
@@ -126,19 +170,49 @@ export async function generateMetadata({
   };
 }
 
-export default async function CategoryPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function CategoryPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { slug } = await params;
 
   // Valida o slug contra a lista fechada ANTES de tocar no banco. Barra
   // qualquer string vinda da URL de saída.
   if (!isCategorySlug(slug)) notFound();
 
-  const data = await getCategoryPage(slug);
+  const query = await searchParams;
+  const page = parsePage(query.pagina);
+  const formatFilter = parseFormatFilter(query.formato);
+
+  const data = await getCategoryPage(slug, page, formatFilter);
   if (!data) notFound();
 
-  const { category, articles, trending, upcomingReleases } = data;
+  const { category, articles, trending, upcomingReleases, totalPages } = data;
   const subcategories = subcategoriesOf(slug);
   const railSlot = categoryRailSlot();
+
+  /**
+   * PÁGINA VAZIA POR NÚMERO ALTO DEMAIS RESPONDE 404.
+   *
+   * Sem isso, `?pagina=900` devolveria 200 com uma listagem vazia — e o Google
+   * indexaria infinitas páginas em branco da mesma editoria, cada uma delas
+   * diluindo a autoridade das que têm conteúdo. A primeira página é exceção: uma
+   * editoria recém-criada sem matéria nenhuma é um estado legítimo, com texto
+   * próprio ("Ainda não publicamos nada nesta editoria").
+   */
+  if (page > 1 && articles.length === 0) notFound();
+
+  /** Monta a URL preservando o outro filtro. */
+  const hrefFor = (target: number) => {
+    const search = new URLSearchParams();
+    if (formatFilter) search.set('formato', formatFilter);
+    if (target > 1) search.set('pagina', String(target));
+    const qs = search.toString();
+    return qs ? `${routes.category(slug)}?${qs}` : routes.category(slug);
+  };
 
   return (
     <>
@@ -184,25 +258,55 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
           elemento clicável em todos os estados evita que a linha "pule" de
           largura ao navegar e dá ao leitor um caminho de volta previsível.
         */}
-        {subcategories.length > 0 && (
-          <nav className="tabs" aria-label={`Seções de ${category.name}`}>
-            <Link href={routes.category(slug)} aria-current="page">
-              Tudo
+        <nav className="tabs" aria-label={`Seções de ${category.name}`}>
+          {/* "Tudo" só é a aba ativa quando NÃO há filtro de formato. Antes ela
+              era marcada como `aria-current` incondicionalmente — o que dizia ao
+              leitor de tela que a página atual era a lista completa mesmo quando
+              o leitor estava vendo só os trailers. */}
+          <Link
+            href={routes.category(slug)}
+            {...(formatFilter === null ? { 'aria-current': 'page' as const } : {})}
+          >
+            Tudo
+          </Link>
+
+          {/* Sub-SEÇÕES vêm antes dos formatos: são acervos próprios (hierarquia),
+              enquanto formato é recorte (filtro). A ordem comunica essa diferença
+              sem precisar de rótulo. */}
+          {subcategories.map((sub) => (
+            <Link key={sub.slug} href={routes.subcategory(slug, sub.slug)}>
+              {sub.name}
             </Link>
-            {subcategories.map((sub) => (
-              <Link key={sub.slug} href={routes.subcategory(slug, sub.slug)}>
-                {sub.name}
-              </Link>
-            ))}
-          </nav>
-        )}
+          ))}
+
+          {FORMAT_TABS.map((tab) => (
+            <Link
+              key={tab.value}
+              href={routes.categoryFiltered(slug, tab.value)}
+              {...(formatFilter === tab.value ? { 'aria-current': 'page' as const } : {})}
+            >
+              {tab.label}
+            </Link>
+          ))}
+        </nav>
       </div>
 
       <div className="container layout-2col">
         <div>
           {articles.length === 0 ? (
             <p className="empty-state">
-              Ainda não publicamos nada nesta editoria. Volte em breve.
+              {/* O texto muda com o FILTRO. "Ainda não publicamos nada nesta
+                  editoria" seria falso numa editoria cheia em que só o recorte
+                  de trailers está vazio — e mandaria o leitor embora do site
+                  quando o que ele precisa é tirar o filtro. */}
+              {formatFilter
+                ? `Nenhuma matéria de ${category.name} neste formato ainda.`
+                : 'Ainda não publicamos nada nesta editoria. Volte em breve.'}
+              {formatFilter && (
+                <Link href={routes.category(slug)} className="link-more">
+                  Ver tudo de {category.name}
+                </Link>
+              )}
             </p>
           ) : (
             // Duas colunas a partir de 640px — a grade de categoria do
@@ -253,6 +357,16 @@ export default async function CategoryPage({ params }: { params: Promise<{ slug:
               </div>
             </>
           )}
+
+          {/* PAGINAÇÃO REAL — a editoria deixou de despejar o acervo inteiro
+              numa página só. Ver o cabeçalho de `components/pagination.tsx`
+              para o motivo de não ser rolagem infinita. */}
+          <Pagination
+            page={page}
+            totalPages={totalPages}
+            hrefFor={hrefFor}
+            label={`Páginas de ${category.name}`}
+          />
         </div>
 
         <aside className="sidebar">

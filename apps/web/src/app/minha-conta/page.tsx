@@ -6,8 +6,9 @@
  * ESTA PÁGINA NÃO TEM NADA A VER COM /admin, e a separação é intencional.
  *
  * São dois públicos e dois sistemas de autenticação distintos: a redação entra
- * com o segredo compartilhado do painel (`ADMIN_ACCESS_TOKEN`), o leitor entra
- * com Discord ou Google. Nenhum caminho de navegação liga um ao outro, e um bug
+ * com conta individual de e-mail e senha (`server/staff-auth.ts`), o leitor
+ * entra com Discord ou Google. Nenhum caminho de navegação liga um ao outro, e
+ * um bug
  * aqui não pode, em hipótese alguma, abrir a porta da redação — por isso esta
  * página não importa uma linha sequer do módulo de admin.
  *

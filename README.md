@@ -107,7 +107,26 @@ painel editorial se popula e nada quebra.
 
 ### Painel editorial
 
-<http://localhost:3000/admin> — o token é o valor de `ADMIN_ACCESS_TOKEN` no `.env`.
+<http://localhost:3000/admin> — entra-se com **conta individual** (e-mail e senha).
+
+Na primeira vez, crie a conta de administrador pelo terminal:
+
+```bash
+npm run staff:create -- --email=voce@dominio.com --nome="Seu Nome"
+npm run staff:create -- --listar        # quem tem acesso hoje
+```
+
+O comando pede a senha sem ecoar na tela. Depois disso, as demais contas são criadas
+pela própria tela **Contas** do painel. Não existe rota pública de setup, de propósito —
+o racional está no cabeçalho de `packages/db/scripts/staff-account.ts`.
+
+Dois níveis de acesso, definidos em `packages/core/src/staff.ts`:
+
+| | Admin | Redator |
+|---|---|---|
+| Criar/editar matéria | tudo | só as que assina |
+| Fila de pautas | ver, assumir, sobrepor score, descartar | ver e assumir |
+| Comentários, afiliados, relatórios, contas | sim | não |
 
 ### Testes e verificação
 
@@ -371,10 +390,11 @@ Nada aqui é opcional. Os quatro primeiros itens são **bloqueadores de lançame
       e não cita domínio nenhum, então trocar de domínio não volta a quebrar isso.
       Ainda assim, **verifique `curl https://ortuspixel.com/robots.txt` antes de
       divulgar o site** — é um teste de 2 segundos contra um erro de 3 semanas.
-- [ ] **`ADMIN_ACCESS_TOKEN` trocado.** O valor do `.env.example`
-      (`troque-me-antes-de-producao`) é público — está no repositório. Enquanto o painel
-      usar segredo compartilhado, esse valor sozinho dá acesso a publicar, editar e
-      moderar. Gere com `openssl rand -base64 32` e troque sempre que alguém sair da equipe.
+- [ ] **Conta de administrador criada NO SERVIDOR, com senha forte.** O painel não tem
+      mais segredo compartilhado em variável de ambiente: rode
+      `npm run staff:create -- --email=... --nome="..."` depois do deploy. Enquanto não
+      existir nenhuma conta, ninguém entra — o que é a falha segura correta, mas também
+      significa que este passo não pode ser esquecido.
 - [ ] **`REVALIDATE_SECRET` e `NEWSLETTER_TOKEN_SECRET` gerados novos.** Mesmo raciocínio:
       os placeholders são públicos. Com o primeiro, um terceiro força invalidação de cache
       à vontade e derruba o site sob pico.
@@ -1040,9 +1060,11 @@ Cuidados adicionais específicos deste domínio:
 
 ### Pendências antes de produção
 
-1. **Autenticação do painel** — hoje é segredo compartilhado. Sem identidade individual, a
-   trilha de auditoria registra "alguém" em vez de "a Marina", o que anula boa parte do
-   valor do `AuditLog`. Substituir por Auth.js + SSO da redação.
+1. ~~**Autenticação do painel**~~ — **RESOLVIDO**. O segredo compartilhado saiu; cada
+   pessoa tem conta individual (e-mail + senha com scrypt, sessão opaca em `StaffSession`)
+   e o `AuditLog` passou a gravar `actorId`. O que ficou de fora, conscientemente:
+   recuperação de senha por e-mail (a redação é pequena; um admin redefine pela tela de
+   contas) e segundo fator. Ver `apps/web/src/server/staff-auth.ts`.
 2. **Rate limiting distribuído** — hoje em memória. Com múltiplas réplicas, o limite real
    vira N × o configurado. Migrar para Redis (`INCR` + `EXPIRE`).
 3. **Content-Security-Policy** — não configurada ainda. O inventário de domínios cresceu
@@ -1068,9 +1090,9 @@ Cuidados adicionais específicos deste domínio:
    por duas semanas e ler os relatórios. CSP de anúncio quebra de formas que não aparecem
    em teste manual — costuma falhar só em um formato de criativo, semanas depois.
 
-4. **Autenticação individual no painel** — as telas de afiliados e de moderação também
-   usam o segredo compartilhado. Com o `AuditLog` registrando "alguém" em vez de "a
-   Marina", uma remoção de comentário contestada não tem responsável identificável.
+4. ~~**Autenticação individual nas telas de afiliados e moderação**~~ — **RESOLVIDO** junto
+   com o item 1: as duas passaram a exigir nível `admin` e registram `actorId` no
+   `AuditLog`, então uma remoção de comentário contestada tem responsável identificável.
 5. **Proxy de imagem de produto** — as fotos das ofertas virão do CDN das lojas. Servi-las
    direto entrega o IP do leitor ao varejista e nos deixa reféns de link quebrado. O
    `next/image` com `remotePatterns` resolve o segundo problema; o primeiro exige proxy.

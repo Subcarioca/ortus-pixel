@@ -43,6 +43,20 @@ interface CommentSectionProps {
   returnTo: string;
 }
 
+/**
+ * A partir de quantos comentários o contador aparece.
+ *
+ * Zero era o corte óbvio e não é o suficiente. O problema é PROVA SOCIAL
+ * NEGATIVA: "Comentários · 1" comunica "ninguém participa aqui" com mais força
+ * do que a ausência do número comunica qualquer coisa — e quem lê isso não
+ * comenta, o que mantém o número baixo. É o mesmo raciocínio pelo qual não
+ * exibimos o "293 pessoas online" do protótipo do Discord sem ter o dado.
+ *
+ * A seção continua aparecendo sempre, com o convite ("Ninguém comentou ainda.
+ * Puxe a conversa."). O que some é só a CONTAGEM.
+ */
+const MIN_COUNT_TO_SHOW = 3;
+
 export function CommentSection({
   articleId,
   comments,
@@ -59,7 +73,7 @@ export function CommentSection({
       <div className="section-head">
         <h2 id="comentarios-titulo" className="section-title">
           Comentários
-          {comments.length > 0 && (
+          {comments.length >= MIN_COUNT_TO_SHOW && (
             <span className="cmt__time"> · {comments.length}</span>
           )}
         </h2>

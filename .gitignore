@@ -15,7 +15,7 @@ out/
 #
 # CORREÇÃO DE SEGURANÇA: a lista anterior era `.env`, `.env.local` e
 # `.env.*.local`. Nenhum desses padrões casa com `.env.production` — o arquivo
-# que guarda a senha do banco, o ADMIN_ACCESS_TOKEN e as chaves de API do VPS.
+# que guarda a senha do banco e as chaves de API do VPS.
 # Ou seja, ele podia ser commitado por acidente (um `git add -A` bastava), e
 # segredo que entra no histórico do Git não sai com um `rm` no commit seguinte:
 # precisa ser ROTACIONADO.

@@ -72,7 +72,7 @@ const ROOT = __dirname;
  * (o `.gitignore` já cobre `.env*` menos o `.example`).
  *
  * Permissão recomendada no VPS: `chmod 600 .env.production` e dono = usuário
- * que roda o PM2. Ele contém DATABASE_URL, ADMIN_ACCESS_TOKEN e chaves de API.
+ * que roda o PM2. Ele contém DATABASE_URL e as chaves de API.
  */
 const ENV_FILE = path.join(ROOT, '.env.production');
 

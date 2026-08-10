@@ -14,8 +14,9 @@ import { generateToken, hashPersonalData, hashToken } from './security';
  *
  * "Leitor" e não "usuário": esta sessão NÃO dá acesso a nada além de escrever e
  * apagar os próprios comentários. O painel editorial tem autenticação separada
- * (`ADMIN_ACCESS_TOKEN`), e essa separação é proposital — um bug aqui não pode,
- * em nenhuma hipótese, abrir a porta da redação.
+ * (`server/staff-auth.ts`: conta individual, cookie próprio, tabela própria), e
+ * essa separação é proposital — um bug aqui não pode, em nenhuma hipótese, abrir
+ * a porta da redação.
  *
  * FORMATO DA SESSÃO: TOKEN OPACO + HASH NO BANCO.
  *

@@ -403,6 +403,39 @@ export default async function HomePage() {
           <AdSlot slot={homeAds.afterTrending} />
         )}
 
+        {/* ---------- ACABOU DE SAIR: a única superfície cronológica ----------
+            Fica ENTRE o ranking e a grade e não muda a ordenação de nenhum dos
+            dois. Sem imagem e com horário: a home já tem dois blocos de cards
+            competindo pelo mesmo olhar, e um terceiro com capa transformaria a
+            página numa disputa. Como lista de títulos, ela é lida em dois
+            segundos e responde a pergunta de quem volta ao site três vezes por
+            dia — "o que mudou desde que eu saí?". Ver `home:newest`. */}
+        {home.justOut.length > 0 && (
+          <section className="section" aria-labelledby="acabou-de-sair">
+            <div className="section-head">
+              <h2 id="acabou-de-sair" className="section-title">
+                Acabou de sair
+              </h2>
+              <Link href={routes.trending()} className="link-more">
+                Ranking ao vivo
+              </Link>
+            </div>
+            <ul className="just-out__list">
+              {home.justOut.map((item) => (
+                <li key={item.id}>
+                  {/* O HORÁRIO vem primeiro e é `<time>`: é o dado que dá sentido
+                      à faixa, e alinhado à esquerda em mono ele funciona como
+                      coluna — o olho desce pelos horários e para no que interessa.
+                      `RelativeTime` já resolve o fuso no cliente (o servidor não
+                      sabe o do leitor) e degrada para a data absoluta sem JS. */}
+                  <RelativeTime date={item.publishedAt} className="just-out__time" />
+                  <Link href={item.url}>{item.title}</Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {/* ---------- MAIS REPERCUTIDO AGORA: a seção-âncora ----------
             Incondicional em relação à FAIXA (entra tudo o que foi publicado,
             de qualquer temperatura) e ordenada por REPERCUSSÃO, do maior score

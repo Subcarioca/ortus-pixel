@@ -225,6 +225,41 @@ export const FORMAT_LABELS: Record<ContentFormat, string> = {
 };
 
 /**
+ * Classe do SELO DE FORMATO (`.fmt`) para cada formato de conteúdo.
+ *
+ * -----------------------------------------------------------------------------
+ * POR QUE UM SEGUNDO SELO NÃO BRIGA COM O BADGE DE TEMPERATURA
+ * -----------------------------------------------------------------------------
+ * O §4 reservava a linha do card à temperatura, e acrescentar um elemento ali
+ * exigiu decisão do dono do produto (aprovada). O argumento que a sustenta é de
+ * FORMA, não de conteúdo: `.heat` é pílula PREENCHIDA, mono, e pode pulsar;
+ * `.fmt` é CONTORNO, mono, estático. É a mesma distinção que o §7.2 já usa para
+ * o `.deal-seal` não se confundir com badge de temperatura — e ela funciona
+ * porque o olho separa preenchido de contornado antes de ler o texto.
+ *
+ * -----------------------------------------------------------------------------
+ * SÓ TRÊS FORMATOS GANHAM ÍCONE, E OS OUTROS CINCO FICAM SEM — DE PROPÓSITO
+ * -----------------------------------------------------------------------------
+ * O CSS do design define pictogramas só para vídeo, galeria e lista. Inventar um
+ * para "teoria" e outro para "comparativo" produziria cinco símbolos abstratos
+ * que ninguém decifra, e o selo passaria a exigir uma legenda — que é o oposto
+ * de sinalização. Os demais formatos usam o selo sem ícone: o texto ("Guia",
+ * "Análise") já é a informação, e o contorno já é o sinal de "isto é formato".
+ *
+ * O mesmo raciocínio dos `tier--*` do painel: se tudo tem destaque, nada tem.
+ */
+const FORMAT_SEAL_MODIFIER: Partial<Record<ContentFormat, string>> = {
+  trailer: 'video',
+  listicle: 'list',
+};
+
+/** `className` do selo de formato. */
+export function formatSealClass(format: ContentFormat): string {
+  const modifier = FORMAT_SEAL_MODIFIER[format];
+  return modifier ? `fmt fmt--${modifier}` : 'fmt';
+}
+
+/**
  * Os formatos que compõem "Guias e essenciais" na home.
  *
  * A seção era montada por FAIXA DE SCORE (`heat === 'ever'`, ou seja, score

@@ -279,6 +279,15 @@ export type HomeHeroKind = 'hot' | 'rise' | 'latest' | 'none';
 const HOME_FEED_SIZE = 12;
 
 /**
+ * Títulos da faixa "Acabou de sair".
+ *
+ * Cinco: o suficiente para cobrir um dia de publicação da redação e curto o
+ * bastante para ser lido de uma vez, sem virar uma segunda listagem competindo
+ * com a grade logo abaixo.
+ */
+const JUST_OUT_SIZE = 5;
+
+/**
  * Dados da home.
  *
  * =============================================================================
@@ -343,9 +352,14 @@ const getHomeDataCached = unstable_cache(
           }),
         [],
       ),
-      // A mais recente, e só ela: serve ao terceiro degrau do hero ("Última
-      // publicada"). Consulta própria porque num acervo grande a matéria mais
-      // nova pode estar fora dos 40 maiores scores — justamente por ser nova.
+      // As mais RECENTES. Consulta própria (e não uma reordenação do lote por
+      // score) porque num acervo grande a matéria mais nova pode estar fora dos
+      // 40 maiores scores — justamente por ser nova.
+      //
+      // UMA consulta, DOIS usos: a primeira linha é o terceiro degrau do hero
+      // ("Última publicada"), e a lista inteira é a faixa "Acabou de sair". Eram
+      // duas consultas idênticas a menos de um `take`; buscar cinco linhas em
+      // vez de uma custa o mesmo e economiza uma ida ao banco na home.
       safeQuery(
         'home:newest',
         () =>
@@ -353,7 +367,7 @@ const getHomeDataCached = unstable_cache(
             where: { status: 'published', publishedAt: { not: null } },
             select: CARD_SELECT,
             orderBy: { publishedAt: 'desc' },
-            take: 1,
+            take: JUST_OUT_SIZE,
           }),
         [],
       ),
@@ -440,7 +454,30 @@ const getHomeDataCached = unstable_cache(
 
     const evergreen = guideRows.map(toCardData);
 
-    return { hero, heroKind, trending, feed, evergreen };
+    /**
+     * FAIXA "ACABOU DE SAIR" — a única superfície CRONOLÓGICA da home.
+     *
+     * Ela existe porque a home inteira é ordenada por repercussão, e score leva
+     * horas para subir: uma matéria publicada há 10 minutos entra na grade numa
+     * posição baixa e só sobe depois. Sem esta faixa, o leitor que volta ao site
+     * três vezes por dia não tem NENHUMA forma de ver o que mudou desde a última
+     * visita — que é o motivo pelo qual ele voltou.
+     *
+     * A decisão contraria a regra "a home inteira é ordenada por repercussão" e
+     * foi aprovada pelo dono do produto. Ela não muda a ordenação de nada: é uma
+     * faixa a mais, entre o ranking e a grade.
+     *
+     * SEM IMAGEM E COM HORÁRIO, de propósito: com capa, ela competiria com o
+     * hero e com a grade pelo mesmo olhar, e a home teria três blocos de cards
+     * disputando atenção. Como lista de títulos com horário, ela é lida em dois
+     * segundos e não rouba hierarquia de ninguém.
+     *
+     * A faixa NÃO exclui o que está no hero nem no ranking. Aqui a pergunta é
+     * "o que saiu agora?", e uma matéria pode legitimamente ser a mais nova E a
+     * mais repercutida. Escondê-la por já aparecer acima responderia a pergunta
+     * errada — a faixa passaria a mentir sobre o que é recente.
+     */
+    return { hero, heroKind, trending, feed, evergreen, justOut: newest };
   },
   ['home-data'],
   {
@@ -579,23 +616,51 @@ export const getTrendingRanking = withDateRevival(getTrendingRankingCached);
 // CATEGORIA
 // =============================================================================
 
+/**
+ * Tamanho da página da editoria.
+ *
+ * 18 é múltiplo de 2 e de 3 — os dois números de colunas da grade (`g-sm-2`).
+ * Um total que não fecha a grade deixa um card órfão na última linha, que é o
+ * defeito visual mais visível de uma listagem paginada.
+ */
+export const CATEGORY_PAGE_SIZE = 18;
+
 const getCategoryPageCached = unstable_cache(
-  async (slug: string) => {
+  async (slug: string, page: number, format: string | null) => {
     const category = await requiredQuery('category:lookup', () =>
       prisma.category.findUnique({ where: { slug } }),
     );
     if (!category) return null;
 
+    /**
+     * O FILTRO POR FORMATO É UM RECORTE DO MESMO ACERVO, não uma seção nova.
+     *
+     * Por isso ele entra no `where` da MESMA consulta e a página continua com
+     * `canonical` apontando para a editoria sem filtro (ver `routes.ts`): uma
+     * URL indexável por filtro criaria N páginas quase idênticas competindo
+     * entre si pela mesma consulta de busca — canibalização de SEO.
+     */
+    const where = {
+      status: 'published' as const,
+      categoryId: category.id,
+      ...(format ? { format } : {}),
+    };
+
     const data = await safeQuery(
       'category:data',
       async () => {
-        const [articles, trendingInCategory, upcomingReleases] = await Promise.all([
+        const [total, articles, trendingInCategory, upcomingReleases] = await Promise.all([
+          // A CONTAGEM é o que permite a paginação saber se existe página
+          // seguinte SEM buscar uma linha a mais e descartá-la. Ela roda em
+          // paralelo com a listagem, então não soma latência.
+          prisma.article.count({ where }),
           prisma.article.findMany({
-            where: { status: 'published', categoryId: category.id },
+            where,
             select: CARD_SELECT,
             // Ordem CRONOLÓGICA: quem entra na categoria quer ver o que saiu hoje.
             orderBy: { publishedAt: 'desc' },
-            take: 24,
+            skip: (page - 1) * CATEGORY_PAGE_SIZE,
+            take: CATEGORY_PAGE_SIZE,
           }),
           prisma.article.findMany({
             where: {
@@ -620,9 +685,10 @@ const getCategoryPageCached = unstable_cache(
           }),
         ]);
 
-        return { articles, trendingInCategory, upcomingReleases };
+        return { total, articles, trendingInCategory, upcomingReleases };
       },
       {
+        total: 0,
         articles: [] as CardRow[],
         trendingInCategory: [] as CardRow[],
         upcomingReleases: [] as {
@@ -646,11 +712,20 @@ const getCategoryPageCached = unstable_cache(
       articles: data.articles.map(toCardData),
       trending: data.trendingInCategory.map(toCardData),
       upcomingReleases: data.upcomingReleases,
+      page,
+      totalPages: Math.max(1, Math.ceil(data.total / CATEGORY_PAGE_SIZE)),
+      totalArticles: data.total,
     };
   },
   ['category-page'],
   { revalidate: 300, tags: [CACHE_TAGS.home] },
 );
+
+/**
+ * `page` e `format` entram na CHAVE do cache automaticamente (o `unstable_cache`
+ * usa os argumentos), então cada combinação tem entrada própria e nenhuma
+ * invalida a outra por engano.
+ */
 export const getCategoryPage = withDateRevival(getCategoryPageCached);
 
 /**

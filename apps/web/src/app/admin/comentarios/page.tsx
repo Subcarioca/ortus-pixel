@@ -22,19 +22,23 @@
 
 import Link from 'next/link';
 
-import { COMMENT_PROVIDER_LABELS, isCommentProvider, routes } from '@subcarioca/core';
+import { COMMENT_PROVIDER_LABELS, isCommentProvider } from '@subcarioca/core';
 import { prisma } from '@subcarioca/db';
 
 import { AdminLogin } from '@/components/admin/admin-login';
+import { AdminForbidden } from '@/components/admin/admin-forbidden';
+import { AdminNav } from '@/components/admin/admin-nav';
 import { AdminActionButton } from '@/components/admin/admin-action-button';
 import { RelativeTime } from '@/components/relative-time';
-import { isAdminAuthenticated } from '@/server/admin-auth';
+import { requireStaffPage } from '@/server/staff-auth';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminCommentsPage() {
-  if (!(await isAdminAuthenticated())) {
-    return <AdminLogin />;
+  const guard = await requireStaffPage('moderarComentarios');
+  if (guard.state === 'anonymous') return <AdminLogin />;
+  if (guard.state === 'forbidden') {
+    return <AdminForbidden user={guard.user} what="A moderação de comentários" />;
   }
 
   const [pending, recent] = await Promise.all([
@@ -67,14 +71,7 @@ export default async function AdminCommentsPage() {
           O primeiro comentário de cada conta passa por aqui. Depois de aprovado uma
           vez, os seguintes daquela pessoa publicam direto.
         </p>
-        <nav className="admin-actions">
-          <Link href={routes.admin()} className="link-more">
-            ← Fila de pautas
-          </Link>
-          <Link href={routes.adminAffiliates()} className="link-more">
-            Afiliados
-          </Link>
-        </nav>
+        <AdminNav user={guard.user} current="comentarios" />
       </header>
 
       {/* ---------- FILA DE PENDENTES ---------- */}

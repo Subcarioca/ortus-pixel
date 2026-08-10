@@ -1623,3 +1623,184 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
 .theme-seg button:hover { color: var(--ink); }
 .theme-seg button[aria-pressed="true"] { background: var(--ink); color: var(--ink-invert); }
 .theme-seg button:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+
+/* ==========================================================================
+   ==========================================================================
+   18. EDITOR DE BLOCOS — componentes novos do corpo da matéria
+   ==========================================================================
+   ==========================================================================
+
+   PROVENIÊNCIA: as regras de 18.1 vêm do <style> de `design/artigo-blocos.html`,
+   o protótipo do Weber, praticamente verbatim — era a intenção declarada no
+   relatório dele: se aprovado, este bloco é copiado para o produto.
+
+   POR QUE ENTRARAM AQUI, NA SEÇÃO 18, E NÃO NO CORPO COPIADO DO DESIGN:
+   a regra de ouro deste arquivo (ver o topo da seção 17) é que da linha 1 até a
+   seção 17 tudo é cópia byte a byte de `design/assets/ortuspixel.css`, e existe
+   um `diff` documentado que prova isso. Injetar as regras no meio deslocaria
+   todas as linhas e quebraria essa verificação — a garantia mais barata que o
+   projeto tem contra protótipo e produto divergirem em silêncio.
+
+   Nenhuma regra daqui redefine token, cor ou componente existente: tudo sai das
+   custom properties da seção 1, exatamente como no protótipo.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   18.1 BLOCOS NO SITE PÚBLICO
+   -------------------------------------------------------------------------- */
+
+/* CRÉDITO DE IMAGEM.
+   Antes só existia legenda (`.prose figure figcaption`). Crédito é obrigação
+   jurídica e sinal de E-E-A-T, e precisa ser visualmente SUBORDINADO à legenda —
+   senão o leitor lê "Divulgação/Team Cherry" como se fosse informação da
+   matéria. Mono, menor, caixa-alta: o vocabulário de "isto é metadado". */
+.figcredit {
+  display: block; margin-top: 4px;
+  font-family: var(--font-mono); font-size: var(--fs-xxs);
+  letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3);
+}
+
+/* MÍDIA QUE FURA A MEDIDA DE LEITURA.
+   O `.article` tem 44rem, calibrados para o TEXTO. Imagem e vídeo podem passar
+   disso (decisão aprovada pelo dono): a foto ganha ar sem que a linha de texto
+   fique longa demais para o olho acompanhar.
+
+   A largura própria é uma VARIÁVEL, e não um valor fixo, para que o mesmo
+   componente sirva às três larguras sem três blocos de regra. A margem negativa
+   simétrica mantém o bloco CENTRADO na coluna de texto: sem ela, a mídia larga
+   cresceria só para a direita e desalinharia a página inteira.
+
+   O teto por `min()` com `100vw` é o que impede a barra de rolagem horizontal
+   no celular — onde a coluna já ocupa a tela toda e não há folga para furar. */
+.media { margin: var(--s-5) 0; }
+.media--wide, .media--full {
+  --media-w: min(var(--media-max, 52rem), calc(100vw - 2 * var(--s-4)));
+  width: var(--media-w);
+  margin-inline: calc((100% - var(--media-w)) / 2);
+}
+.media--full { --media-max: 64rem; }
+@media (min-width: 768px) {
+  .media--wide, .media--full { --media-w: min(var(--media-max, 52rem), calc(100vw - 2 * var(--s-5))); }
+}
+.media figcaption { font-size: var(--fs-xs); color: var(--ink-3); margin-top: var(--s-2); }
+
+/* EMBED (vídeo) — FACHADA, não iframe.
+   Altura reservada pelo `aspect-ratio` do `.thumb`: o player nasce exatamente do
+   tamanho da miniatura que ele substitui, então o clique não empurra o texto
+   (CLS zero). `.embed__src` existe porque embed sem fonte declarada é conteúdo
+   de terceiro passando por conteúdo nosso. */
+.embed { margin: var(--s-5) 0; }
+.embed__frame { position: relative; aspect-ratio: 16/9; border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); }
+.embed__frame > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+.embed__src {
+  display: flex; align-items: center; gap: 6px; margin-top: var(--s-2);
+  font-family: var(--font-mono); font-size: var(--fs-xxs);
+  letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3);
+}
+
+/* LEIA TAMBÉM INLINE — o bloco que mais faltava.
+   Fica DENTRO do corpo, entre parágrafos. Deliberadamente NÃO usa cor de
+   temperatura nem carmim preenchido: é navegação editorial, não urgência e não
+   comércio (design §2 e §7.0). O filete carmim à esquerda é a mesma gramática do
+   `.tldr` e do `blockquote` — "isto é um destaque nosso, dentro do texto". */
+.readmore {
+  border-left: 3px solid var(--brand); background: var(--surface-1);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+  padding: var(--s-3) var(--s-4); margin: var(--s-5) 0;
+  display: grid; gap: 4px;
+}
+.readmore__label {
+  font-family: var(--font-mono); font-size: var(--fs-xxs); letter-spacing: .14em;
+  text-transform: uppercase; color: var(--brand-ink);
+}
+.readmore a { font-family: var(--font-display); font-weight: 700; font-size: 1.02rem; line-height: 1.25; color: var(--ink); border: 0; }
+.readmore a:hover { text-decoration: underline; text-decoration-color: var(--brand); text-underline-offset: 3px; }
+.readmore--multi ul { list-style: none; padding: 0; display: grid; gap: var(--s-2); margin: 0; }
+
+/* ATRIBUIÇÃO DA CITAÇÃO.
+   O `blockquote` do design é uma pull quote sem fonte. O `<cite>` entra
+   subordinado — menor e sem itálico (o navegador o italiza por padrão, e dentro
+   de um bloco que já é display bold isso vira ruído). */
+.quote__source {
+  display: block; margin-top: var(--s-2);
+  font-family: var(--font-text); font-style: normal; font-weight: 400;
+  font-size: var(--fs-xs); color: var(--ink-3);
+}
+.quote__source a { border-bottom: 1px solid var(--line); }
+
+/* RÓTULO DE FORMATO (`.fmt`).
+   Contorno, mono, caixa-alta — o oposto FORMAL do badge de temperatura
+   (preenchido, pulsante). É essa diferença de forma que sustenta a regra do §4:
+   impossível confundir "isto é um vídeo" com "isto está bombando". Mesma
+   distinção que o §7.2 já usa para o `.deal-seal` não se confundir com badge. */
+.fmt {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-mono); font-size: var(--fs-xxs); font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2);
+  border: 1px solid var(--line); border-radius: var(--r-sm); padding: 3px 8px;
+  background: var(--surface-1);
+}
+.fmt::before { content: ""; width: 0; height: 0; }
+.fmt--video::before   { border-left: 7px solid currentColor; border-block: 4.5px solid transparent; }
+.fmt--gallery::before { width: 9px; height: 9px; border: 1.5px solid currentColor; border-radius: 2px; }
+.fmt--list::before    { width: 9px; height: 9px; border-top: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; }
+
+/* ÍNDICE FIXO — só no desktop.
+   Num celular, um índice grudado no topo come um terço da tela de leitura.
+   `max-height` com rolagem porque um guia de 15 seções ultrapassaria a viewport
+   e as últimas entradas ficariam inalcançáveis. */
+.toc__sub { margin-left: var(--s-4); }
+@media (min-width: 1024px) {
+  .toc--sticky {
+    position: sticky; top: calc(var(--header-h) + 16px);
+    max-height: calc(100vh - var(--header-h) - 48px); overflow-y: auto;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   18.2 EDITOR DE BLOCOS (/admin) — ferramenta interna, sem protótipo
+   -------------------------------------------------------------------------- */
+.block-editor { display: grid; gap: var(--s-3); margin-top: var(--s-2); }
+.block-editor--empty {
+  border: 1px dashed var(--line); border-radius: var(--r-md);
+  padding: var(--s-4); background: var(--surface-1);
+  display: grid; gap: var(--s-3);
+}
+.block-editor__list { list-style: none; padding: 0; display: grid; gap: var(--s-3); margin: 0; }
+.block-editor__add { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+
+.block-card {
+  border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--surface-1); padding: var(--s-3);
+  display: grid; gap: var(--s-3);
+}
+.block-card__head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--s-2); flex-wrap: wrap;
+}
+.block-card__type {
+  font-family: var(--font-mono); font-size: var(--fs-xxs); font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
+}
+/* Os controles de ordem e remoção ficam compactos e neutros: numa lista de 30
+   blocos, botões com o alvo de toque padrão (48px) transformariam o editor numa
+   parede de botões, e a ação principal — digitar — sumiria no meio deles. */
+.block-card__tools { display: flex; gap: 4px; flex-wrap: wrap; }
+.block-card__tools .btn { min-height: 32px; padding: 4px 10px; }
+.block-card .admin-form { gap: var(--s-2); }
+
+/* --------------------------------------------------------------------------
+   18.3 BARRA DO PAINEL — identidade da conta logada
+   -------------------------------------------------------------------------- */
+/* A navegação usa `.tabs` (componente do design); esta regra só posiciona a
+   barra e o bloco de identidade ao lado dela. Em telas estreitas os dois
+   empilham, e as abas continuam rolando na horizontal como `.tabs` já faz. */
+.admin-bar { display: grid; gap: var(--s-2); }
+@media (min-width: 900px) {
+  .admin-bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center; gap: var(--s-4);
+  }
+  .admin-bar .tabs { margin-bottom: 0; }
+}
+.admin-bar__me { display: flex; align-items: center; gap: var(--s-3); justify-content: flex-end; }

@@ -18,8 +18,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import type { ArticleBlock } from '@subcarioca/core';
+
 import { readAdminResponse } from './admin-response';
 import { FORMAT_OPTIONS, formatRequiresTldr } from './article-format-options';
+import { BlockEditor } from './block-editor';
 
 interface ArticleCreateFormProps {
   topicId: string;
@@ -45,8 +48,14 @@ export function ArticleCreateForm({
   const [message, setMessage] = useState<string | null>(null);
   const [format, setFormat] = useState('breaking');
   const [tldr, setTldr] = useState<string[]>(['', '', '']);
+  const [blocks, setBlocks] = useState<ArticleBlock[]>([]);
+  // O texto vive num `useState` (e não só no `defaultValue`) porque o editor de
+  // blocos precisa dele para o botão "converter o texto atual em blocos": numa
+  // matéria nova, o redator pode começar escrevendo corrido e converter depois.
+  const [content, setContent] = useState('');
 
   const requiresTldr = formatRequiresTldr(format);
+  const usaBlocos = blocks.length > 0;
 
   function updateTldr(index: number, value: string) {
     setTldr((prev) => prev.map((item, i) => (i === index ? value : item)));
@@ -76,7 +85,8 @@ export function ArticleCreateForm({
           action: 'create-article',
           title: form.get('title'),
           excerpt: form.get('excerpt'),
-          content: form.get('content'),
+          content,
+          blocks,
           categorySlug: form.get('categorySlug'),
           authorId: form.get('authorId'),
           format,
@@ -177,10 +187,27 @@ export function ArticleCreateForm({
         />
       </label>
 
-      <label className="admin-form__full">
-        Corpo da matéria
-        <textarea name="content" required minLength={40} rows={10} placeholder="Escreva o texto completo aqui..." />
-      </label>
+      {/* Some quando há blocos: eles passam a ser o corpo. Ver o comentário
+          equivalente em `article-edit-form.tsx`. */}
+      {!usaBlocos && (
+        <label className="admin-form__full">
+          Corpo da matéria
+          <textarea
+            name="content"
+            required
+            minLength={40}
+            rows={10}
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+            placeholder="Escreva o texto completo aqui..."
+          />
+        </label>
+      )}
+
+      <div className="admin-form__full">
+        <span className="form-hint">Corpo em blocos</span>
+        <BlockEditor blocks={blocks} onChange={setBlocks} legacyMarkdown={content} />
+      </div>
 
       <div className="admin-form__full admin-tldr">
         <span className="form-hint">

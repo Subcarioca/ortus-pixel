@@ -17,6 +17,7 @@
     "migrate": "prisma migrate dev",
     "studio": "prisma studio",
     "seed": "tsx prisma/seed.ts",
+    "staff:create": "tsx scripts/staff-account.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

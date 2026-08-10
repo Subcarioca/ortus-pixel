@@ -36,14 +36,18 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import {
+  FORMAT_LABELS,
   HEAT_LABELS,
   absoluteUrl,
+  blocksToToc,
   catClass,
   catToken,
+  hasBlocks,
   heatForBand,
   heatLevelForHeat,
   isCategorySlug,
   routes,
+  schemaVideoFromBlocks,
   trendForDelta,
 } from '@subcarioca/core';
 
@@ -51,7 +55,9 @@ import { AdSlot } from '@/components/ad-slot';
 import { AffiliateDisclosure } from '@/components/affiliate-disclosure';
 import { AffiliateOffers } from '@/components/affiliate-offers';
 import { CommentSection } from '@/components/comments/comment-section';
-import { ArticleBody } from '@/components/article-body';
+import { ArticleBody, markdownToc } from '@/components/article-body';
+import { ArticleBlocks } from '@/components/article-blocks';
+import { ArticleToc } from '@/components/article-toc';
 import { ArticleCard } from '@/components/article-card';
 import { ArticleJsonLd, BreadcrumbJsonLd, ProductJsonLd } from '@/components/json-ld';
 import { HeatBadge } from '@/components/heat-badge';
@@ -194,9 +200,25 @@ export default async function ArticlePage({
   const endAdSlot = policy.adSlots.find((s) => s.placement === 'end');
   const railAdSlot = policy.adSlots.find((s) => s.placement === 'rail');
 
+  /**
+   * O CORPO VEM DE UM DE DOIS LUGARES — e a matéria antiga não muda de lado.
+   *
+   * `blocks` vazio (que é o caso de todo o acervo publicado antes do editor de
+   * blocos) cai no renderizador de Markdown de sempre, com o mesmo resultado
+   * de antes. Só quem for editado no editor novo passa para o outro caminho, e
+   * só quando alguém o fizer de propósito. É esta linha que faz a migração ser
+   * incremental em vez de um evento.
+   */
+  const usaBlocos = hasBlocks(article.blocks);
+
+  // O índice sai dos títulos, venham eles de blocos ou do Markdown legado.
+  const toc = usaBlocos ? blocksToToc(article.blocks) : markdownToc(article.content);
+
   return (
     <>
-      <ArticleJsonLd article={article} video={article.video} />
+      {/* O `VideoObject` sai do BLOCO de vídeo — o mesmo que a página renderiza
+          logo abaixo. Ver `schemaVideoFromBlocks` para o bug que isto corrige. */}
+      <ArticleJsonLd article={article} video={schemaVideoFromBlocks(article.blocks)} />
 
       {/* Product + Offer só em review e comparativo, e só com preço fresco —
           ver o comentário extenso em components/json-ld.tsx. Em notícia, um
@@ -385,14 +407,30 @@ export default async function ArticlePage({
             <AffiliateDisclosure kind={article.disclosureKind ?? 'affiliate'} />
           )}
 
+          {/* ---------- 10.7: índice ----------
+              No MOBILE ele vem aqui, dentro do corpo, logo antes do texto —
+              é onde o leitor decide se vai ler tudo ou pular para uma seção.
+              No desktop ele vira a caixa fixa da sidebar (ver o `<aside>`), e
+              esta cópia some: duas listas iguais visíveis ao mesmo tempo seriam
+              lidas duas vezes por um leitor de tela. */}
+          <div className="only-mobile">
+            <ArticleToc entries={toc} />
+          </div>
+
           {/* ---------- 11: corpo ---------- */}
-          {hasSpoiler ? (
-            <SpoilerBlock>
+          {(() => {
+            const corpo = usaBlocos ? (
+              <ArticleBlocks blocks={article.blocks} categoryToken={catToken(categoria)} />
+            ) : (
               <ArticleBody markdown={article.content} />
-            </SpoilerBlock>
-          ) : (
-            <ArticleBody markdown={article.content} />
-          )}
+            );
+
+            // `hasSpoiler` continua embrulhando a matéria INTEIRA enquanto o
+            // bloco `spoiler` por trecho (P1 do relatório do Weber) não existe.
+            // Quando ele entrar, este campo passa a ser derivado ("existe algum
+            // bloco spoiler?") e este ternário sai.
+            return hasSpoiler ? <SpoilerBlock>{corpo}</SpoilerBlock> : corpo;
+          })()}
 
           {/* Slot do meio: só existe em formato evergreen (guia, review,
               comparativo, listicle). Em breaking e cobertura ao vivo, a tabela
@@ -495,6 +533,16 @@ export default async function ArticlePage({
         </article>
 
         <aside className="sidebar">
+          {/* Índice fixo do desktop: numa matéria longa, é o que segura a
+              rolagem. `only-desk` porque a mesma lista já aparece no corpo em
+              telas menores — e o `.toc--sticky` só faz sentido onde há coluna
+              lateral para ele acompanhar. */}
+          {toc.length > 0 && (
+            <div className="only-desk">
+              <ArticleToc entries={toc} sticky />
+            </div>
+          )}
+
           {/* Prompt de push DEPOIS do conteúdo, com justificativa explícita e
               promessa de frequência. Pedir sem contexto é a razão nº 1 de
               bloqueio permanente de notificação. */}

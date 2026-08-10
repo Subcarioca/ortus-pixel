@@ -31,6 +31,14 @@ import { ArticleCreateForm } from './article-create-form';
 interface TopicRowProps {
   categories: { slug: string; name: string }[];
   authors: { id: string; name: string }[];
+  /**
+   * A conta logada pode CURAR a fila (sobrepor score, descartar tópico)?
+   *
+   * Redator não pode: as duas ações mudam o que o site inteiro exibe. Esconder
+   * os controles é cortesia, não segurança — a rota `/api/admin/topics/[id]`
+   * recusa as duas ações por conta própria, e é ela que vale.
+   */
+  canCurate: boolean;
   topic: {
     id: string;
     title: string;
@@ -59,7 +67,7 @@ interface TopicRowProps {
   };
 }
 
-export function TopicRow({ topic, categories, authors }: TopicRowProps) {
+export function TopicRow({ topic, categories, authors, canCurate }: TopicRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [creatingArticle, setCreatingArticle] = useState(false);
   const [overrideValue, setOverrideValue] = useState('');
@@ -232,14 +240,16 @@ export function TopicRow({ topic, categories, authors }: TopicRowProps) {
           {expanded ? 'Ocultar detalhes' : 'Por que esse score?'}
         </button>
 
-        <button
-          type="button"
-          className="btn btn--ghost btn--sm"
-          onClick={() => callAction('dismiss')}
-          disabled={isPending}
-        >
-          Descartar
-        </button>
+        {canCurate && (
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            onClick={() => callAction('dismiss')}
+            disabled={isPending}
+          >
+            Descartar
+          </button>
+        )}
       </div>
 
       {/* ---------- CRIAR MATÉRIA A PARTIR DESTE TÓPICO ---------- */}
@@ -289,7 +299,10 @@ export function TopicRow({ topic, categories, authors }: TopicRowProps) {
           {/* ---------- OVERRIDE MANUAL ---------- */}
           {/* O humano SEMPRE pode vencer o algoritmo. A justificativa é
               obrigatória: é ela que, depois, permite distinguir "o algoritmo
-              errou" de "o editor discordou" — insumo direto da recalibração. */}
+              errou" de "o editor discordou" — insumo direto da recalibração.
+              "O humano", aqui, é quem faz curadoria: o score que este formulário
+              altera reordena a home e o ranking para todos os leitores. */}
+          {canCurate && (
           <form
             className="admin-override"
             onSubmit={(event) => {
@@ -336,6 +349,7 @@ export function TopicRow({ topic, categories, authors }: TopicRowProps) {
               </button>
             </div>
           </form>
+          )}
         </div>
       )}
 

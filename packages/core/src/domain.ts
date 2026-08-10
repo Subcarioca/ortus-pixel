@@ -17,6 +17,7 @@
 import type { CategorySlug, SubcategorySlug } from './taxonomy';
 import type { EmotionalTrigger, ScoreBand } from './scoring-types';
 import type { AffiliateOffer, DisclosureKind } from './monetization';
+import type { ArticleBlock } from './blocks';
 
 /** Estados do artigo. Modelado como máquina de estados explícita, não booleanos soltos. */
 export type ArticleStatus =
@@ -112,8 +113,25 @@ export interface Article {
   title: string;
   /** Subtítulo/linha fina. Usado como meta description quando não há uma específica. */
   excerpt: string;
-  /** Corpo em Markdown. Ver ADR 0005 para a escolha de formato. */
+  /**
+   * Corpo em Markdown. Ver ADR 0005 para a escolha de formato.
+   *
+   * Quando `blocks` não é vazio, este campo passa a ser a PROJEÇÃO em texto puro
+   * dos blocos (montada pelo servidor na gravação) e deixa de ser o que o leitor
+   * vê. Ele continua existindo por dois motivos, ambos invisíveis na tela: é a
+   * origem do `searchVector` e é o caminho de renderização do acervo antigo.
+   */
   content: string;
+  /**
+   * Corpo em BLOCOS. Vazio = matéria escrita antes do editor de blocos (ou
+   * convertida de volta), que renderiza a partir de `content`.
+   *
+   * A lista chega aqui SEM revalidação de forma: o mapper confia no que está no
+   * banco porque a validação aconteceu na escrita (server/blocks-input.ts). O
+   * renderizador ainda assim ignora tipo desconhecido — ver o cabeçalho de
+   * article-blocks.tsx.
+   */
+  blocks: ArticleBlock[];
   status: ArticleStatus;
   category: Category;
   /**

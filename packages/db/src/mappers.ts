@@ -24,6 +24,7 @@
 import type {
   AffiliateOffer,
   Article,
+  ArticleBlock,
   ArticleStatus,
   Author,
   Category,
@@ -106,6 +107,23 @@ function toArticleStatus(value: string): ArticleStatus {
     'archived',
   ];
   return valid.includes(value as ArticleStatus) ? (value as ArticleStatus) : 'draft';
+}
+
+/**
+ * Coluna `Json` → lista de blocos.
+ *
+ * NÃO revalida a forma de cada bloco, e isso é uma escolha: a validação vive na
+ * ESCRITA (apps/web/src/server/blocks-input.ts), onde ela acontece uma vez por
+ * salvamento, e não a cada leitura de uma página que é servida a dezenas de
+ * milhares de pessoas. O que este mapper garante é o mínimo que o consumidor
+ * precisa para não quebrar: que seja um array. Bloco de tipo desconhecido chega
+ * ao renderizador e é ignorado por ele.
+ *
+ * `null`, `{}` e string viram lista vazia — que a página lê como "renderize a
+ * partir do Markdown", o comportamento de sempre.
+ */
+function toArticleBlocks(value: unknown): ArticleBlock[] {
+  return Array.isArray(value) ? (value as ArticleBlock[]) : [];
 }
 
 function toScoreBand(value: string): ScoreBand {
@@ -331,6 +349,7 @@ export function mapArticle(row: ArticleWithRelations): Article {
     title: row.title,
     excerpt: row.excerpt,
     content: row.content,
+    blocks: toArticleBlocks(row.blocks),
     status: toArticleStatus(row.status),
     category: mapCategory(row.category),
     // Sub-categoria só é aceita se estiver na taxonomia tipada. Um slug órfão

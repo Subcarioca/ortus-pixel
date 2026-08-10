@@ -39,7 +39,7 @@ import {
   updateOfferPrice,
 } from '@subcarioca/db';
 
-import { isAdminAuthenticated } from '@/server/admin-auth';
+import { requireStaffApi } from '@/server/staff-auth';
 import { CACHE_TAGS } from '@/server/queries';
 import { safeAffiliateUrl } from '@/lib/safe-url';
 import { getClientIp, hashPersonalData } from '@/server/security';
@@ -49,9 +49,8 @@ export const dynamic = 'force-dynamic';
 const ID_PATTERN = /^[a-z0-9-]{10,60}$/i;
 
 export async function POST(request: Request) {
-  if (!(await isAdminAuthenticated())) {
-    return NextResponse.json({ ok: false, message: 'Não autorizado.' }, { status: 401 });
-  }
+  const guard = await requireStaffApi('gerenciarComercial');
+  if (!guard.ok) return guard.response;
 
   let body: unknown;
   try {

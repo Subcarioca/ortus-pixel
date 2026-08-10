@@ -12,15 +12,12 @@
  */
 
 import type { Metadata } from 'next';
-import { cookies } from 'next/headers';
-import Link from 'next/link';
-
-import { routes } from '@subcarioca/core';
 
 import { AdminLogin } from '@/components/admin/admin-login';
-import { ADMIN_SESSION_COOKIE } from '@/server/admin-auth';
+import { AdminForbidden } from '@/components/admin/admin-forbidden';
+import { AdminNav } from '@/components/admin/admin-nav';
 import { getAccuracyReportSafe } from '@/server/admin-metrics';
-import { safeCompare } from '@/server/security';
+import { requireStaffPage } from '@/server/staff-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,16 +26,12 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-async function isAuthenticated(): Promise<boolean> {
-  const expected = process.env.ADMIN_ACCESS_TOKEN;
-  if (!expected) return false;
-  const cookieStore = await cookies();
-  const provided = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
-  return Boolean(provided) && safeCompare(provided!, expected);
-}
-
 export default async function AccuracyPage() {
-  if (!(await isAuthenticated())) return <AdminLogin />;
+  const guard = await requireStaffPage('verRelatorios');
+  if (guard.state === 'anonymous') return <AdminLogin />;
+  if (guard.state === 'forbidden') {
+    return <AdminForbidden user={guard.user} what="O relatório de precisão do score" />;
+  }
 
   const report = await getAccuracyReportSafe();
 
@@ -48,8 +41,9 @@ export default async function AccuracyPage() {
         <h1 className="article__title">Precisão do score</h1>
         <p className="section-sub">
           O quanto o score previsto na publicação se relacionou com a audiência real das 24h
-          seguintes. <Link href={routes.admin()}>Voltar ao painel</Link>.
+          seguintes.
         </p>
+        <AdminNav user={guard.user} current="precisao" />
       </header>
 
       {!report || report.sampleSize < 20 ? (

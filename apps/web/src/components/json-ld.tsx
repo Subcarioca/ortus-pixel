@@ -93,7 +93,24 @@ export function ArticleJsonLd({
   video,
 }: {
   article: Article;
-  video: { url: string; thumbnailUrl: string; durationSeconds: number } | null;
+  /**
+   * O vídeo QUE A PÁGINA DE FATO RENDERIZA — hoje, o primeiro bloco `video` do
+   * corpo (ver `schemaVideoFromBlocks`).
+   *
+   * Antes, esta prop vinha dos campos `videoUrl`/`videoThumbnailUrl` do artigo,
+   * que nenhum template exibia: o site emitia um `VideoObject` completo
+   * descrevendo um player inexistente. Dado estruturado incoerente com o
+   * conteúdo visível é, na política do Google, motivo de ação manual — e o
+   * sintoma seria uma queda de tráfego sem causa aparente. Sem bloco de vídeo,
+   * `null`, e o `VideoObject` simplesmente não é emitido.
+   */
+  video: {
+    name: string;
+    embedUrl: string;
+    contentUrl: string;
+    thumbnailUrl: string | null;
+    durationSeconds: number;
+  } | null;
 }) {
   const articleUrl = absoluteUrl(routes.article(article.category.slug, article.slug));
   const authorId = absoluteUrl(routes.author(article.author.slug)) + '#person';
@@ -148,14 +165,29 @@ export function ArticleJsonLd({
     graph.push({
       '@type': 'VideoObject',
       '@id': `${articleUrl}#video`,
-      name: article.title,
+      // O nome é o do VÍDEO, não o da matéria. Eram a mesma coisa quando o dado
+      // era fictício; agora que ele descreve um player real, repetir a manchete
+      // descreveria a página, e não o vídeo dentro dela.
+      name: video.name,
       description: article.excerpt,
-      thumbnailUrl: [video.thumbnailUrl],
+      // Miniatura é campo OBRIGATÓRIO do VideoObject. Sem ela, omitimos o
+      // atributo em vez de mandar `[null]` — um campo obrigatório ausente rende
+      // um aviso no Search Console; um campo obrigatório com lixo dentro rende
+      // um erro.
+      ...(video.thumbnailUrl ? { thumbnailUrl: [video.thumbnailUrl] } : {}),
       uploadDate: article.publishedAt?.toISOString(),
       // Formato ISO 8601 de duração. "PT2M8S" = 2 minutos e 8 segundos.
-      duration: `PT${Math.floor(video.durationSeconds / 60)}M${video.durationSeconds % 60}S`,
-      contentUrl: video.url,
-      embedUrl: video.url,
+      // Só é declarada quando conhecida: duração zero seria uma afirmação falsa.
+      ...(video.durationSeconds > 0
+        ? {
+            duration: `PT${Math.floor(video.durationSeconds / 60)}M${video.durationSeconds % 60}S`,
+          }
+        : {}),
+      // `contentUrl` é a página de assistir; `embedUrl`, o player incorporável.
+      // Antes os dois recebiam o mesmo valor, o que os tornava contraditórios em
+      // metade dos casos possíveis.
+      contentUrl: video.contentUrl,
+      embedUrl: video.embedUrl,
     });
   }
 

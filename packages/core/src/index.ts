@@ -12,6 +12,8 @@ export * from './domain';
 export * from './presentation';
 export * from './monetization';
 export * from './community';
+export * from './staff';
+export * from './blocks';
 export * from './recommendation';
 export * from './routes';
 export * from './utils';

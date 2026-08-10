@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Silksong é o melhor metroidvania da década — Ortus Pixel (protótipo de blocos)</title>
+<meta name="description" content="Protótipo de referência: uma matéria montada só com os tipos de bloco recomendados para o novo editor.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<!-- CSS REAL DO PRODUTO (design v0.3 + apêndice do produto).
+     Nenhuma linha dele foi alterada por este protótipo. -->
+<link rel="stylesheet" href="../apps/web/src/app/ortuspixel.css">
+
+<style>
+/* ==========================================================================
+   PROPOSTA — COMPONENTES NOVOS PARA O EDITOR DE BLOCOS
+   --------------------------------------------------------------------------
+   Tudo aqui é ADITIVO: nada redefine token, cor, tipografia ou componente
+   existente. Todo valor sai das custom properties da seção 1 do CSS real,
+   como manda o §9 do design/README.md ("não hardcode cor").
+
+   Se aprovado, este bloco vira a seção 15 de design/assets/ortuspixel.css e é
+   copiado verbatim para o produto — não fica morando num <style> de página.
+   ========================================================================== */
+
+/* --- 1. CRÉDITO DE IMAGEM -------------------------------------------------
+   Hoje só existe legenda (.prose figure figcaption). Crédito é obrigação
+   jurídica e de E-E-A-T, e precisa ser visualmente subordinado à legenda —
+   senão o leitor lê "Divulgação/Team Cherry" como se fosse informação. */
+.figcredit {
+  display: block; margin-top: 4px;
+  font-family: var(--font-mono); font-size: var(--fs-xxs);
+  letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3);
+}
+
+/* --- 2. GALERIA -----------------------------------------------------------
+   Grade de 2 (mobile) / 3 (>=640px) com razão fixa: CLS zero, mesma regra do
+   .thumb. O último item carrega o contador "+N", que é o afford de "isto abre
+   um lightbox" sem depender de ícone. */
+.gallery { display: grid; gap: var(--s-2); grid-template-columns: repeat(2, 1fr); margin: var(--s-5) 0; }
+@media (min-width: 640px) { .gallery { grid-template-columns: repeat(3, 1fr); } }
+.gallery .thumb { border-radius: var(--r-sm); }
+.gallery__more { position: relative; }
+.gallery__more::after {
+  content: attr(data-more); position: absolute; inset: 0; z-index: 3;
+  display: grid; place-items: center; border-radius: var(--r-sm);
+  background: light-dark(rgba(22,22,26,.62), rgba(10,10,15,.68));
+  color: #fff; font-family: var(--font-mono); font-weight: 700; font-size: 1.05rem;
+}
+.gallery__cap { grid-column: 1 / -1; font-size: var(--fs-xs); color: var(--ink-3); }
+
+/* --- 3. EMBED (vídeo, tweet, post) ---------------------------------------
+   FACHADA, não iframe: o iframe do YouTube custa ~900 KB e vários requests de
+   terceiro no primeiro byte. A fachada é uma <img> + botão; o iframe só entra
+   no clique. Altura reservada pelo aspect-ratio → CLS zero.
+   `.embed__src` existe porque embed sem fonte declarada é conteúdo de terceiro
+   passando por conteúdo nosso. */
+.embed { margin: var(--s-5) 0; }
+.embed__frame { position: relative; aspect-ratio: 16/9; border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); }
+.embed__src {
+  display: flex; align-items: center; gap: 6px; margin-top: var(--s-2);
+  font-family: var(--font-mono); font-size: var(--fs-xxs);
+  letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3);
+}
+.embed--social .embed__frame { aspect-ratio: auto; background: var(--surface-1); padding: var(--s-4); }
+.embed__author { display: flex; align-items: center; gap: var(--s-2); margin-bottom: var(--s-2); }
+.embed__avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, var(--ink-3), var(--surface-3)); flex: none; }
+.embed__handle { font-size: var(--fs-xs); color: var(--ink-3); }
+.embed__text { font-size: var(--fs-sm); color: var(--ink); }
+
+/* --- 4. LEIA TAMBÉM INLINE ------------------------------------------------
+   O bloco que mais falta hoje. Fica DENTRO do corpo, entre parágrafos.
+   Deliberadamente NÃO usa cor de temperatura nem carmim preenchido: é
+   navegação editorial, não urgência e não comércio (README §2 e §7.0).
+   Filete carmim à esquerda = mesma gramática do .tldr e do blockquote. */
+.readmore {
+  border-left: 3px solid var(--brand); background: var(--surface-1);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+  padding: var(--s-3) var(--s-4); margin: var(--s-5) 0;
+  display: grid; gap: 4px;
+}
+.readmore__label {
+  font-family: var(--font-mono); font-size: var(--fs-xxs); letter-spacing: .14em;
+  text-transform: uppercase; color: var(--brand-ink);
+}
+.readmore a { font-family: var(--font-display); font-weight: 700; font-size: 1.02rem; line-height: 1.25; color: var(--ink); border: 0; }
+.readmore a:hover { text-decoration: underline; text-decoration-color: var(--brand); text-underline-offset: 3px; }
+.readmore--multi ul { list-style: none; padding: 0; display: grid; gap: var(--s-2); margin: 0; }
+
+/* --- 5. ENTRADA DE LISTA (listicle rico) ---------------------------------
+   O padrão de CBR/ScreenRant: cada item é numerado, tem imagem própria,
+   subtítulo e, opcionalmente, uma linha de ficha. Hoje o Markdown do produto
+   só produz <li> de texto. */
+.entry { margin: var(--s-6) 0; padding-top: var(--s-5); border-top: 1px solid var(--line-soft); }
+.entry__head { display: grid; grid-template-columns: auto 1fr; gap: var(--s-3); align-items: start; }
+.entry__num {
+  font-family: var(--font-mono); font-size: 1.6rem; font-weight: 700;
+  line-height: 1; color: var(--ink-3); padding-top: 2px;
+}
+.entry__title { font-size: var(--fs-h3); }
+.entry__sub { color: var(--ink-2); font-size: var(--fs-sm); margin-top: 4px; }
+.entry .thumb { margin-top: var(--s-3); }
+
+/* --- 6. FICHA TÉCNICA / INFOBOX ------------------------------------------
+   Kotaku ("The Kotaku Review" box) e Omelete ("Ficha técnica") têm isso em
+   toda crítica. É <dl> — semântica de pares rótulo/valor, e o leitor de tela
+   anuncia "Desenvolvedora: Team Cherry" em vez de duas células soltas. */
+.factbox { background: var(--surface-1); border: 1px solid var(--line); border-radius: var(--r-md); padding: var(--s-4); margin: var(--s-5) 0; }
+.factbox__label { font-family: var(--font-mono); font-size: var(--fs-xxs); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: var(--s-3); }
+.factbox dl { display: grid; gap: var(--s-2); margin: 0; }
+@media (min-width: 768px) { .factbox dl { grid-template-columns: 1fr 1fr; gap: var(--s-2) var(--s-5); } }
+.factbox div { display: grid; grid-template-columns: 8.5rem 1fr; gap: var(--s-3); font-size: var(--fs-sm); align-items: baseline; }
+.factbox dt { color: var(--ink-3); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .06em; }
+.factbox dd { margin: 0; color: var(--ink); font-weight: 600; }
+
+/* --- 7. CALLOUT / DESTAQUE EDITORIAL -------------------------------------
+   Três intenções, três cores — todas já existentes e nenhuma delas quente:
+   neutro (contexto), spoiler (laranja, token já reservado), ok (verde). */
+.callout { border: 1px solid var(--line); border-left: 4px solid var(--ink-3); background: var(--surface-1); border-radius: var(--r-md); padding: var(--s-4); margin: var(--s-5) 0; }
+.callout__label { font-family: var(--font-mono); font-size: var(--fs-xxs); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; display: block; }
+.callout p { font-size: var(--fs-sm); color: var(--ink-2); }
+.callout--tip { border-left-color: var(--ok); }
+.callout--tip .callout__label { color: var(--ok); }
+.callout--warn { border-left-color: var(--spoiler); background: var(--spoiler-soft); }
+.callout--warn .callout__label { color: var(--spoiler); }
+
+/* --- 8. RÓTULO DE FORMATO NO CARD E NO ARTIGO ----------------------------
+   Contorno, mono, caixa-alta — o oposto formal do badge de temperatura
+   (preenchido, pulsante). Impossível confundir "isto é um vídeo" com
+   "isto está bombando", que é a regra que sustenta o §4 do README. */
+.fmt {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--font-mono); font-size: var(--fs-xxs); font-weight: 700;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2);
+  border: 1px solid var(--line); border-radius: var(--r-sm); padding: 3px 8px;
+  background: var(--surface-1);
+}
+.fmt::before { content: ""; width: 0; height: 0; }
+.fmt--video::before  { border-left: 7px solid currentColor; border-block: 4.5px solid transparent; }
+.fmt--gallery::before{ width: 9px; height: 9px; border: 1.5px solid currentColor; border-radius: 2px; }
+.fmt--list::before   { width: 9px; height: 9px; border-top: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; }
+
+/* --- 9. PROGRESSO / ÍNDICE FLUTUANTE (só desktop) -------------------------
+   Não é bloco de redator: é derivado dos H2 do corpo. Entra aqui só para o
+   protótipo mostrar o efeito do índice em matéria longa. */
+@media (min-width: 1024px) { .toc--sticky { position: sticky; top: calc(var(--header-h) + 16px); } }
+
+/* --- demo only ----------------------------------------------------------- */
+.demo-note { border: 1px dashed var(--brand-line); background: var(--brand-soft); border-radius: var(--r-md); padding: var(--s-3) var(--s-4); font-size: var(--fs-xs); color: var(--ink-2); margin: var(--s-5) 0; }
+.demo-note b { color: var(--ink); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .1em; font-size: var(--fs-xxs); display: block; margin-bottom: 4px; }
+</style>
+</head>
+
+<body>
+<a class="skip-link" href="#main">Pular para o conteúdo</a>
+
+<div class="protobar"><div class="container protobar__inner">
+  <span>Protótipo · editor de blocos</span>
+  <a href="index.html">Home</a>
+  <a href="artigo.html">Artigo (quente)</a>
+  <a href="artigo-review.html">Review + afiliados</a>
+  <a href="artigo-blocos.html" aria-current="page">Artigo em blocos (novo)</a>
+  <a href="sistema.html">Design system</a>
+</div></div>
+
+<header class="header">
+  <div class="container header__bar">
+    <a class="logo" href="index.html"><span class="logo__dot" aria-hidden="true"></span>Ortus<b>Pixel</b></a>
+    <nav class="header__nav" aria-label="Editorias">
+      <a href="categoria.html" aria-current="page">Games</a>
+      <a href="categoria.html">Cinema &amp; Séries</a>
+      <a href="categoria.html">Anime &amp; Mangá</a>
+      <a href="categoria.html">HQs</a>
+      <a href="categoria-hardware.html">Tech</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main" class="container layout-2col">
+  <article class="article">
+
+    <div class="demo-note">
+      <b>Como ler este protótipo</b>
+      Cada bloco está marcado com um comentário no HTML no formato
+      <code>&lt;!-- BLOCO: tipo --&gt;</code>. Tudo o que aparece aqui é
+      expressável como um bloco reordenável do editor novo — nada depende de o
+      redator escrever HTML. Abra em 360&nbsp;px de largura antes de olhar no desktop.
+    </div>
+
+    <!-- ================= CABEÇALHO (não é bloco: é campo do artigo) ======= -->
+    <div class="article__kicker">
+      <span class="heat heat--rise heat--lg">Em alta</span>
+      <span class="heatbar heatbar--rise" data-on="3" aria-label="Temperatura: alta"><i></i><i></i><i></i><i></i></span>
+      <span class="trend trend--up">Subindo</span>
+      <a class="cat cat--games" href="categoria.html">Games</a>
+      <a class="chip chip--hot" href="hub-franquia.html">Hollow Knight</a>
+      <!-- NOVO: rótulo de FORMATO ao lado do de temperatura -->
+      <span class="fmt fmt--video">Análise em vídeo</span>
+    </div>
+
+    <h1 class="article__title">Silksong entrega o metroidvania mais difícil e mais generoso da década</h1>
+    <p class="article__dek">Seis anos de espera, 40 horas de jogo e uma única certeza: a Team Cherry não fez uma sequência, fez um jogo maior que o original em tudo — inclusive na paciência que exige de você.</p>
+
+    <div class="byline">
+      <span class="byline__avatar" aria-hidden="true"></span>
+      <div>
+        <div class="byline__name">Por <a href="#">Marina Okada</a>, editora de Games</div>
+        <div class="byline__meta">
+          Publicado há 4 horas ·
+          <span class="updated-flag"><span class="live-dot" aria-hidden="true"></span> atualizado há 40 min</span>
+          · 11 min de leitura
+        </div>
+      </div>
+    </div>
+
+    <div class="share" style="margin-top:var(--s-4)">
+      <a class="share__btn share__btn--wa" href="#"><span>WhatsApp</span></a>
+      <a class="share__btn share__btn--x" href="#"><span>X</span></a>
+      <button class="share__btn"><span>Copiar link</span></button>
+    </div>
+
+    <!-- BLOCO: imagem (capa) — agora com CRÉDITO separado da legenda -->
+    <figure>
+      <div class="thumb" data-c="games"></div>
+      <figcaption>
+        Hornet atravessa Pharloom em uma das dezenas de rotas opcionais do mapa.
+        <span class="figcredit">Imagem: Team Cherry / Divulgação</span>
+      </figcaption>
+    </figure>
+
+    <!-- BLOCO: tldr (já existe no produto) -->
+    <section class="tldr" aria-labelledby="tldr-t">
+      <h2 id="tldr-t" class="tldr__label">Resumo em 15 segundos</h2>
+      <ul>
+        <li>Silksong é maior, mais difícil e mais variado que Hollow Knight — e não pede que você tenha jogado o primeiro.</li>
+        <li>O sistema de ferramentas substitui os amuletos e muda a forma como você planeja cada rota.</li>
+        <li>Roda a 60&nbsp;fps travados no Switch 2, no PS5 e em PC modesto.</li>
+        <li>A curva de dificuldade tem um degrau brutal nas primeiras 3 horas. Depois dele, o jogo abre.</li>
+      </ul>
+    </section>
+
+    <!-- BLOCO: ficha-tecnica (NOVO) — Kotaku e Omelete têm isso em toda crítica -->
+    <section class="factbox" aria-labelledby="ficha-t">
+      <h2 id="ficha-t" class="factbox__label">Ficha técnica</h2>
+      <dl>
+        <div><dt>Desenvolvedora</dt><dd>Team Cherry</dd></div>
+        <div><dt>Distribuidora</dt><dd>Team Cherry</dd></div>
+        <div><dt>Plataformas</dt><dd>PC, PS5, Xbox Series, Switch 2</dd></div>
+        <div><dt>Lançamento</dt><dd>04/09/2026</dd></div>
+        <div><dt>Gênero</dt><dd>Metroidvania</dd></div>
+        <div><dt>Tempo de análise</dt><dd>41 horas, final verdadeiro</dd></div>
+        <div><dt>Versão analisada</dt><dd>PS5 (código cedido)</dd></div>
+        <div><dt>Idioma</dt><dd>Legendas em PT-BR</dd></div>
+      </dl>
+    </section>
+
+    <!-- BLOCO: veredito (já existe como .verdict, mas hoje não é editável) -->
+    <section class="verdict" aria-labelledby="veredito-t">
+      <div class="verdict__score" aria-hidden="true"><span>9,2</span></div>
+      <div>
+        <h2 id="veredito-t">Excelente</h2>
+        <p style="color:var(--ink-2);font-size:var(--fs-sm)">Um dos raros casos em que a sequência de um jogo quase perfeito acerta em tudo o que se propôs — desde que você aguente as três primeiras horas.</p>
+        <div class="pros-cons">
+          <div class="pros">
+            <h3>Pontos fortes</h3>
+            <ul><li>Mapa denso, sem repetição</li><li>Trilha sonora impecável</li><li>Desempenho travado nas 4 plataformas</li></ul>
+          </div>
+          <div class="cons">
+            <h3>Pontos fracos</h3>
+            <ul><li>Abertura punitiva demais</li><li>Sistema de ferramentas mal explicado</li><li>Sem mapa automático no início</li></ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- BLOCO: indice (derivado dos H2 do corpo, não escrito à mão) -->
+    <nav class="toc" aria-labelledby="toc-t">
+      <h2 id="toc-t" class="toc__label">Neste texto</h2>
+      <ol>
+        <li><a href="#abertura">A abertura mais dura da série</a></li>
+        <li><a href="#ferramentas">Ferramentas mudam tudo</a></li>
+        <li><a href="#momentos">Três momentos que definem o jogo</a></li>
+        <li><a href="#desempenho">Desempenho e acessibilidade</a></li>
+      </ol>
+    </nav>
+
+    <!-- ================= CORPO EM BLOCOS ================================= -->
+    <div class="prose">
+
+      <!-- BLOCO: paragrafo -->
+      <p>Não há uma forma delicada de dizer isto: as três primeiras horas de <em>Silksong</em> são a pior propaganda que o jogo poderia fazer de si mesmo. Hornet começa sem mapa, sem bússola e com um único ataque, num bioma que já pede leitura precisa de padrão de inimigo. Quem desistir aí vai embora convencido de que a Team Cherry fez um jogo hostil.</p>
+
+      <p>Não fez. Fez um jogo que <strong>cobra antes de dar</strong> — e o que ele dá depois é a coisa mais generosa que o gênero produziu desde 2017.</p>
+
+      <!-- BLOCO: heading -->
+      <h2 id="abertura">A abertura mais dura da série</h2>
+
+      <p>O primeiro chefe obrigatório, Moorwing, tem três fases e nenhuma delas perdoa erro de espaçamento. Levei 19 tentativas. O detalhe importante é que, em todas as 19, morri por um motivo diferente — nunca por dano acumulado que eu não conseguisse enxergar.</p>
+    </div>
+
+    <!-- BLOCO: leia-tambem (NOVO) — no MEIO do texto, não no fim.
+         É o padrão que ScreenRant e CBR usam em praticamente toda matéria. -->
+    <aside class="readmore">
+      <span class="readmore__label">Leia também</span>
+      <a href="artigo.html">Team Cherry explica por que Silksong levou seis anos: “era outro jogo em 2021”</a>
+    </aside>
+
+    <div class="prose">
+      <p>A diferença entre punição justa e punição preguiçosa está aí, e é a razão de o degrau inicial não ser um defeito de design, mas uma escolha — discutível, mas coerente com tudo o que vem depois.</p>
+
+      <!-- BLOCO: citacao (pull quote — já existe como blockquote) -->
+      <blockquote><p>Silksong não quer que você seja bom. Quer que você seja específico.</p></blockquote>
+
+      <h2 id="ferramentas">Ferramentas mudam tudo</h2>
+      <p>Os amuletos do primeiro jogo eram passivos: você equipava e esquecia. As ferramentas de Hornet são consumíveis, recarregam em bancos e ocupam três slots rápidos. Na prática, cada sala vira uma decisão de inventário.</p>
+    </div>
+
+    <!-- BLOCO: imagem (no meio do corpo, com legenda + crédito) -->
+    <figure class="prose">
+      <div class="thumb" data-c="games"></div>
+      <figcaption>
+        As ferramentas aparecem no canto inferior direito e recarregam só em bancos — o que transforma cada retorno em uma decisão de rota.
+        <span class="figcredit">Captura: Ortus Pixel / PS5</span>
+      </figcaption>
+    </figure>
+
+    <!-- BLOCO: galeria (NOVO) — 1 imagem de capa não cobre review, hardware,
+         cosplay de evento, painel de HQ nem antes/depois de patch. -->
+    <div class="gallery">
+      <div class="thumb" data-c="games"></div>
+      <div class="thumb" data-c="games"></div>
+      <div class="thumb" data-c="games"></div>
+      <div class="thumb" data-c="games"></div>
+      <div class="thumb" data-c="games"></div>
+      <div class="thumb gallery__more" data-c="games" data-more="+7"></div>
+      <p class="gallery__cap">12 imagens · Os biomas de Pharloom, na ordem em que aparecem. <span class="figcredit" style="display:inline">Imagens: Team Cherry</span></p>
+    </div>
+
+    <!-- BLOCO: callout (NOVO) — "dica", "contexto" ou "aviso" -->
+    <aside class="callout callout--tip">
+      <span class="callout__label">Dica</span>
+      <p>O mapa automático só liga depois que você compra a bússola com Shakra, no segundo bioma. Antes disso, marque os bancos manualmente — o jogo não avisa.</p>
+    </aside>
+
+    <div class="prose">
+      <h2 id="momentos">Três momentos que definem o jogo</h2>
+      <p>Não são os três melhores. São os três em que <em>Silksong</em> mostra, sem dizer, o que ele é.</p>
+    </div>
+
+    <!-- BLOCO: entrada-de-lista (NOVO) × 3 — item numerado com imagem própria,
+         subtítulo e parágrafos. É o formato mais republicado de CBR/ScreenRant
+         e hoje o Ortus Pixel só consegue produzir <li> de texto puro. -->
+    <section class="entry">
+      <div class="entry__head">
+        <span class="entry__num" aria-hidden="true">01</span>
+        <div>
+          <h3 class="entry__title">A queda do Sino de Bellhart</h3>
+          <p class="entry__sub">Bioma 2 · aproximadamente 6 horas de jogo</p>
+        </div>
+      </div>
+      <div class="thumb" data-c="games"></div>
+      <div class="prose" style="margin-top:var(--s-3)">
+        <p>É a primeira vez que o mapa se reorganiza sozinho. Uma rota que você percorreu quatro vezes deixa de existir, e o jogo não comenta. A sensação de perda territorial é o motor emocional das próximas seis horas.</p>
+      </div>
+    </section>
+
+    <section class="entry">
+      <div class="entry__head">
+        <span class="entry__num" aria-hidden="true">02</span>
+        <div>
+          <h3 class="entry__title">O duelo silencioso com Lace</h3>
+          <p class="entry__sub">Bioma 4 · opcional</p>
+        </div>
+      </div>
+      <div class="thumb" data-c="games"></div>
+      <div class="prose" style="margin-top:var(--s-3)">
+        <p>Sem trilha, sem barra de vida visível nos primeiros 20 segundos. A Team Cherry desliga a interface para forçar leitura de animação — e a luta inteira funciona melhor por isso.</p>
+      </div>
+    </section>
+
+    <!-- BLOCO: spoiler (NOVO como bloco: hoje o spoiler é a matéria INTEIRA).
+         Aqui ele embrulha só um trecho, que é como Omelete e IGN tratam. -->
+    <section class="spoiler" aria-labelledby="spoiler-t">
+      <div class="entry__head">
+        <span class="entry__num" aria-hidden="true">03</span>
+        <div>
+          <h3 class="entry__title" id="spoiler-t">O terceiro momento é o final</h3>
+          <p class="spoiler__label">Contém spoiler do ato final</p>
+        </div>
+      </div>
+      <div class="spoiler__body" data-hidden="true">
+        <div class="prose" style="margin-top:var(--s-3)">
+          <p>Hornet não vence. O final verdadeiro exige que você aceite a troca proposta por Pharloom, e a última tela é a mesma da abertura — com uma única diferença de cor que a maioria dos jogadores não vai notar na primeira vez.</p>
+        </div>
+      </div>
+      <button class="btn btn--ghost btn--sm spoiler__reveal">Mostrar mesmo assim</button>
+    </section>
+
+    <div class="prose">
+      <h2 id="desempenho">Desempenho e acessibilidade</h2>
+      <p>Testamos nas quatro plataformas. O resultado é raro o suficiente para merecer tabela.</p>
+    </div>
+
+    <!-- BLOCO: tabela (NOVO como bloco editável; .cmp já existe no CSS) -->
+    <div class="table-wrap">
+      <table class="cmp">
+        <caption class="sr-only">Desempenho de Silksong por plataforma</caption>
+        <thead>
+          <tr><th scope="col">Plataforma</th><th scope="col">Resolução</th><th scope="col">FPS</th><th scope="col">Tempo de carregamento</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">PS5</th><td>1440p</td><td class="win">60 travados</td><td>2,1 s</td></tr>
+          <tr><th scope="row">Xbox Series X</th><td>1440p</td><td class="win">60 travados</td><td>2,3 s</td></tr>
+          <tr><th scope="row">Switch 2</th><td>1080p</td><td>60 (quedas raras)</td><td>4,8 s</td></tr>
+          <tr><th scope="row">PC (GTX 1060)</th><td>1080p</td><td>60 travados</td><td>3,0 s</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- BLOCO: video (NOVO) — fachada, iframe só no clique.
+         Hoje o produto declara VideoObject no JSON-LD e NÃO renderiza vídeo
+         nenhum: dado estruturado prometendo um player que não existe. -->
+    <figure class="embed">
+      <div class="embed__frame thumb" data-c="games">
+        <button class="thumb__play" aria-label="Reproduzir: análise em vídeo de Silksong (8 min)"></button>
+        <span class="thumb__dur">8:12</span>
+      </div>
+      <figcaption class="embed__src">Vídeo · YouTube · Ortus Pixel</figcaption>
+    </figure>
+
+    <!-- BLOCO: leia-tambem (variante lista) -->
+    <aside class="readmore readmore--multi">
+      <span class="readmore__label">Mais sobre Hollow Knight</span>
+      <ul>
+        <li><a href="artigo.html">Guia: a ordem ideal dos biomas de Pharloom sem spoiler</a></li>
+        <li><a href="artigo-review.html">Todos os chefes de Silksong, do mais fácil ao mais difícil</a></li>
+      </ul>
+    </aside>
+
+    <!-- BLOCO: embed-social (NOVO) — fachada de post, sem script de terceiro -->
+    <figure class="embed embed--social">
+      <div class="embed__frame">
+        <div class="embed__author">
+          <span class="embed__avatar" aria-hidden="true"></span>
+          <div>
+            <strong style="font-size:var(--fs-sm)">Team Cherry</strong>
+            <div class="embed__handle">@TeamCherryGames</div>
+          </div>
+        </div>
+        <p class="embed__text">O patch 1.0.2 já está no ar em todas as plataformas. Ele corrige o travamento no Sino de Bellhart e reduz o dano da segunda fase de Moorwing em 15%.</p>
+      </div>
+      <figcaption class="embed__src">Post · X · publicado em 06/08/2026</figcaption>
+    </figure>
+
+    <div class="prose">
+      <p>A redução de dano no patch 1.0.2 confirma o que a recepção já dizia: o degrau da abertura era mais alto do que a própria Team Cherry pretendia.</p>
+    </div>
+
+    <!-- BLOCO: aviso comercial (só quando há afiliado — regra do §7) -->
+    <p class="disclosure">Esta análise cita links de lojas parceiras. Se você comprar por eles, a Ortus Pixel pode receber uma comissão — <b>que não influencia a nota</b>, fechada antes de qualquer link entrar no texto. <a href="#">Nossa política comercial</a>.</p>
+
+    <div class="ad ad--rect" role="complementary" aria-label="Publicidade">
+      <span class="ad__label">Publicidade</span>
+      <div class="ad__box">300×250</div>
+    </div>
+
+    <div class="cta-inline">
+      <div>
+        <h2>Gostou? Receba o resumo diário</h2>
+        <p>Uma edição por dia com o que importou de verdade.</p>
+      </div>
+      <form class="form-inline">
+        <input class="input" type="email" placeholder="seu@email.com" aria-label="Seu e-mail">
+        <button class="btn btn--primary">Assinar</button>
+      </form>
+    </div>
+
+    <section class="section" aria-labelledby="rel-t">
+      <div class="section-head">
+        <h2 id="rel-t" class="section-title">Mais de Hollow Knight</h2>
+        <a class="link-more" href="hub-franquia.html">Ver hub completo</a>
+      </div>
+      <div class="stack-sm">
+        <article class="card card--row">
+          <div class="thumb" data-c="games"></div>
+          <div>
+            <div class="card__head">
+              <span class="heat heat--ever">Guia</span>
+              <!-- NOVO: sinalização de formato no card do feed -->
+              <span class="fmt fmt--list">Lista</span>
+            </div>
+            <h3 class="card__title"><a href="#">Os 12 chefes de Silksong, do mais fácil ao mais difícil</a></h3>
+          </div>
+        </article>
+        <article class="card card--row">
+          <div class="thumb" data-c="games"></div>
+          <div>
+            <div class="card__head">
+              <span class="heat heat--base">Relevante</span>
+              <span class="fmt fmt--video">Vídeo</span>
+            </div>
+            <h3 class="card__title"><a href="#">Assista: 20 minutos de gameplay do bioma final, sem spoiler de história</a></h3>
+          </div>
+        </article>
+        <article class="card card--row">
+          <div class="thumb" data-c="games"></div>
+          <div>
+            <div class="card__head">
+              <span class="heat heat--base">Relevante</span>
+              <span class="fmt fmt--gallery">Galeria</span>
+            </div>
+            <h3 class="card__title"><a href="#">Pharloom em 30 imagens: o mapa completo comentado pela redação</a></h3>
+          </div>
+        </article>
+      </div>
+    </section>
+
+  </article>
+
+  <aside class="sidebar">
+    <!-- Índice fixo no desktop: em matéria de 11 min, é o que segura o scroll -->
+    <nav class="side-box toc--sticky" aria-label="Índice da matéria">
+      <h2>Neste texto</h2>
+      <ol class="side-list" style="padding-left:1.1rem;font-size:var(--fs-sm)">
+        <li><a href="#abertura">A abertura mais dura da série</a></li>
+        <li><a href="#ferramentas">Ferramentas mudam tudo</a></li>
+        <li><a href="#momentos">Três momentos que definem o jogo</a></li>
+        <li><a href="#desempenho">Desempenho e acessibilidade</a></li>
+      </ol>
+    </nav>
+    <div class="ad ad--rail" role="complementary" aria-label="Publicidade">
+      <span class="ad__label">Publicidade</span>
+      <div class="ad__box">300×600</div>
+    </div>
+  </aside>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <p class="footer__legal">Protótipo de referência do editor de blocos · Ortus Pixel · nenhum conteúdo desta página é real.</p>
+  </div>
+</footer>
+
+<script>
+/* Só o mínimo para o protótipo ser navegável: revelar spoiler e abrir o vídeo.
+   No produto isso vira componente React — aqui é 8 linhas para o botão não
+   ser um enfeite. */
+document.querySelector('.spoiler__reveal')?.addEventListener('click', function () {
+  var body = this.parentElement.querySelector('.spoiler__body');
+  var hidden = body.dataset.hidden === 'true';
+  body.dataset.hidden = hidden ? 'false' : 'true';
+  this.textContent = hidden ? 'Esconder de novo' : 'Mostrar mesmo assim';
+});
+document.querySelector('.thumb__play')?.addEventListener('click', function () {
+  this.parentElement.insertAdjacentHTML('beforeend',
+    '<p style="position:absolute;inset:0;display:grid;place-items:center;z-index:5;background:var(--surface-2);color:var(--ink-2);font-size:var(--fs-sm);text-align:center;padding:var(--s-4)">Aqui o iframe do YouTube seria injetado — só agora, no clique.</p>');
+});
+</script>
+</body>
+</html>

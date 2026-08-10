@@ -12,35 +12,28 @@
  */
 
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { revalidateTag } from 'next/cache';
 
-import { prisma } from '@subcarioca/db';
-import { estimateReadingMinutes, slugify } from '@subcarioca/core';
+import { prisma, toJsonColumn } from '@subcarioca/db';
+import { blocksReadingMinutes, estimateReadingMinutes, hasBlocks, slugify } from '@subcarioca/core';
 
-import { ADMIN_SESSION_COOKIE } from '@/server/admin-auth';
 import { parseArticleInput } from '@/server/article-input';
-import { getClientIp, hashPersonalData, safeCompare } from '@/server/security';
+import { requireStaffApi } from '@/server/staff-auth';
+import { getClientIp, hashPersonalData } from '@/server/security';
 import { CACHE_TAGS } from '@/server/queries';
 
 export const dynamic = 'force-dynamic';
-
-async function isAuthenticated(): Promise<boolean> {
-  const expected = process.env.ADMIN_ACCESS_TOKEN;
-  if (!expected) return false;
-
-  const cookieStore = await cookies();
-  const provided = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
-  return Boolean(provided) && safeCompare(provided!, expected);
-}
 
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ ok: false, message: 'Não autorizado.' }, { status: 401 });
-  }
+  // Ver a fila é o piso: qualquer conta ativa passa aqui. As ações que exigem
+  // mais (`override`, `dismiss`) são checadas uma a uma dentro do `switch` —
+  // porque três das quatro ações desta rota têm exigências diferentes, e um
+  // guard único no topo teria de usar a mais frouxa das quatro.
+  const guard = await requireStaffApi('verFilaDePautas');
+  if (!guard.ok) return guard.response;
 
   const { id } = await params;
 
@@ -101,6 +94,11 @@ export async function POST(
 
     // -------------------------------------------------------------------------
     case 'override': {
+      // Sobrepor score reordena a home e o /em-alta para TODOS os leitores. É
+      // curadoria, e curadoria é do administrador (ver STAFF_CAPABILITIES).
+      const curation = await requireStaffApi('curarFilaDePautas');
+      if (!curation.ok) return curation.response;
+
       const score = Number(payload.score);
       const reason = typeof payload.reason === 'string' ? payload.reason.trim() : '';
 
@@ -167,7 +165,7 @@ export async function POST(
       // Transforma um tópico da fila numa matéria de verdade. É a peça que
       // faltava entre "o pipeline descobriu e pontuou" e "o leitor consegue
       // ler" — até aqui, esse passo só existia manualmente, direto no banco.
-      const parsed = await parseArticleInput(payload);
+      const parsed = await parseArticleInput(payload, guard.user);
       if (!parsed.ok) {
         return NextResponse.json({ ok: false, message: parsed.message }, { status: 400 });
       }
@@ -218,6 +216,10 @@ export async function POST(
                 title: input.title,
                 excerpt: input.excerpt,
                 content: input.content,
+                // `null` (e não `[]`) quando não há blocos: a coluna significa
+                // "esta matéria foi escrita no editor de blocos?", e um array
+                // vazio responderia "sim, e está vazia" — que é outra coisa.
+                blocks: hasBlocks(input.blocks) ? toJsonColumn(input.blocks) : undefined,
                 status: publish ? 'published' : 'draft',
                 categoryId: category.id,
                 authorId: input.authorId,
@@ -228,7 +230,12 @@ export async function POST(
                 coverImageAlt: input.coverImageAlt,
                 isBreaking: input.isBreaking,
                 hasSpoiler: input.hasSpoiler,
-                readingMinutes: estimateReadingMinutes(input.content),
+                // Com blocos, o tempo de leitura conta imagem e vídeo além das
+                // palavras (ver `blocksReadingMinutes`). Sem blocos, continua a
+                // estimativa de sempre sobre o Markdown.
+                readingMinutes: hasBlocks(input.blocks)
+                  ? blocksReadingMinutes(input.blocks)
+                  : estimateReadingMinutes(input.content),
                 currentScore: topic.currentScore,
                 scoreAtPublish: publish ? topic.currentScore : null,
                 publishedAt: publish ? now : null,
@@ -240,6 +247,9 @@ export async function POST(
                 action: publish ? 'article.published' : 'article.drafted',
                 entityType: 'Article',
                 entityId: created.id,
+                // `actorId` finalmente diz QUEM. Era o campo que o segredo
+                // compartilhado deixava vazio e que tornava a auditoria inútil.
+                actorId: guard.user.id,
                 after: { title: input.title, slug, categorySlug: category.slug, publish },
                 ipHash,
               },
@@ -295,6 +305,11 @@ export async function POST(
 
     // -------------------------------------------------------------------------
     case 'dismiss': {
+      // Descartar um tópico o tira da fila de TODA a redação — é decisão de
+      // pauta, não de redação.
+      const curation = await requireStaffApi('curarFilaDePautas');
+      if (!curation.ok) return curation.response;
+
       await prisma.$transaction([
         prisma.topic.update({ where: { id }, data: { status: 'dismissed' } }),
         prisma.auditLog.create({

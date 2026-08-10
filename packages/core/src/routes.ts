@@ -119,6 +119,8 @@ export const routes = {
   adminAccuracy: () => '/admin/precisao',
   adminAffiliates: () => '/admin/afiliados',
   adminComments: () => '/admin/comentarios',
+  /** Gestão de contas da redação. Só administrador. */
+  adminAccounts: () => '/admin/contas',
 
   // --- APIs públicas ---
   apiTrending: () => '/api/trending',

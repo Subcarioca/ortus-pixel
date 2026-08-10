@@ -19,28 +19,38 @@
  * e trabalho inacabado que some da vista é trabalho esquecido.
  */
 
-import Link from 'next/link';
-
-import { CATEGORIES, routes } from '@subcarioca/core';
+import { CATEGORIES, can, routes } from '@subcarioca/core';
 import { prisma } from '@subcarioca/db';
 
 import { AdminLogin } from '@/components/admin/admin-login';
+import { AdminNav } from '@/components/admin/admin-nav';
 import { ArticleRow, type AdminArticleRowData } from '@/components/admin/article-row';
-import { isAdminAuthenticated } from '@/server/admin-auth';
+import { requireStaffPage } from '@/server/staff-auth';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminArticlesPage() {
-  if (!(await isAdminAuthenticated())) {
-    return <AdminLogin />;
-  }
+  const guard = await requireStaffPage('verMaterias');
+  if (guard.state !== 'ok') return <AdminLogin />;
+
+  const { user } = guard;
+  const vePorTodaARedacao = can(user.accessLevel, 'atribuirOutroAutor');
 
   const [articles, authors] = await Promise.all([
     prisma.article.findMany({
       // 'suggested'/'archived' ficam de fora: esta tela é sobre o que a redação
       // escreveu e mantém no ar. Incluir tudo transformaria a lista num despejo
       // do banco, que é o oposto de uma ferramenta de trabalho.
-      where: { status: { in: ['published', 'draft', 'in-review'] } },
+      //
+      // O RECORTE POR AUTORIA É FEITO NA CONSULTA, e não filtrando em memória
+      // depois. Não é otimização: filtrar depois significaria mandar ao
+      // navegador do redator o título, o resumo e o corpo dos rascunhos não
+      // publicados de toda a redação — inclusive os que ainda são segredo de
+      // pauta. O que ele não pode editar, ele não recebe.
+      where: {
+        status: { in: ['published', 'draft', 'in-review'] },
+        ...(vePorTodaARedacao ? {} : { authorId: user.id }),
+      },
       orderBy: { updatedAt: 'desc' },
       // Teto explícito. Sem ele, a tela degrada silenciosamente conforme o
       // acervo cresce — e o dia em que travar será numa quinta-feira agitada.
@@ -59,6 +69,7 @@ export default async function AdminArticlesPage() {
         coverImageAlt: true,
         isBreaking: true,
         hasSpoiler: true,
+        blocks: true,
         publishedAt: true,
         updatedAt: true,
         authorId: true,
@@ -70,7 +81,15 @@ export default async function AdminArticlesPage() {
         _count: { select: { comments: true } },
       },
     }),
-    prisma.author.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+    // Mesma regra da fila de pautas: quem não pode atribuir outro autor só
+    // recebe a si mesmo como opção.
+    vePorTodaARedacao
+      ? prisma.author.findMany({
+          where: { isActive: true },
+          orderBy: { name: 'asc' },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([{ id: user.id, name: user.name }]),
   ]);
 
   const categoryOptions = CATEGORIES.map((c) => ({ slug: c.slug, name: c.name }));
@@ -92,6 +111,11 @@ export default async function AdminArticlesPage() {
     coverImageAlt: article.coverImageAlt,
     isBreaking: article.isBreaking,
     hasSpoiler: article.hasSpoiler,
+    // O `blocks` é `Json` no Prisma, ou seja, `unknown` aqui. Ele atravessa a
+    // fronteira servidor→cliente como veio e é NORMALIZADO no editor
+    // (`toEditorBlocks`), que trata Json malformado como "sem blocos". Validar
+    // de novo aqui só duplicaria a regra.
+    blocks: article.blocks,
     // Datas viram ISO na fronteira servidor→cliente: props de componente de
     // cliente são serializadas, e formatar no servidor usaria o fuso dele.
     publishedAt: article.publishedAt?.toISOString() ?? null,
@@ -106,22 +130,13 @@ export default async function AdminArticlesPage() {
   return (
     <div className="container admin">
       <header className="admin__head">
-        <h1 className="article__title">Matérias</h1>
+        <h1 className="article__title">{vePorTodaARedacao ? 'Matérias' : 'Minhas matérias'}</h1>
         <p className="section-sub">
-          Edite ou remova o que já foi criado. Para escrever uma matéria nova, comece por um
-          tópico da fila de pautas.
+          {vePorTodaARedacao
+            ? 'Edite ou remova o que já foi criado. Para escrever uma matéria nova, comece por um tópico da fila de pautas.'
+            : 'Esta lista mostra só o que você assina. Para escrever uma matéria nova, comece por um tópico da fila de pautas.'}
         </p>
-        <nav className="admin-actions">
-          <Link href={routes.admin()} className="link-more">
-            Fila de pautas
-          </Link>
-          <Link href={routes.adminComments()} className="link-more">
-            Comentários
-          </Link>
-          <Link href={routes.adminAffiliates()} className="link-more">
-            Afiliados
-          </Link>
-        </nav>
+        <AdminNav user={user} current="materias" />
       </header>
 
       <section aria-labelledby="materias-rascunhos">

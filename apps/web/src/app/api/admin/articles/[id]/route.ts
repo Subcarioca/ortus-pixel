@@ -22,36 +22,25 @@
  */
 
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { revalidateTag } from 'next/cache';
 
-import { prisma } from '@subcarioca/db';
-import { estimateReadingMinutes } from '@subcarioca/core';
+import { JSON_COLUMN_NULL, prisma, toJsonColumn } from '@subcarioca/db';
+import { blocksReadingMinutes, canEditArticleOf, estimateReadingMinutes, hasBlocks } from '@subcarioca/core';
 
-import { ADMIN_SESSION_COOKIE } from '@/server/admin-auth';
 import { parseArticleInput } from '@/server/article-input';
-import { getClientIp, hashPersonalData, safeCompare } from '@/server/security';
+import { forbiddenArticleResponse, requireStaffApi } from '@/server/staff-auth';
+import { getClientIp, hashPersonalData } from '@/server/security';
 import { CACHE_TAGS } from '@/server/queries';
 
 export const dynamic = 'force-dynamic';
-
-async function isAuthenticated(): Promise<boolean> {
-  const expected = process.env.ADMIN_ACCESS_TOKEN;
-  if (!expected) return false;
-
-  const cookieStore = await cookies();
-  const provided = cookieStore.get(ADMIN_SESSION_COOKIE)?.value;
-  return Boolean(provided) && safeCompare(provided!, expected);
-}
 
 // -----------------------------------------------------------------------------
 // PATCH — editar
 // -----------------------------------------------------------------------------
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ ok: false, message: 'Não autorizado.' }, { status: 401 });
-  }
+  const guard = await requireStaffApi('verMaterias');
+  if (!guard.ok) return guard.response;
 
   const { id } = await params;
   if (!/^[a-z0-9]{20,40}$/i.test(id)) {
@@ -79,6 +68,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       publishedAt: true,
       currentScore: true,
       scoreAtPublish: true,
+      authorId: true,
       category: { select: { id: true, slug: true } },
     },
   });
@@ -87,7 +77,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ ok: false, message: ARTICLE_GONE_MESSAGE }, { status: 404 });
   }
 
-  const parsed = await parseArticleInput(payload);
+  /**
+   * A REGRA DE PROPRIEDADE, APLICADA NO SERVIDOR.
+   *
+   * Vem DEPOIS da leitura (é preciso saber quem assina) e ANTES da validação do
+   * formulário: apontar vírgula no resumo de uma matéria que a pessoa não pode
+   * editar seria responder à pergunta errada. Ver `canEditArticleOf` em
+   * core/staff.ts — a mesma função que a tela usa para esconder o botão.
+   */
+  if (!canEditArticleOf(guard.user, existing.authorId)) {
+    return forbiddenArticleResponse();
+  }
+
+  const parsed = await parseArticleInput(payload, guard.user);
   if (!parsed.ok) {
     return NextResponse.json({ ok: false, message: parsed.message }, { status: 400 });
   }
@@ -107,6 +109,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           title: input.title,
           excerpt: input.excerpt,
           content: input.content,
+          // `null` DESLIGA os blocos e devolve a matéria ao renderizador de
+          // Markdown. É o caminho de volta, e ele precisa existir: sem ele, uma
+          // conversão feita por engano seria irreversível pela interface.
+          blocks: hasBlocks(input.blocks) ? toJsonColumn(input.blocks) : JSON_COLUMN_NULL,
           status: publish ? 'published' : 'draft',
           categoryId: category.id,
           authorId: input.authorId,
@@ -116,7 +122,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           coverImageAlt: input.coverImageAlt,
           isBreaking: input.isBreaking,
           hasSpoiler: input.hasSpoiler,
-          readingMinutes: estimateReadingMinutes(input.content),
+          readingMinutes: hasBlocks(input.blocks)
+            ? blocksReadingMinutes(input.blocks)
+            : estimateReadingMinutes(input.content),
           // `publishedAt` só é definido na PRIMEIRA publicação. Reescrevê-lo a
           // cada save faria uma correção de texto "republicar" a matéria: ela
           // pularia para o topo do feed cronológico e reapareceria como novidade
@@ -136,6 +144,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           action: publish ? 'article.updated_published' : 'article.updated_draft',
           entityType: 'Article',
           entityId: id,
+          actorId: guard.user.id,
           before: {
             title: existing.title,
             status: existing.status,
@@ -189,9 +198,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 // -----------------------------------------------------------------------------
 
 export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
-  if (!(await isAuthenticated())) {
-    return NextResponse.json({ ok: false, message: 'Não autorizado.' }, { status: 401 });
-  }
+  const guard = await requireStaffApi('verMaterias');
+  if (!guard.ok) return guard.response;
 
   const { id } = await params;
   if (!/^[a-z0-9]{20,40}$/i.test(id)) {
@@ -206,12 +214,19 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       title: true,
       status: true,
       topicId: true,
+      authorId: true,
       category: { select: { slug: true } },
     },
   });
 
   if (!existing) {
     return NextResponse.json({ ok: false, message: ARTICLE_GONE_MESSAGE }, { status: 404 });
+  }
+
+  // Apagar é a ação irreversível: a checagem de propriedade vale aqui com ainda
+  // mais força do que na edição.
+  if (!canEditArticleOf(guard.user, existing.authorId)) {
+    return forbiddenArticleResponse();
   }
 
   try {
@@ -226,6 +241,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
           action: 'article.deleted',
           entityType: 'Article',
           entityId: id,
+          actorId: guard.user.id,
           before: {
             title: existing.title,
             slug: existing.slug,

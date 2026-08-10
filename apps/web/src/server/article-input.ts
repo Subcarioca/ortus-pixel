@@ -29,18 +29,30 @@ import 'server-only';
 import { prisma } from '@subcarioca/db';
 import {
   CONTENT_FORMATS,
+  blocksToPlainText,
+  can,
   isCategorySlug,
   validateTldrRequirement,
+  type ArticleBlock,
   type ContentFormat,
 } from '@subcarioca/core';
 
 import { ALLOWED_IMAGE_HOSTS_LABEL } from '@/lib/image-hosts';
 import { safeImageUrl } from '@/lib/safe-url';
+import { parseBlocksInput } from './blocks-input';
+import type { StaffUser } from './staff-auth';
 
 export interface ArticleInput {
   title: string;
   excerpt: string;
+  /**
+   * Corpo em texto. Quando há blocos, é a PROJEÇÃO deles em texto puro, montada
+   * aqui pelo servidor — nunca o que o cliente mandou. Ver o comentário da
+   * coluna `content` no schema para o motivo de ela continuar existindo.
+   */
   content: string;
+  /** Corpo em blocos. Vazio = matéria em Markdown (acervo antigo ou escolha). */
+  blocks: ArticleBlock[];
   format: ContentFormat;
   tldr: string[];
   coverImageUrl: string | null;
@@ -67,6 +79,7 @@ export type ArticleInputResult =
  */
 export async function parseArticleInput(
   payload: Record<string, unknown>,
+  viewer: StaffUser,
 ): Promise<ArticleInputResult> {
   const title = boundedText(payload.title, 8, 180);
   if ('error' in title) return fail(`O título ${title.error}`);
@@ -74,18 +87,56 @@ export async function parseArticleInput(
   const excerpt = boundedText(payload.excerpt, 20, 300);
   if ('error' in excerpt) return fail(`O resumo ${excerpt.error}`);
 
-  const content = boundedText(payload.content, 40, 20_000);
-  if ('error' in content) return fail(`O corpo da matéria ${content.error}`);
+  /**
+   * O CORPO PODE VIR DE DOIS LUGARES, E SÓ UM DELES É A FONTE DA VERDADE.
+   *
+   * Com blocos, `content` é DERIVADO deles (`blocksToPlainText`) e o que o
+   * cliente mandou nesse campo é ignorado. Não é excesso de zelo: aceitar os
+   * dois independentes criaria matérias em que o texto indexado pela busca não é
+   * o texto que está na tela — e ninguém descobriria, porque as duas coisas
+   * nunca são vistas juntas.
+   */
+  const parsedBlocks = parseBlocksInput(payload.blocks);
+  if (!parsedBlocks.ok) return fail(parsedBlocks.message);
+  const blocks = parsedBlocks.blocks;
+
+  const rawContent = blocks.length > 0 ? blocksToPlainText(blocks) : payload.content;
+
+  const content = boundedText(rawContent, 40, 20_000);
+  if ('error' in content) {
+    return fail(
+      blocks.length > 0
+        ? // Com blocos, o limite mínimo não é sobre um campo que a pessoa vê —
+          // dizer "o corpo precisa de 40 caracteres" mandaria o redator procurar
+          // um campo que não existe mais na tela.
+          'A matéria está curta demais. Escreva ao menos um parágrafo de verdade antes de salvar.'
+        : `O corpo da matéria ${content.error}`,
+    );
+  }
 
   const categorySlug = typeof payload.categorySlug === 'string' ? payload.categorySlug : '';
   if (!isCategorySlug(categorySlug)) {
     return fail('Categoria inválida.');
   }
 
-  const authorId =
+  /**
+   * QUEM ASSINA A MATÉRIA.
+   *
+   * Um redator NÃO escolhe: ele assina o que escreve, e o campo do formulário
+   * dele vem travado. A imposição acontece AQUI, no servidor, e não no `<select>`
+   * — porque o `<select>` é do navegador dele, e um navegador não é um lugar
+   * onde se aplica regra de permissão. Sem esta linha, bastaria trocar o valor
+   * no devtools para publicar em nome de outra pessoa.
+   */
+  const requestedAuthorId =
     typeof payload.authorId === 'string' && /^[a-z0-9]{10,40}$/i.test(payload.authorId)
       ? payload.authorId
       : null;
+
+  const authorId = can(viewer.accessLevel, 'atribuirOutroAutor')
+    ? requestedAuthorId
+    : viewer.id;
+
   if (!authorId) return fail('Selecione um autor.');
 
   // O formato vem de um `<select>` fechado; um valor fora da lista só chega por
@@ -140,6 +191,7 @@ export async function parseArticleInput(
       title: title.value,
       excerpt: excerpt.value,
       content: content.value,
+      blocks,
       format,
       tldr,
       coverImageUrl,

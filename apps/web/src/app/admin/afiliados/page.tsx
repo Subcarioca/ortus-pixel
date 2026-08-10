@@ -37,17 +37,21 @@ import {
 import { prisma } from '@subcarioca/db';
 
 import { AdminLogin } from '@/components/admin/admin-login';
+import { AdminForbidden } from '@/components/admin/admin-forbidden';
+import { AdminNav } from '@/components/admin/admin-nav';
 import { AdminActionButton } from '@/components/admin/admin-action-button';
 import { OfferCreateForm } from '@/components/admin/offer-create-form';
 import { OfferLinkForm } from '@/components/admin/offer-link-form';
-import { isAdminAuthenticated } from '@/server/admin-auth';
+import { requireStaffPage } from '@/server/staff-auth';
 
 /** Painel nunca é cacheado: mostra o estado ao vivo. */
 export const dynamic = 'force-dynamic';
 
 export default async function AdminAffiliatesPage() {
-  if (!(await isAdminAuthenticated())) {
-    return <AdminLogin />;
+  const guard = await requireStaffPage('gerenciarComercial');
+  if (guard.state === 'anonymous') return <AdminLogin />;
+  if (guard.state === 'forbidden') {
+    return <AdminForbidden user={guard.user} what="O cadastro de ofertas de afiliado" />;
   }
 
   const [offers, articles] = await Promise.all([
@@ -89,14 +93,7 @@ export default async function AdminAffiliatesPage() {
           Cadastro manual de ofertas e vínculo com artigos. Esta tela é de ação HUMANA:
           o pipeline de curadoria não vincula link comercial a matéria nenhuma.
         </p>
-        <nav className="admin-actions">
-          <Link href={routes.admin()} className="link-more">
-            ← Fila de pautas
-          </Link>
-          <Link href={routes.adminComments()} className="link-more">
-            Comentários
-          </Link>
-        </nav>
+        <AdminNav user={guard.user} current="afiliados" />
       </header>
 
       {/* ---------- ALERTA DE PREÇO VENCIDO ---------- */}

@@ -15,34 +15,36 @@
  *   - o cronômetro da meta de 30 minutos;
  *   - o motivo de a automação estar bloqueada, quando estiver.
  *
- * AVISO DE SEGURANÇA — AUTENTICAÇÃO PROVISÓRIA:
- * o MVP protege esta área com um segredo compartilhado via cookie. É adequado
- * para desenvolvimento e piloto interno, mas NÃO para produção com uma redação
- * real, porque não há identidade individual (e sem identidade individual, a
- * trilha de auditoria de quem sobrepôs o quê perde o sentido).
- * Ver README > Segurança > "Pendências antes de produção".
+ * ACESSO: conta individual (e-mail + senha), com nível `admin` ou `redator`.
+ * A checagem vive em `server/staff-auth.ts` e é obrigatória em TODA página e
+ * rota de `/admin` — não existe middleware fazendo isso por baixo (o porquê está
+ * documentado no cabeçalho daquele módulo).
+ *
+ * O QUE MUDA PARA O REDATOR NESTA TELA: ele vê a fila e assume pauta, mas não
+ * sobrepõe score nem descarta tópico — as duas ações mexem no que o SITE INTEIRO
+ * exibe, e por isso são de curadoria, não de redação. Ver `STAFF_CAPABILITIES`.
  */
 
 import Link from 'next/link';
 
-import { CATEGORIES, SCORE_BANDS, bandForScore, routes } from '@subcarioca/core';
+import { CATEGORIES, SCORE_BANDS, bandForScore, can, routes } from '@subcarioca/core';
 import { prisma } from '@subcarioca/db';
 
 import { AdminLogin } from '@/components/admin/admin-login';
+import { AdminNav } from '@/components/admin/admin-nav';
 import { TopicRow } from '@/components/admin/topic-row';
 import { getHotPublishRateSafe } from '@/server/admin-metrics';
-import { isAdminAuthenticated } from '@/server/admin-auth';
+import { requireStaffPage } from '@/server/staff-auth';
 
 /** Painel nunca é cacheado: mostra o estado ao vivo da redação. */
 export const dynamic = 'force-dynamic';
 
 export default async function AdminPage() {
-  // A checagem vive em `server/admin-auth.ts`: com seis superfícies
-  // administrativas, uma cópia por arquivo seria garantia de que uma delas
-  // ficaria para trás numa correção futura.
-  if (!(await isAdminAuthenticated())) {
-    return <AdminLogin />;
-  }
+  const guard = await requireStaffPage('verFilaDePautas');
+  if (guard.state !== 'ok') return <AdminLogin />;
+
+  const { user } = guard;
+  const podeCurar = can(user.accessLevel, 'curarFilaDePautas');
 
   const [topics, publishRate, lastRun, authors] = await Promise.all([
     prisma.topic.findMany({
@@ -64,7 +66,17 @@ export default async function AdminPage() {
       where: { status: 'completed' },
       orderBy: { finishedAt: 'desc' },
     }),
-    prisma.author.findMany({ orderBy: { name: 'asc' }, select: { id: true, name: true } }),
+    // Um REDATOR não escolhe o autor da matéria: ele assina o que escreve (ver
+    // `atribuirOutroAutor` em core/staff.ts). Buscar a redação inteira para
+    // depois esconder a lista seria mandar ao navegador o nome de todo mundo
+    // sem necessidade — a consulta já sai filtrada.
+    can(guard.user.accessLevel, 'atribuirOutroAutor')
+      ? prisma.author.findMany({
+          where: { isActive: true },
+          orderBy: { name: 'asc' },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([{ id: guard.user.id, name: guard.user.name }]),
   ]);
 
   const categoryOptions = CATEGORIES.map((c) => ({ slug: c.slug, name: c.name }));
@@ -78,25 +90,7 @@ export default async function AdminPage() {
         <p className="section-sub">
           Fila de pautas ordenada por score. O override manual sempre vence o algoritmo.
         </p>
-        {/*
-          O score numérico aparece NESTA área e só nela (ADR 0009). As duas
-          telas abaixo são as superfícies de trabalho humano que não passam pelo
-          pipeline: vínculo de afiliado e moderação.
-        */}
-        <nav className="admin-actions">
-          <Link href={routes.adminArticles()} className="link-more">
-            Matérias
-          </Link>
-          <Link href={routes.adminAffiliates()} className="link-more">
-            Afiliados
-          </Link>
-          <Link href={routes.adminComments()} className="link-more">
-            Comentários
-          </Link>
-          <Link href={routes.adminAccuracy()} className="link-more">
-            Precisão do score
-          </Link>
-        </nav>
+        <AdminNav user={user} current="fila" />
       </header>
 
       {/* ---------- KPIs DO PIPELINE ---------- */}
@@ -131,13 +125,17 @@ export default async function AdminPage() {
               : 'Pipeline ainda não rodou'}
           </p>
         </div>
-        <div className="side-box">
-          <h2 className="hub-stat__lbl">Precisão do score</h2>
-          <p className="hub-stat__num">
-            <Link href={routes.adminAccuracy()}>Ver relatório</Link>
-          </p>
-          <p className="form-hint">Correlação entre score previsto e pageviews reais</p>
-        </div>
+        {/* O relatório é de administrador: para um redator, este cartão seria
+            um link para uma tela que responde "sem acesso". */}
+        {can(user.accessLevel, 'verRelatorios') && (
+          <div className="side-box">
+            <h2 className="hub-stat__lbl">Precisão do score</h2>
+            <p className="hub-stat__num">
+              <Link href={routes.adminAccuracy()}>Ver relatório</Link>
+            </p>
+            <p className="form-hint">Correlação entre score previsto e pageviews reais</p>
+          </div>
+        )}
       </section>
 
       {/* ---------- LEGENDA DAS FAIXAS ---------- */}
@@ -177,6 +175,7 @@ export default async function AdminPage() {
                 key={topic.id}
                 categories={categoryOptions}
                 authors={authors}
+                canCurate={podeCurar}
                 topic={{
                   id: topic.id,
                   title: topic.title,

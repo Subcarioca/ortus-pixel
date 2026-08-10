@@ -36,6 +36,8 @@
 
 import Link from 'next/link';
 
+import { headingAnchor } from '@subcarioca/core';
+
 import { safeContentUrl } from '@/lib/safe-url';
 
 interface ArticleBodyProps {
@@ -162,11 +164,11 @@ function renderBlock(block: Block, key: number): React.ReactNode {
       // Títulos internos recebem `id` para permitir índice clicável e links
       // diretos para a seção (útil em listicles e guias longos).
       return block.level === 2 ? (
-        <h2 key={key} id={slugifyHeading(block.text)}>
+        <h2 key={key} id={headingAnchor(block.text)}>
           {renderInline(block.text)}
         </h2>
       ) : (
-        <h3 key={key} id={slugifyHeading(block.text)}>
+        <h3 key={key} id={headingAnchor(block.text)}>
           {renderInline(block.text)}
         </h3>
       );
@@ -212,8 +214,15 @@ function renderBlock(block: Block, key: number): React.ReactNode {
  *
  * Devolve um array de nós React — nunca uma string de HTML. Cada trecho de
  * texto vira um nó de texto escapado pelo React.
+ *
+ * EXPORTADA porque o renderizador de BLOCOS (`article-blocks.tsx`) precisa
+ * exatamente desta função, e reimplementá-la lá seria a pior forma de
+ * duplicação possível: o dia em que o corpo em blocos tivesse a própria versão
+ * do tratamento de link seria o dia em que uma das duas deixaria de validar o
+ * protocolo. Marcação inline é a fronteira de XSS do site; ela tem UMA
+ * implementação, revisada uma vez.
  */
-function renderInline(text: string): React.ReactNode[] {
+export function renderInline(text: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
   // Regex única com grupos alternativos, para varrer o texto em uma passada.
   const pattern = /(\*\*([^*]+)\*\*)|(\*([^*]+)\*)|(`([^`]+)`)|(\[([^\]]+)\]\(([^)]+)\))/g;
@@ -295,12 +304,26 @@ function renderLink(label: string, href: string, key: number): React.ReactNode {
   );
 }
 
-function slugifyHeading(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60);
+/**
+ * Índice a partir dos títulos do Markdown legado.
+ *
+ * O acervo escrito antes do editor de blocos não tem blocos `titulo` para
+ * alimentar o `.toc` — mas tem `##` no texto. Esta função dá a essas matérias o
+ * mesmo índice que as novas ganham de graça, sem convertê-las nem reescrevê-las.
+ *
+ * A âncora sai de `headingAnchor`, a MESMA usada ao renderizar o título logo
+ * acima. É o que garante que o link do índice caia no lugar certo — duas
+ * implementações de slug aqui produziriam um índice inteiro de links mortos, e
+ * ninguém testa link de índice.
+ */
+export function markdownToc(markdown: string, minEntries = 2) {
+  const entries = parseBlocks(markdown)
+    .filter((block): block is Extract<Block, { type: 'heading' }> => block.type === 'heading')
+    .map((block) => ({
+      nivel: block.level,
+      texto: block.text,
+      anchor: headingAnchor(block.text),
+    }));
+
+  return entries.length >= minEntries ? entries : [];
 }

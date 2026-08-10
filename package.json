@@ -34,6 +34,14 @@
     "db:generate": "npm run generate --workspace=@subcarioca/db",
     "db:push": "npm run push --workspace=@subcarioca/db",
     "db:seed": "npm run seed --workspace=@subcarioca/db",
+    "//staff:create": [
+      "Cria a PRIMEIRA conta de administrador do painel — e é também o modo de",
+      "resgate quando ninguém consegue mais entrar. Exige acesso ao servidor:",
+      "não existe rota pública de setup, de propósito (ver o cabeçalho do script).",
+      "  npm run staff:create -- --email=voce@dominio.com --nome=\"Seu Nome\"",
+      "  npm run staff:create -- --listar"
+    ],
+    "staff:create": "npm run staff:create --workspace=@subcarioca/db --",
     "db:studio": "npm run studio --workspace=@subcarioca/db",
     "curator:once": "npm run once --workspace=@subcarioca/curator",
     "setup": "npm install && npm run db:generate"

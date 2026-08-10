@@ -27,14 +27,19 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import type { ArticleBlock } from '@subcarioca/core';
+
 import { readAdminResponse } from './admin-response';
 import { FORMAT_OPTIONS, formatRequiresTldr } from './article-format-options';
+import { BlockEditor, toEditorBlocks } from './block-editor';
 
 export interface EditableArticle {
   id: string;
   title: string;
   excerpt: string;
   content: string;
+  /** Coluna `Json` do banco — normalizada por `toEditorBlocks`. */
+  blocks: unknown;
   categorySlug: string;
   authorId: string;
   format: string;
@@ -65,7 +70,12 @@ export function ArticleEditForm({ article, categories, authors, onDone }: Articl
     article.tldr.length > 0 ? article.tldr : ['', '', ''],
   );
 
+  // O corpo em blocos é estado do formulário, não campo de `FormData`: ele é uma
+  // estrutura, e `FormData` só transporta texto.
+  const [blocks, setBlocks] = useState<ArticleBlock[]>(() => toEditorBlocks(article.blocks));
+
   const requiresTldr = formatRequiresTldr(format);
+  const usaBlocos = blocks.length > 0;
 
   function updateTldr(index: number, value: string) {
     setTldr((prev) => prev.map((item, i) => (i === index ? value : item)));
@@ -86,6 +96,11 @@ export function ArticleEditForm({ article, categories, authors, onDone }: Articl
           title: form.get('title'),
           excerpt: form.get('excerpt'),
           content: form.get('content'),
+          // Com blocos, o servidor IGNORA `content` e o deriva deles. Mandamos
+          // os dois assim mesmo: o campo de texto continua sendo o corpo real
+          // enquanto ninguém converte a matéria, e é ele que o botão de
+          // conversão usa como origem.
+          blocks,
           categorySlug: form.get('categorySlug'),
           authorId: form.get('authorId'),
           format,
@@ -198,10 +213,32 @@ export function ArticleEditForm({ article, categories, authors, onDone }: Articl
         />
       </label>
 
-      <label className="admin-form__full">
-        Corpo da matéria
-        <textarea name="content" required minLength={40} rows={10} defaultValue={article.content} />
-      </label>
+      {/*
+        O CAMPO DE TEXTO SÓ APARECE ENQUANTO NÃO HÁ BLOCOS.
+
+        Mostrar os dois ao mesmo tempo criaria a pergunta que nenhum editor
+        deveria ter de responder: "qual dos dois é o que vai para o ar?". Com
+        blocos, eles são o corpo — e o texto vira uma projeção que o servidor
+        reescreve sozinho. O `required` acompanha a visibilidade: um campo
+        obrigatório escondido impede o envio do formulário sem dizer por quê.
+      */}
+      {!usaBlocos && (
+        <label className="admin-form__full">
+          Corpo da matéria
+          <textarea
+            name="content"
+            required
+            minLength={40}
+            rows={10}
+            defaultValue={article.content}
+          />
+        </label>
+      )}
+
+      <div className="admin-form__full">
+        <span className="form-hint">Corpo em blocos</span>
+        <BlockEditor blocks={blocks} onChange={setBlocks} legacyMarkdown={article.content} />
+      </div>
 
       <div className="admin-form__full admin-tldr">
         <span className="form-hint">

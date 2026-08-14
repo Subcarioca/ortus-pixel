@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { routes, type CategoryDefinition } from '@subcarioca/core';
 
 import { SITE_NAME, SITE_TAGLINE, SOCIAL_HANDLE } from '@/lib/site';
+import { PixelO } from './pixel-o';
 import { ThemeToggle } from './theme-toggle';
 
 /**
@@ -30,9 +31,25 @@ export function SiteFooter({ categories }: { categories: readonly CategoryDefini
       <div className="container">
         <div className="footer__grid">
           <div>
-            <Link href={routes.home()} className="logo">
-              <span className="logo__dot" aria-hidden="true" />
-              Ortus<b>Pixel</b>
+            {/*
+              O MESMO "O" PIXELADO DO HEADER, aqui substituindo a primeira letra
+              do nome por extenso: [▣]RTUS **PIXEL**.
+
+              `aria-label` no link é OBRIGATÓRIO agora, e não um capricho: o
+              texto que sobrou no HTML é "rtus" + "Pixel", então sem o rótulo um
+              leitor de tela anunciaria o link do rodapé como "rtus Pixel". O
+              "O" existe visualmente para quem enxerga e precisa existir
+              textualmente para quem não enxerga (WCAG 2.4.4 e 1.1.1).
+            */}
+            <Link
+              href={routes.home()}
+              className="logo logo--px"
+              aria-label="Ortus Pixel — página inicial"
+            >
+              <PixelO />
+              <span className="logo__word">
+                rtus <b>Pixel</b>
+              </span>
             </Link>
             {/*
               A TAGLINE abre a descrição, em negrito, como no protótipo: é a

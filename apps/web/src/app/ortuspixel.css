@@ -1978,3 +1978,49 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
     align-items: start;
   }
 }
+
+/* --------------------------------------------------------------------------
+   19.1 WORDMARK COM O "O" PIXELADO
+   --------------------------------------------------------------------------
+   Pedido do dono do produto: "o 'O' da ortus deve ser como um pixel e inverta
+   as cores do 'pixel'. O 'O' pixelado deve ser vermelho e o pixel preto."
+
+   O QUE INVERTEU, EXATAMENTE:
+     antes → "O" na cor do texto  +  "Pixel" em carmim (`.logo b`)
+     agora → "O" em pixel art CARMIM  +  "Pixel" na cor do texto (`--ink`)
+
+   POR QUE UM MODIFICADOR (`.logo--px`) E NÃO UMA MUDANÇA NA REGRA BASE:
+   `.logo` é componente do design system e é usado pelos dez protótipos de
+   `design/*.html`, que ainda trazem o ponto pulsante e o "Pixel" em carmim.
+   Redefinir `.logo b` na raiz mudaria todos eles em silêncio, inclusive os que
+   documentam a versão anterior da marca. O modificador deixa as duas marcas
+   coexistirem enquanto os protótipos não forem atualizados — e deixa o diff
+   desta mudança caber inteiro nesta seção.
+
+   O CARMIM VEM DE `--brand`, e não de `--heat-hot`: a regra dos dois vermelhos
+   (seção 1) reserva o vermelho vivo para urgência, e o próprio design system
+   lista "logotipo" como o primeiro uso legítimo de `--brand`. O "O" ficou,
+   portanto, o único acento de marca do cabeçalho — e é por isso que o ponto
+   pulsante saiu do markup: dois carmins no mesmo canto anulam um ao outro.  */
+
+/* `gap: 0` porque agora o "O" é uma LETRA, não um ícone ao lado do texto: entre
+   ele e o resto da palavra não pode haver espaço. O respiro entre "Ortus" e
+   "Pixel" (no rodapé) é um espaço de texto de verdade, dentro do `.logo__word`. */
+.logo--px { gap: 0; }
+.logo--px b { color: var(--ink); }
+
+/* Tamanho em `em`: o desenho acompanha a tipografia do wordmark em vez de ter
+   um px fixo que desalinha quando o header muda de escala.
+
+   0,82em NÃO é um número escolhido no olho: `.logo` é caixa-alta, e a altura de
+   maiúscula da Archivo é ~0,72em. Como a caixa do SVG é quadrada e o "O"
+   pixelado tem os cantos recuados, ele precisa de um pouco mais que 0,72 para
+   ler com o MESMO peso das letras ao lado — é o mesmo overshoot que qualquer
+   tipógrafo dá a um "O" redondo em relação a um "H" reto. Abaixo de 0,78 ele
+   vira uma letra menor que as outras; acima de 0,9, um ícone colado no texto. */
+.logo__o { width: .82em; height: .82em; flex: none; fill: var(--brand); }
+
+/* O texto do wordmark é um item de flex único — ver o comentário no header.
+   `nowrap` impede que "Ortus Pixel" quebre em duas linhas dentro do rodapé de
+   4 colunas, onde a coluna pode ficar estreita. */
+.logo__word { white-space: nowrap; }

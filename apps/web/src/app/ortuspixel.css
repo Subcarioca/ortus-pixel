@@ -51,6 +51,29 @@
 
   /* --- Superfícies (preto/cinza) --- */
   --bg:            light-dark(#F5F5F7, #131317);
+
+  /* --- FUNDO EM GRADIENTE NEUTRO (v0.4) ---------------------------------
+     Pedido do dono do produto: "colocar um gradiente de cores neutras para
+     sair um pouco desse branco puro". Três tokens, um degradê, dois temas.
+
+     POR QUE NÃO MEXEMOS EM `--bg`: ele continua sendo a cor CHAPADA de fundo
+     e é o que pinta a tela antes de qualquer coisa (fallback de navegador sem
+     `light-dark()`, `background-color` do body, meta `theme-color` da barra do
+     navegador). O degradê é uma CAMADA por cima dele, e não um substituto —
+     assim nenhum contraste já calibrado neste arquivo muda de valor.
+
+     A escada é de cima para baixo: mais claro junto ao header (onde a manchete
+     precisa de fundo limpo) e um degrau mais fundo perto do rodapé. No tema
+     escuro, a mesma lógica invertida em luminância, para o fundo não achatar
+     contra o preto do rodapé. Nenhum tom quente e nenhum carmim: é fundo, não
+     é marca.                                                                */
+  --bg-grad-top:   light-dark(#F1F1F5, #17171D);
+  --bg-grad-bottom:light-dark(#E5E5EB, #0C0C10);
+  /* Brilho suave logo abaixo do header. Branco quase opaco no claro (é ele que
+     faz o topo parecer papel) mas a 55%: a 100% ele devolveria o #FFF que o
+     pedido manda evitar. No escuro, um véu de 4% — o suficiente para o topo
+     não parecer um buraco.                                                  */
+  --bg-grad-glow:  light-dark(rgba(255,255,255,.55), rgba(255,255,255,.04));
   --surface-1:     light-dark(#FFFFFF, #1A1A1F);
   --surface-2:     light-dark(#EFEFF2, #232329);
   --surface-3:     light-dark(#E3E3E8, #2D2D34);
@@ -210,7 +233,7 @@
 * { margin: 0; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 body {
-  background: var(--bg);
+  background-color: var(--bg);
   color: var(--ink);
   font-family: var(--font-text);
   font-size: var(--fs-body);
@@ -219,6 +242,35 @@ body {
   padding-bottom: 64px; /* espaço da bottom-nav mobile */
 }
 @media (min-width: 768px) { body { padding-bottom: 0; } }
+
+/* A CAMADA DO GRADIENTE — um elemento fixo atrás de tudo, e não
+   `background-attachment: fixed` no próprio body.
+
+   Duas razões, as duas práticas:
+   a) `background-attachment: fixed` é historicamente quebrado no Safari do iOS
+      (o degradê passa a ser calculado sobre a altura do DOCUMENTO, então numa
+      matéria de 8.000px ele vira uma cor chapada) — e o celular é a maioria da
+      audiência de um portal de notícias;
+   b) uma camada `position: fixed` é composta pela GPU: ela não repinta a cada
+      quadro da rolagem, ao contrário de um fundo preso ao body.
+
+   `z-index: -1` a coloca atrás de todo o conteúdo sem precisar mexer no
+   empilhamento de nada (o body não cria contexto de empilhamento próprio) e
+   `pointer-events: none` garante que ela nunca intercepte um clique.
+
+   O `background-color: var(--bg)` do body continua embaixo: se o navegador não
+   entender `light-dark()` ou a camada falhar, o fundo é o de sempre.        */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(1100px 520px at 50% 0%, var(--bg-grad-glow), transparent 72%),
+    linear-gradient(180deg, var(--bg-grad-top), var(--bg-grad-bottom));
+}
+
 /* Anúncio ancorado no mobile: reserva o espaço dele também (sem CLS) */
 @media (max-width: 767px) { body:has(.ad-anchor) { padding-bottom: 152px; } }
 

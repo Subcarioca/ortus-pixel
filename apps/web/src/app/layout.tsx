@@ -84,11 +84,16 @@ export const metadata: Metadata = {
 /**
  * Viewport separado dos metadados (exigência do Next 15+).
  *
- * `themeColor` casa com o `--bg` do design system e evita o flash da barra do
- * navegador no mobile — a primeira coisa que o usuário vê. Agora são DOIS
- * valores, um por esquema: com um valor só, quem usa o tema escuro teria a
- * barra do navegador clara sobre um site escuro (ou o contrário), e a emenda
- * fica visível no topo da tela.
+ * `themeColor` casa com o TOPO do gradiente de fundo (`--bg-grad-top` somado ao
+ * brilho de `--bg-grad-glow`, que é o que fica logo abaixo do header) e evita o
+ * flash da barra do navegador no mobile — a primeira coisa que o usuário vê.
+ * São DOIS valores, um por esquema: com um valor só, quem usa o tema escuro
+ * teria a barra do navegador clara sobre um site escuro (ou o contrário), e a
+ * emenda fica visível no topo da tela.
+ *
+ * ⚠ Estes literais são a ÚNICA cópia dos tokens de fundo fora do CSS, e é uma
+ * cópia inevitável: a barra do navegador é pintada antes de qualquer folha de
+ * estilo carregar. Se `--bg-grad-top` mudar no design system, mude aqui junto.
  *
  * `colorScheme: 'light dark'` declara que o site suporta os dois — é o que faz
  * o navegador pintar corretamente scrollbars, campos de formulário e controles
@@ -98,8 +103,8 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#F5F5F7' },
-    { media: '(prefers-color-scheme: dark)', color: '#131317' },
+    { media: '(prefers-color-scheme: light)', color: '#F9F9FB' },
+    { media: '(prefers-color-scheme: dark)', color: '#191920' },
   ],
   colorScheme: 'light dark',
 };

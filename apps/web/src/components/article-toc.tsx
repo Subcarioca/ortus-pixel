@@ -14,15 +14,22 @@
  * já resolve — é ruído com aparência de recurso.
  *
  * NÃO é sticky por conta própria: a variante fixa (`.toc--sticky`) é aplicada
- * pela página, e só no desktop. Num celular, um índice grudado no topo come um
- * terço da tela de leitura.
+ * por quem renderiza.
+ *
+ * ⚠ DESDE O REDESENHO DE 2026-08, NINGUÉM PASSA `sticky` — e isso é
+ * intencional, não esquecimento. A página de matéria perdeu a barra lateral
+ * (ver app/[categoria]/[slug]/page.tsx): um índice grudado na tela ao lado do
+ * texto era um dos elementos que competiam com a leitura, que é justamente o
+ * que o redesenho foi feito para eliminar. A propriedade continua existindo
+ * porque a variante fixa segue válida para qualquer superfície que volte a ter
+ * coluna lateral — uma página de guia longo, por exemplo.
  */
 
 import type { TocEntry } from '@subcarioca/core';
 
 interface ArticleTocProps {
   entries: TocEntry[];
-  /** `true` na sidebar do desktop; `false` no corpo, em telas menores. */
+  /** `true` onde houver coluna lateral para o índice acompanhar a rolagem. */
   sticky?: boolean;
 }
 

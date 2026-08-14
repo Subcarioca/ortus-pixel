@@ -32,7 +32,7 @@ import {
   type ScoreResult,
   type SignalContext,
 } from '@subcarioca/core';
-import { prisma } from '@subcarioca/db';
+import { prisma, toStringArray } from '@subcarioca/db';
 import { calculateScore, DEFAULT_WEIGHTS, isEligibleForAutomation } from '@subcarioca/scoring';
 
 import { getAvailableConnectors } from '../connectors/registry';
@@ -328,7 +328,12 @@ async function matchFranchises(text: string): Promise<{ id: string; slug: string
 
   return franchises
     .filter((franchise) => {
-      const terms = [franchise.name, ...franchise.aliases];
+      // `toStringArray` porque `aliases` é coluna `Json` desde a migração para o
+      // MySQL. Aqui a normalização não é só de tipo: um valor não-string caído
+      // nesse array chegaria a `escapeRegex`/`new RegExp` mais abaixo e
+      // derrubaria o ciclo inteiro de curadoria — num processo de fundo, onde
+      // ninguém veria o erro até o score parar de atualizar.
+      const terms = [franchise.name, ...toStringArray(franchise.aliases)];
       return terms.some((term) => {
         const normalized = term.toLowerCase();
         // Fronteira de palavra evita que "DC" case dentro de "DCEU" ou de
@@ -374,7 +379,10 @@ async function scoreTopic(
     analysisText: string;
   } = {
     query: topic.query,
-    aliases: topic.aliases,
+    // Coluna `Json` desde a migração para o MySQL. Este contexto é consumido
+    // pelos conectores (youtube.ts, serp-competition.ts), que iteram os aliases
+    // — normalizar aqui, na origem, evita repetir a checagem em cada um deles.
+    aliases: toStringArray(topic.aliases),
     categorySlug: topic.category?.slug,
     franchiseSlugs: topic.franchises.map((f) => f.franchise.slug),
     firstSeenAt: topic.firstSeenAt,

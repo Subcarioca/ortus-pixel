@@ -32,8 +32,25 @@
     ],
     "check:classes": "node scripts/check-classes.mjs",
     "db:generate": "npm run generate --workspace=@subcarioca/db",
+    "//db:push": [
+      "Usamos `db push`, não `prisma migrate`: o usuário do MySQL da Hostinger não",
+      "tem CREATE DATABASE, e `migrate dev` exige um shadow database.",
+      "⚠ SEMPRE rode `npm run db:fulltext` DEPOIS — os índices FULLTEXT da busca",
+      "não vêm do schema Prisma e o `db push` não os conhece."
+    ],
     "db:push": "npm run push --workspace=@subcarioca/db",
+    "db:fulltext": "npm run fulltext --workspace=@subcarioca/db",
     "db:seed": "npm run seed --workspace=@subcarioca/db",
+    "//migracao-de-dados": [
+      "Bloco 3 do plano de migração (design/plano-migracao-mysql-2026-08.md).",
+      "Exigem SOURCE_DATABASE_URL apontando para a Neon. Temporários: somem junto",
+      "com a Neon, 7 dias após o corte."
+    ],
+    "db:generate:source": "npm run generate:source --workspace=@subcarioca/db",
+    "db:migrate-data": "npm run migrate-data --workspace=@subcarioca/db --",
+    "db:verify-migration": "npm run verify-migration --workspace=@subcarioca/db",
+    "db:rehearse-load": "npm run rehearse-load --workspace=@subcarioca/db",
+    "db:fixtures": "npm run fixtures --workspace=@subcarioca/db",
     "//staff:create": [
       "Cria a PRIMEIRA conta de administrador do painel — e é também o modo de",
       "resgate quando ninguém consegue mais entrar. Exige acesso ao servidor:",

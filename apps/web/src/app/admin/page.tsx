@@ -28,7 +28,7 @@
 import Link from 'next/link';
 
 import { CATEGORIES, SCORE_BANDS, bandForScore, can, routes } from '@subcarioca/core';
-import { prisma } from '@subcarioca/db';
+import { prisma, toStringArray } from '@subcarioca/db';
 
 import { AdminLogin } from '@/components/admin/admin-login';
 import { AdminNav } from '@/components/admin/admin-nav';
@@ -190,7 +190,10 @@ export default async function AdminPage() {
                   seoOpportunity: topic.seoOpportunity,
                   termType: topic.termType,
                   scoreSummary: topic.scoreSummary,
-                  emotionalTriggers: topic.emotionalTriggers,
+                  // Coluna `Json` desde a migração para o MySQL: normalizada no
+                  // servidor para que `topic-row.tsx` continue podendo fazer
+                  // `.length` e `.map` sem checagem defensiva.
+                  emotionalTriggers: toStringArray(topic.emotionalTriggers),
                   requiresHumanReview: topic.requiresHumanReview,
                   sourceName: topic.sourceName,
                   sourceUrl: topic.sourceUrl,

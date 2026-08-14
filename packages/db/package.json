@@ -11,21 +11,80 @@
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },
+  "//migrate": [
+    "`migrate` continua declarado só para não sumir da memória de quem procurar",
+    "por ele: NÃO USE `prisma migrate dev` neste projeto. O usuário do MySQL da",
+    "Hostinger não tem CREATE DATABASE, e `migrate dev` precisa criar e derrubar",
+    "um 'shadow database' para calcular o diff. O caminho oficial é",
+    "`npm run db:push` seguido de `npm run db:fulltext` — a mesma decisão já",
+    "tomada no projeto cariocatech, na mesma conta de hospedagem."
+  ],
+  "//fulltext": [
+    "Cria os 4 índices FULLTEXT da busca de artigos (o Prisma não os gera a",
+    "partir do schema). É IDEMPOTENTE: pode rodar quantas vezes quiser.",
+    "Precisa rodar DEPOIS de todo `db push` que toque a tabela Article, porque o",
+    "`db push` não conhece esses índices e um `--force-reset` os leva junto.",
+    "Sem eles a busca não fica lenta: ela ERRA, porque `MATCH` sem índice",
+    "correspondente é erro de SQL, não varredura."
+  ],
+  "//migracao-de-dados": [
+    "Scripts do Bloco 3 do plano — a cópia Postgres(Neon) → MySQL. Temporários:",
+    "podem ser apagados junto com schema.source-postgres.prisma depois que a Neon",
+    "for desligada (7 dias de observação após o corte, §6.7 do plano).",
+    "",
+    "  npm run db:generate:source     gera o Prisma Client que LÊ a Neon",
+    "  npm run db:migrate-data -- --ensaio     lê tudo, não grava (mede a janela)",
+    "  npm run db:migrate-data -- --executar   copia de verdade",
+    "  npm run db:verify-migration    critério de aceite do corte (§6.5)",
+    "",
+    "Todos exigem SOURCE_DATABASE_URL apontando para a Neon. É variável SEPARADA",
+    "da DATABASE_URL de propósito: com uma só, um erro de configuração faria o",
+    "script ler e escrever no mesmo banco."
+  ],
   "scripts": {
     "generate": "prisma generate",
+    "generate:source": "prisma generate --schema prisma/schema.source-postgres.prisma",
     "push": "prisma db push",
     "migrate": "prisma migrate dev",
+    "migrate-data": "tsx scripts/migrate-data.ts",
+    "verify-migration": "tsx scripts/verify-migration.ts",
+    "fulltext": "tsx scripts/apply-fulltext-indexes.ts",
+    "rehearse-load": "tsx scripts/rehearse-load.ts",
+    "fixtures": "tsx scripts/seed-migration-fixtures.ts",
     "studio": "prisma studio",
     "seed": "tsx prisma/seed.ts",
     "staff:create": "tsx scripts/staff-account.ts",
     "typecheck": "tsc --noEmit"
   },
+  "//prisma-version-pin": [
+    "VERSÕES FIXADAS (sem `^`, sem `~`) DE PROPÓSITO — não 'atualize' isto sem",
+    "ler o parágrafo abaixo. O CLI do Prisma imprime um convite para subir para o",
+    "7 em TODO comando; ignore-o.",
+    "",
+    "O banco é MariaDB (Hostinger). O Prisma 7 gera SQL específico do MySQL 8",
+    "(`CAST(... AS json)`) que o parser do MariaDB 10.11+ REJEITA — introspecção",
+    "e consultas quebram. Ver https://github.com/prisma/prisma/issues/29023.",
+    "Este é o preço declarado da migração para MySQL, registrado na seção 1.3 do",
+    "design/plano-migracao-mysql-2026-08.md: subir o Prisma deixou de ser",
+    "manutenção de rotina e virou bloqueio de fornecedor.",
+    "",
+    "Por que EXATO e não `~6.19.0`: com til, um `npm install` numa máquina nova já",
+    "traria uma 6.19.x diferente da testada, e o Prisma Client é CÓDIGO GERADO que",
+    "entra no build. Queremos que toda máquina de desenvolvimento e o servidor",
+    "rodem exatamente o mesmo engine — o mesmo motivo pelo qual `binaryTargets`",
+    "está explícito no schema. As duas versões precisam ser IGUAIS entre si:",
+    "`prisma` (CLI, que gera) e `@prisma/client` (runtime, que consome).",
+    "",
+    "PARA DESTRAVAR: acompanhe a issue #29023. Quando fechar, suba as duas juntas,",
+    "rode `npm run db:push` + `npm run db:fulltext` contra um banco de TESTE e",
+    "confira a busca — é o ponto do projeto que mais depende do SQL gerado."
+  ],
   "dependencies": {
     "@subcarioca/core": "^0.1.0",
-    "@prisma/client": "^6.1.0"
+    "@prisma/client": "6.19.3"
   },
   "devDependencies": {
-    "prisma": "^6.1.0",
+    "prisma": "6.19.3",
     "tsx": "^4.19.2"
   }
 }

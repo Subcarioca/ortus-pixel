@@ -2,7 +2,7 @@ import 'server-only';
 
 import webpush from 'web-push';
 
-import { prisma } from '@subcarioca/db';
+import { prisma, toStringArray } from '@subcarioca/db';
 
 import { CONTACT_EMAIL } from '@/lib/site';
 
@@ -88,16 +88,68 @@ export async function sendPushNotification(notificationId: string): Promise<Send
   const score = notification.scoreAtTrigger ?? 0;
   const categorySlug = notification.article.category.slug;
 
-  // Só inscritos ATIVOS cujo limiar seja compatível com o score da notícia.
-  const subscriptions = await prisma.pushSubscription.findMany({
+  // ---------------------------------------------------------------------------
+  // SEGMENTAÇÃO — dois passos, e o segundo é em MEMÓRIA de propósito
+  // ---------------------------------------------------------------------------
+  //
+  // PASSO 1, NO BANCO: inscritos ativos cujo limiar seja compatível com o score.
+  // Esse filtro é indexado (`@@index([isActive, minScoreThreshold])`) e é o que
+  // faz o volume de linhas trazido ser pequeno.
+  //
+  // PASSO 2, EM MEMÓRIA: a regra de categoria.
+  //
+  // POR QUE MUDOU: até a migração para o MySQL, este `where` também filtrava a
+  // categoria dentro do banco, com `{ preferredCategories: { isEmpty: true } }` e
+  // `{ preferredCategories: { has: categorySlug } }`. Esses são FILTROS DE ARRAY
+  // do Prisma que existem SÓ no conector Postgres. Com `preferredCategories`
+  // virando coluna `Json` (MySQL não tem array nativo), eles deixaram de existir
+  // — não é uma questão de desempenho, o código simplesmente não compila mais.
+  //
+  // AS TRÊS SAÍDAS CONSIDERADAS, e por que esta:
+  //
+  //   (a) FILTRAR EM MEMÓRIA — escolhida. A base de push é de centenas a poucos
+  //       milhares de linhas, o disparo já roda em lotes (`BATCH_SIZE`) e
+  //       acontece FORA do caminho da requisição do leitor: ninguém está
+  //       esperando na frente de uma tela enquanto isto roda. É a mudança menor,
+  //       a mais legível, e a única que não acrescenta nada ao sistema.
+  //
+  //   (b) `JSON_CONTAINS` VIA SQL CRU — descartada. É precisa, mas NÃO USA
+  //       ÍNDICE (varredura completa da tabela), então não é sequer mais rápida
+  //       que (a) nesta escala. E acrescentaria um terceiro ponto de SQL cru a um
+  //       projeto que tem dois — cada um deles um lugar a mais onde o banco não
+  //       pode ser trocado sem reescrita.
+  //
+  //   (c) TABELA DE JUNÇÃO `PushSubscriptionCategory` — a modelagem correta e a
+  //       única que escala de verdade, porque volta a ser indexável. Descartada
+  //       POR ORA: cria tabela, migração de dados e código novo para um problema
+  //       que ainda não existe.
+  //
+  // ⚠ A RÉGUA PARA MUDAR DE IDEIA, escrita para não virar decisão de intuição:
+  // quando a base de `PushSubscription` ativa passar de ~10.000 linhas, o passo 2
+  // deixa de ser barato (estaríamos trazendo dezenas de milhares de linhas para
+  // descartar a maioria em JavaScript) e o caminho é (c), não (b).
+  const candidates = await prisma.pushSubscription.findMany({
     where: {
       isActive: true,
       minScoreThreshold: { lte: Math.round(score) },
-      // Lista de categorias vazia = quer tudo. Caso contrário, precisa conter
-      // a categoria desta notícia.
-      OR: [{ preferredCategories: { isEmpty: true } }, { preferredCategories: { has: categorySlug } }],
     },
-    select: { id: true, endpoint: true, p256dh: true, auth: true },
+    select: {
+      id: true,
+      endpoint: true,
+      p256dh: true,
+      auth: true,
+      preferredCategories: true,
+    },
+  });
+
+  const subscriptions = candidates.filter((subscription) => {
+    // `toStringArray` e não `as string[]`: a coluna é `Json`, então o banco não
+    // garante mais a forma do valor — um `null` ou um objeto ali dentro faria
+    // `.includes` estourar e derrubar a campanha inteira. Ver packages/db/src/json.ts.
+    const preferred = toStringArray(subscription.preferredCategories);
+    // Lista vazia = quer tudo. Caso contrário, precisa conter a categoria desta
+    // notícia. É exatamente a mesma regra de antes, só que avaliada aqui.
+    return preferred.length === 0 || preferred.includes(categorySlug);
   });
 
   result.recipients = subscriptions.length;

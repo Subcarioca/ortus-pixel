@@ -1,0 +1,90 @@
+-- =============================================================================
+-- ÍNDICES FULLTEXT DA BUSCA DE ARTIGOS
+-- =============================================================================
+--
+-- POR QUE ESTE ARQUIVO EXISTE, E NÃO UMA MIGRAÇÃO NORMAL DO PRISMA
+-- -----------------------------------------------------------------------------
+-- Duas razões independentes, e cada uma sozinha já bastaria:
+--
+--   1. O PRISMA NÃO CRIA ÍNDICE FULLTEXT a partir do schema nesta configuração.
+--      Existe `@@fulltext`, mas ele exige ligar o preview feature
+--      `fullTextIndex` — e preview feature em produção é dívida com data
+--      marcada. Optamos por SQL explícito.
+--
+--   2. NÃO USAMOS `prisma migrate`, e sim `prisma db push`. O usuário do MySQL
+--      da Hostinger não tem permissão para CRIAR BANCO, e `migrate dev` precisa
+--      de um "shadow database" que ele mesmo cria e derruba. É a mesma decisão
+--      já tomada no projeto cariocatech, na mesma conta de hospedagem.
+--
+-- CONSEQUÊNCIA OPERACIONAL, a parte que morde: `db push` não conhece estes
+-- índices. Ele não os cria, e num `--force-reset` ele os LEVA JUNTO sem avisar.
+-- Por isso existe o runner idempotente `scripts/apply-fulltext-indexes.ts`
+-- (`npm run db:fulltext`), que deve rodar DEPOIS de todo `db push`.
+--
+-- E o modo de falha, se alguém esquecer, não é sutil: `MATCH ... AGAINST` sem
+-- um índice FULLTEXT correspondente é ERRO DE SQL ("Can't find FULLTEXT index
+-- matching the column list"), não uma consulta lenta. A busca do site para de
+-- funcionar por inteiro. Como `searchContent` roda dentro de `safeQuery`, o
+-- sintoma visível seria "a busca nunca acha nada" — silencioso e confuso.
+--
+-- POR QUE QUATRO ÍNDICES E NÃO UM
+-- -----------------------------------------------------------------------------
+-- O MySQL exige um índice FULLTEXT para CADA LISTA DE COLUNAS usada num `MATCH`.
+-- A consulta da busca usa quatro listas diferentes, com papéis distintos:
+--
+--   * `Article_fts_all` (title, excerpt, content) — é o índice do **WHERE**.
+--     Decide QUEM entra no resultado: casou em qualquer um dos três campos.
+--
+--   * `Article_fts_title` / `_excerpt` / `_content` — são os índices do
+--     **ORDER BY**. Decidem a ORDEM, somando três `MATCH` separados com pesos
+--     5 : 2 : 1. Essa soma é a emulação do `setweight(A/B/C)` do `ts_rank` que
+--     tínhamos no Postgres: os pesos padrão do `ts_rank` são 1.0 : 0.4 : 0.2,
+--     que normalizados dão exatamente 5 : 2 : 1. É o que faz "Zelda" no TÍTULO
+--     vencer "Zelda" citado de passagem no meio de um texto sobre outra coisa.
+--
+-- CUSTO ACEITO: publicar uma matéria passa a manter quatro índices invertidos,
+-- contra um único índice GIN no Postgres. A assimetria é a certa — publica-se
+-- dezenas de matérias por dia e faz-se buscas o tempo todo.
+--
+-- LIMITAÇÕES HERDADAS DO INNODB, para quem for depurar a busca depois:
+--   * `innodb_ft_min_token_size` = 3 e NÃO é alterável em hospedagem
+--     compartilhada. Termos de 2 letras ("IA", "PS", "3D") não entram no índice
+--     e NUNCA são encontrados por aqui. Quem cobre esse buraco é o fallback
+--     `LIKE` de `searchContent`.
+--   * A lista de stopwords embutida do InnoDB é EM INGLÊS. Palavras comuns do
+--     português são indexadas normalmente (índice um pouco maior, sem prejuízo
+--     de resultado), mas "the", "and", "for" etc. são descartadas.
+--   * Não há stemming de língua nenhuma. Quem recupera parte disso é o sufixo
+--     `*` do modo booleano, aplicado em `toBooleanFtsQuery`.
+--
+-- ⚠⚠ NÃO APLIQUE ESTE ARQUIVO À MÃO. Use `npm run db:fulltext`.
+--
+-- Dois motivos, e o segundo é o que realmente machuca:
+--
+--   1. ELE NÃO É IDEMPOTENTE. O MySQL não tem `CREATE FULLTEXT INDEX IF NOT
+--      EXISTS`; rodar duas vezes dá erro 1061 (duplicate key name). Quem
+--      confere o `information_schema` antes de cada comando é o runner.
+--
+--   2. ⚠ SOZINHOS, ESTES COMANDOS DEIXAM A BUSCA QUEBRADA se a tabela `Article`
+--      já tiver linhas. Comportamento REPRODUZIDO no MariaDB 11.8.8 da
+--      Hostinger, de forma determinística: ao derrubar TODOS os índices
+--      FULLTEXT de uma tabela populada e recriá-los, o PRIMEIRO índice recriado
+--      volta VAZIO (os seguintes ficam corretos). Como o primeiro daqui é
+--      justamente `Article_fts_all` — o índice do `WHERE`, o que decide quem
+--      entra no resultado —, a busca passaria a não achar NADA, sem erro
+--      nenhum, caindo para sempre no fallback `LIKE`.
+--
+--      Esse é exatamente o fluxo normal do projeto: `db push` derruba os quatro
+--      índices, o runner os recria. Por isso o runner executa
+--      `OPTIMIZE TABLE Article` depois de criar (no InnoDB, um rebuild que
+--      repopula os índices FTS) e ainda faz uma SONDAGEM real contra os dados
+--      antes de declarar sucesso. Aplicar este .sql à mão pula as duas coisas.
+-- =============================================================================
+
+-- ÍNDICE COMBINADO: é o do WHERE. Decide QUEM entra no resultado.
+ALTER TABLE `Article` ADD FULLTEXT INDEX `Article_fts_all` (`title`, `excerpt`, `content`);
+
+-- ÍNDICES POR CAMPO: são os do ORDER BY. Decidem a ORDEM.
+ALTER TABLE `Article` ADD FULLTEXT INDEX `Article_fts_title`   (`title`);
+ALTER TABLE `Article` ADD FULLTEXT INDEX `Article_fts_excerpt` (`excerpt`);
+ALTER TABLE `Article` ADD FULLTEXT INDEX `Article_fts_content` (`content`);

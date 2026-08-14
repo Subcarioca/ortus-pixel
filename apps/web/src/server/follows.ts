@@ -267,6 +267,46 @@ export async function unfollowFranchise(franchiseSlug: string): Promise<FollowOu
  * meio do fluxo de autenticação, que é o pior lugar possível para falhar. Por
  * isso as linhas anônimas que colidem são APAGADAS (a conta já tem a sua), e só
  * as demais são adotadas.
+ *
+ * -----------------------------------------------------------------------------
+ * ⚠ CORRIDA CONHECIDA, E O QUE A MIGRAÇÃO PARA O MySQL MUDOU NELA
+ * -----------------------------------------------------------------------------
+ * REGISTRO DE ANÁLISE — nada aqui foi alterado; isto é documentação de um risco
+ * real que a auditoria de isolamento da migração de banco encontrou. Se alguém
+ * for mexer nesta função, é este o parágrafo que precisa ler antes.
+ *
+ * A corrida em si JÁ EXISTIA no Postgres: entre o `findMany` que monta
+ * `alreadyOwned` e o `updateMany` que adota as linhas, nada impede que OUTRA
+ * sessão insira um follow para o mesmo par (franquia, conta). Os dois `findMany`
+ * são leituras SEM TRAVA nos dois bancos. Se isso acontecer, o `updateMany` viola
+ * o índice único e a exceção derruba o login — o cenário que o parágrafo acima
+ * descreve. Para acontecer, é preciso que a MESMA PESSOA conclua dois logins em
+ * aparelhos diferentes com milissegundos de diferença: é raro, mas não é
+ * impossível.
+ *
+ * O QUE MUDOU: o InnoDB usa REPEATABLE READ por padrão, contra o READ COMMITTED
+ * do Postgres. Numa transação como esta, as leituras simples passam a enxergar um
+ * SNAPSHOT congelado no primeiro `SELECT`, em vez do último estado comitado. Na
+ * prática, a janela da corrida deixa de ser "entre o segundo SELECT e o UPDATE" e
+ * passa a ser "do PRIMEIRO SELECT até o UPDATE". Ela fica MAIOR, não menor:
+ *
+ *   Postgres  → um follow comitado por outra sessão entre os dois SELECTs seria
+ *               visto, a linha entraria em `duplicates` e seria apagada. Sem erro.
+ *   MariaDB   → o mesmo follow NÃO é visto (está fora do snapshot), a linha vai
+ *               para `adoptable`, e o `updateMany` estoura o índice único.
+ *
+ * POR QUE NÃO FOI CORRIGIDO AGORA: mudar isto é mudança de comportamento, e a
+ * migração de banco não é o lugar de embutir uma. A correção certa, quando for
+ * feita, é tratar a violação em vez de tentar prevê-la — envolver a adoção num
+ * `catch` de erro de unicidade (P2002) que apaga a linha anônima e segue, ou
+ * simplesmente apagar-e-recriar em vez de adotar. Prevenir por leitura nunca
+ * fecha a janela; só a estreita.
+ *
+ * SOBRE GAP LOCKS (a outra preocupação clássica do REPEATABLE READ): não se
+ * aplicam aqui. Todos os três comandos de escrita desta transação — o
+ * `deleteMany`, o `updateMany` e o `franchise.update` — filtram por CHAVE
+ * PRIMÁRIA com valores exatos, que é o caso em que o InnoDB trava apenas os
+ * registros encontrados. Não há risco novo de deadlock neste caminho.
  */
 export async function reconcileFollowsOnLogin(authorId: string): Promise<void> {
   const visitorId = await readVisitorId();

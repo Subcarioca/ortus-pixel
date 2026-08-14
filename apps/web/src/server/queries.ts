@@ -46,7 +46,7 @@ import {
   type ContentFormat,
   type ScoreBand,
 } from '@subcarioca/core';
-import { ARTICLE_INCLUDE, mapArticle, mapComment, prisma } from '@subcarioca/db';
+import { ARTICLE_INCLUDE, mapArticle, mapComment, prisma, toStringArray } from '@subcarioca/db';
 
 /**
  * `unstable_cache` serializa o valor de retorno via JSON ao gravar/ler do
@@ -205,7 +205,11 @@ type CardRow = {
   isLive: boolean;
   updatesCount: number;
   hasSpoiler: boolean;
-  tldr: string[];
+  // `unknown` e não `string[]`: desde a migração para o MySQL, `tldr` é uma
+  // coluna `Json` (MySQL não tem array nativo), e o Prisma tipa o retorno como
+  // `JsonValue` — que inclui `null`. A forma volta a ser garantida em
+  // `toCardData`, com `toStringArray`. Ver packages/db/src/json.ts.
+  tldr: unknown;
   isBreaking: boolean;
   category: { slug: string; name: string };
   subcategory: { slug: string } | null;
@@ -248,7 +252,10 @@ function toCardData(row: CardRow): ContentCardData {
     isLive: row.isLive,
     updatesCount: row.updatesCount,
     hasSpoiler: row.hasSpoiler,
-    tldr: row.tldr,
+    // Este é o ponto ÚNICO em que o `tldr` de uma listagem recupera a forma de
+    // `string[]`. Concentrar aqui é o que mantém o resto do código (cards, hero,
+    // página de artigo) sem saber que a coluna virou `Json`.
+    tldr: toStringArray(row.tldr),
     readingTimeMin: row.readingMinutes,
     publishedAt: row.publishedAt,
     coverImageUrl: row.coverImageUrl,
@@ -951,7 +958,10 @@ const articleLoader = async (slug: string) => {
       format: article.format as ContentFormat,
       isLive: article.isLive,
       hasSpoiler: article.hasSpoiler,
-      tldr: article.tldr,
+      // Coluna `Json` desde a migração para o MySQL: normalizamos AQUI, no
+      // servidor, para que a página do artigo continue recebendo `string[]` e
+      // possa fazer `.length` e `.map` sem checagem defensiva na view.
+      tldr: toStringArray(article.tldr),
       reviewData: article.reviewData,
       scoreDelta1h: article.scoreDelta1h,
     };
@@ -1142,6 +1152,120 @@ export function normalizeSearchTerm(input: unknown): string | null {
 }
 
 /**
+ * Teto de termos por busca. Cada token vira TRÊS `MATCH ... AGAINST` na consulta
+ * (um por campo do `ORDER BY`), então o custo cresce em múltiplos do que o
+ * visitante digitar. Sem teto, `SEARCH_MAX_LENGTH` (80 caracteres) permitiria
+ * uns 20 tokens = 60 avaliações de full-text por requisição, de graça, por
+ * qualquer um. Seis cobre com folga qualquer busca humana real.
+ */
+const MAX_SEARCH_TOKENS = 6;
+
+/**
+ * ⚠ DECISÃO DE PRODUTO PENDENTE DE CONFIRMAÇÃO DO DONO DO SITE — leia antes de
+ * mexer, e não troque este valor sem registrar a decisão.
+ *
+ * Define se uma busca de duas palavras exige TODAS elas ou qualquer uma.
+ *
+ *   `true`  → "zelda breath" vira `+zelda* +breath*`: exige as DUAS (E lógico).
+ *   `false` → "zelda breath" vira `zelda* breath*`: basta UMA (OU lógico), que
+ *             é o padrão do modo booleano do MySQL.
+ *
+ * ESTÁ EM `true` PORQUE ISSO PRESERVA O COMPORTAMENTO ATUAL DO SITE. No
+ * Postgres, `websearch_to_tsquery('portuguese', 'zelda breath')` produz
+ * `zelda & breath` — ou seja, a busca de hoje já é E. A primeira versão desta
+ * migração usou o padrão do MySQL e teria trocado E por OU **em silêncio**, que
+ * é exatamente o tipo de mudança que o objetivo declarado da migração ("não se
+ * distanciar do que existe") manda evitar.
+ *
+ * O CUSTO DE MANTER `true`, dito com honestidade: com E, buscas de duas ou mais
+ * palavras devolvem vazio com mais frequência num acervo pequeno — e o fallback
+ * `LIKE` não socorre, porque ele procura a frase inteira literalmente. Se a
+ * redação achar que a busca ficou "seca demais", trocar para `false` é uma
+ * linha. O que não se deve fazer é trocar sem decidir.
+ */
+const SEARCH_REQUIRES_ALL_TERMS = true;
+
+/**
+ * Converte o termo humano em expressão do modo BOOLEANO do MySQL/MariaDB.
+ *
+ * POR QUE ESTA FUNÇÃO EXISTE — é o substituto direto do `websearch_to_tsquery`.
+ * O motivo é o mesmo que estava documentado na versão Postgres: no modo
+ * booleano, `+ - > < ( ) ~ * " @` são OPERADORES. Um `@` digitado por engano
+ * vira erro de sintaxe, e um erro de sintaxe numa busca vira 500 para o leitor.
+ * Removemos os operadores para que qualquer coisa que um humano digite continue
+ * sendo uma busca válida — exatamente a garantia que tínhamos antes.
+ *
+ * ATENÇÃO: isto NÃO é proteção contra injeção de SQL. Essa proteção continua
+ * sendo a parametrização do `$queryRaw` (o valor vai como parâmetro ligado,
+ * jamais concatenado). Confundir as duas coisas levaria alguém a "otimizar"
+ * removendo a parametrização por achar que a sanitização já basta.
+ *
+ * O sufixo `*` é o que recupera parte do stemming que o Postgres nos dava de
+ * graça: "jogo*" casa jogo, jogos, jogador. Não é equivalente a radicalização
+ * (não liga "correu" a "correr"), e só funciona na direção do PREFIXO — quem
+ * busca "jogos" continua não achando "jogo". Cobre, ainda assim, o caso
+ * dominante do português, que é plural e sufixo de derivação.
+ *
+ * OS TRÊS FILTROS APLICADOS A CADA TOKEN, e por que cada um existe:
+ *
+ *   1. `length >= 3` — o índice do InnoDB não contém tokens menores
+ *      (`innodb_ft_min_token_size` = 3, imutável em hospedagem compartilhada;
+ *      confirmado no servidor). Mantê-los não acharia nada e, com o E lógico,
+ *      zeraria a busca inteira. O fallback `LIKE` é quem cobre esse caso.
+ *
+ *   2. TEM QUE CONTER LETRA OU DÍGITO — um token só de pontuação ("...", "###")
+ *      não casa com nada no índice, porque o tokenizador do InnoDB quebra
+ *      justamente na pontuação. Com o E lógico isso é pior do que inútil: um
+ *      `+###*` impossível de satisfazer zeraria uma busca que de outro modo
+ *      funcionaria. `\p{L}` e `\p{N}` (com a flag `u`) e não `[a-z0-9]`, senão
+ *      "ação" e "coração" seriam tratados como pontuação.
+ *
+ *   3. NO MÁXIMO `MAX_SEARCH_TOKENS` — teto de custo, ver a constante.
+ */
+export function toBooleanFtsQuery(term: string): string | null {
+  const tokens = term
+    .replace(/[+\-><()~*"@]/g, ' ') // operadores do modo booleano
+    .split(/\s+/)
+    .filter((t) => t.length >= 3 && /[\p{L}\p{N}]/u.test(t))
+    .slice(0, MAX_SEARCH_TOKENS);
+
+  if (tokens.length === 0) return null; // sinaliza "vá direto para o fallback"
+
+  const prefixo = SEARCH_REQUIRES_ALL_TERMS ? '+' : '';
+  return tokens.map((t) => `${prefixo}${t}*`).join(' ');
+}
+
+/**
+ * Escapa os curingas de `LIKE` (`%` e `_`) e a própria barra de escape.
+ *
+ * POR QUE ISTO É NECESSÁRIO — o Prisma NÃO escapa curingas em `contains`. Ele
+ * parametriza o valor (o que impede injeção de SQL, e essa parte está correta),
+ * mas o valor parametrizado ainda é interpretado como PADRÃO de `LIKE`. Logo,
+ * um `%` digitado pelo visitante deixa de ser a letra "por cento" e vira "case
+ * qualquer coisa".
+ *
+ * O problema não é vazamento de dado — o `where` já restringe a `published` e as
+ * colunas selecionadas são as mesmas. O problema é CUSTO: um termo como
+ * `%a%a%a%a%a%` vira um padrão com múltiplos curingas que o MySQL avalia com
+ * retrocesso, sobre a tabela inteira, sem usar índice nenhum. É barato de
+ * enviar, caro de responder e repetível à vontade — o formato clássico de
+ * negação de serviço por consulta.
+ *
+ * A ordem do `replace` importa: a barra invertida vem PRIMEIRO na classe de
+ * caracteres, senão escaparíamos `%` para `\%` e, na sequência, a barra recém
+ * criada de novo, produzindo `\\%` — que casa uma barra literal seguida de
+ * curinga, exatamente o que queríamos evitar. Uma passada só, com os três
+ * caracteres na mesma classe, não tem esse problema.
+ *
+ * `\` funciona como escape porque é o caractere de escape padrão do `LIKE` no
+ * MySQL/MariaDB. Como o termo viaja parametrizado, ele não é reinterpretado
+ * como escape de string no caminho — só o `LIKE` o enxerga.
+ */
+function escapeLikePattern(term: string): string {
+  return term.replace(/[\\%_]/g, '\\$&');
+}
+
+/**
  * Busca artigos, franquias e editorias.
  *
  * -----------------------------------------------------------------------------
@@ -1156,57 +1280,194 @@ export function normalizeSearchTerm(input: unknown): string | null {
  * -----------------------------------------------------------------------------
  * DOIS MOTORES, DE PROPÓSITO
  * -----------------------------------------------------------------------------
- * ARTIGO usa FULL-TEXT (`tsvector` + GIN, ver a migração
- * 20260809120000_follows_by_reader_and_article_search): o corpo é grande, o
- * acervo cresce todo dia e o leitor espera que "jogos" encontre "jogo".
+ * ARTIGO usa FULL-TEXT (`FULLTEXT` do InnoDB — os quatro índices são criados por
+ * `npm run db:fulltext`, ver packages/db/prisma/migrations-manual/): o corpo é
+ * grande e o acervo cresce todo dia, então varredura com `LIKE` não serve.
  *
- * FRANQUIA e EDITORIA usam `ILIKE`: são dezenas de linhas, com um nome curto
- * cada. Montar `tsvector` para isso seria infraestrutura para um problema que
- * não existe — e `ILIKE '%termo%'` ainda casa PEDAÇO de palavra ("zel" acha
- * "Zelda"), que é justamente o comportamento desejado num campo que funciona
- * como atalho de navegação.
+ * FRANQUIA e EDITORIA usam `contains` (`LIKE '%termo%'`): são dezenas de linhas,
+ * com um nome curto cada. Montar índice de texto para isso seria infraestrutura
+ * para um problema que não existe — e `LIKE '%termo%'` ainda casa PEDAÇO de
+ * palavra ("zel" acha "Zelda"), que é justamente o comportamento desejado num
+ * campo que funciona como atalho de navegação.
+ *
+ * -----------------------------------------------------------------------------
+ * O QUE MUDOU NA SAÍDA DO POSTGRES, e o que foi feito a respeito
+ * -----------------------------------------------------------------------------
+ * Antes: `tsvector` com dicionário de português, `setweight(A/B/C)`, `ts_rank` e
+ * índice GIN. O MariaDB não tem nada disso. As três perdas e as respostas:
+ *
+ *   1. STEMMING. O Postgres ligava "jogos" a "jogo" pelo radical. O MariaDB não
+ *      radicaliza em língua nenhuma. Resposta: modo BOOLEANO com sufixo `*`
+ *      (`jogo*`), que recupera o caso dominante — plural e derivação por sufixo.
+ *      NÃO é equivalente, e a diferença é assimétrica: "jogo" acha "jogos", mas
+ *      "jogos" não acha "jogo". É uma regressão aceita conscientemente.
+ *
+ *   2. PESO POR CAMPO. Sem `setweight`, o peso é emulado somando três `MATCH`
+ *      separados na proporção 5 : 2 : 1 — os pesos padrão do `ts_rank`
+ *      (1.0 : 0.4 : 0.2) normalizados. Preserva a intenção original: "Zelda" no
+ *      TÍTULO vence "Zelda" citado de passagem no meio de um texto sobre outra
+ *      coisa. Como as pontuações de `MATCH` não são normalizadas, esses pesos
+ *      são calibráveis — se título passar a perder para corpo, mexa AQUI.
+ *
+ *   3. TERMOS DE 2 LETRAS. "IA", "PS", "3D" não entram no índice do InnoDB
+ *      (`innodb_ft_min_token_size` = 3, imutável em hospedagem compartilhada).
+ *      Resposta: o fallback `LIKE` mais abaixo. Para um portal que cobre IA,
+ *      isso não é detalhe.
+ *
+ * E UM GANHO REAL: "lancamento" passa a achar "lançamento" — uma limitação que o
+ * Postgres tinha e que era documentada como conhecida e aceita. Quem dá isso é a
+ * collation, `utf8mb4_unicode_ci`, conferida coluna a coluna em
+ * `information_schema.COLUMNS` (o plano supunha `utf8mb4_uca1400_ai_ci`, que não
+ * é a que está no servidor) e validada por comportamento: `'lancamento' =
+ * 'lançamento'` e `'Zelda' = 'zelda'` são ambos verdadeiros.
+ * É também por isso que não existe mais `mode: 'insensitive'` nas duas consultas
+ * abaixo: além de a opção não existir no conector MySQL, ela ficou redundante.
+ * ⚠ Essas duas propriedades vêm da COLLATION, não deste código. Trocar a
+ * collation do banco para uma `_as_` quebraria a busca por acento sem alterar
+ * uma linha daqui.
  *
  * SEGURANÇA (A03 — Injeção): o termo entra por `$queryRaw` TEMPLATE TAG, que o
- * Prisma envia como parâmetro ligado ($1), nunca por concatenação. E o parser
- * escolhido é `websearch_to_tsquery`, não `to_tsquery`: o primeiro aceita
- * qualquer texto humano (inclusive aspas soltas, `&`, `!`) sem lançar exceção,
- * enquanto o segundo estoura erro de sintaxe e transformaria um caractere
- * digitado por engano em erro 500.
+ * Prisma envia como parâmetro ligado (`?`), nunca por concatenação — inclusive
+ * as quatro ocorrências no `ORDER BY`. O `toBooleanFtsQuery` que roda antes NÃO
+ * é a defesa contra injeção (ver o comentário dele): é a defesa contra ERRO DE
+ * SINTAXE do parser de full-text, exatamente o papel que o `websearch_to_tsquery`
+ * cumpria no Postgres.
  */
 export async function searchContent(rawTerm: unknown): Promise<SearchResults | null> {
   const term = normalizeSearchTerm(rawTerm);
   if (!term) return null;
 
-  // `safeQuery` (e não `requiredQuery`): busca é LISTAGEM. Se o banco falhar, a
-  // página responde "nada encontrado" e o site continua de pé — devolver 500
-  // numa busca é pior para o leitor do que devolver vazio.
-  const [articleHits, franchises, categories] = await safeQuery(
-    'search:all',
+  // `null` aqui significa "sobrou nenhum token utilizável" (ex.: o leitor digitou
+  // "IA", ou só pontuação). Nesse caso nem chamamos o full-text: ele devolveria
+  // vazio de qualquer forma, e a consulta seria puro desperdício. Vamos direto ao
+  // fallback, que é justamente quem cobre esse caso.
+  const ftsQuery = toBooleanFtsQuery(term);
+
+  // O termo escapado, para todo `contains` desta função. Ver `escapeLikePattern`:
+  // sem isto, um `%` digitado pelo visitante é interpretado como CURINGA, não
+  // como o caractere "por cento".
+  const termoLike = escapeLikePattern(term);
+
+  // ---------------------------------------------------------------------------
+  // ETAPA 1a — FULL-TEXT, com tratamento de erro PRÓPRIO
+  // ---------------------------------------------------------------------------
+  //
+  // POR QUE ESTA CONSULTA NÃO ESTÁ NO `safeQuery` DAS OUTRAS DUAS: porque
+  // "o full-text não achou nada" e "o full-text QUEBROU" são coisas diferentes, e
+  // colapsá-las num `safeQuery` genérico faz o segundo caso virar o primeiro —
+  // silenciosamente.
+  //
+  // O cenário concreto: alguém roda `prisma db push` e esquece o
+  // `npm run db:fulltext`. Os índices somem (o `db push` os derruba, ele não os
+  // conhece). A partir daí, TODA busca do site vira um erro de SQL, que o
+  // `safeQuery` engole e converte em lista vazia, que dispara o fallback `LIKE`
+  // em TODA busca. O site não quebra — ele só fica pior, mais lento e mais caro,
+  // por tempo indeterminado, sem ninguém receber sinal nenhum. Um índice de busca
+  // desaparecido tem que gritar.
+  let ftsHits: { id: string }[] = [];
+  let ftsFalhou = false;
+
+  if (ftsQuery !== null) {
+    try {
+      ftsHits = await prisma.$queryRaw<{ id: string }[]>`
+        SELECT a.id
+        FROM \`Article\` a
+        WHERE a.\`status\` = 'published'
+          AND MATCH(a.\`title\`, a.\`excerpt\`, a.\`content\`)
+              AGAINST (${ftsQuery} IN BOOLEAN MODE)
+        ORDER BY
+          ( 5.0 * MATCH(a.\`title\`)   AGAINST (${ftsQuery} IN BOOLEAN MODE)
+          + 2.0 * MATCH(a.\`excerpt\`) AGAINST (${ftsQuery} IN BOOLEAN MODE)
+          + 1.0 * MATCH(a.\`content\`) AGAINST (${ftsQuery} IN BOOLEAN MODE)
+          ) DESC,
+          a.\`publishedAt\` DESC
+        LIMIT 24
+      `;
+    } catch (error) {
+      ftsFalhou = true;
+
+      // O MySQL responde 1191 (`ER_FT_MATCHING_KEY_NOT_FOUND`) quando não existe
+      // índice FULLTEXT para a lista de colunas do `MATCH`. É o sintoma exato do
+      // `db:fulltext` esquecido, e é ACIONÁVEL — por isso tem mensagem própria,
+      // dizendo o comando que resolve, em vez de um "erro na busca" genérico que
+      // mandaria alguém depurar SQL.
+      const mensagem = error instanceof Error ? error.message : String(error);
+      const indiceAusente = mensagem.includes('1191') || /fulltext/i.test(mensagem);
+
+      if (indiceAusente) {
+        console.error(
+          '[busca] CRÍTICO: índice FULLTEXT ausente na tabela Article. ' +
+            'A busca do site está degradada para o fallback LIKE em TODAS as ' +
+            'consultas. Rode `npm run db:fulltext` para restaurar.',
+          mensagem,
+        );
+      } else {
+        console.error('[busca] falha no full-text; caindo para o fallback LIKE.', mensagem);
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // ETAPA 1b — atalhos de navegação (franquia e editoria)
+  // ---------------------------------------------------------------------------
+  // Estes continuam no `safeQuery` de sempre: são listagens auxiliares, e falhar
+  // nelas é motivo legítimo para simplesmente não mostrar os chips.
+  const [franchises, categories] = await safeQuery(
+    'search:shortcuts',
     () =>
       Promise.all([
-        prisma.$queryRaw<{ id: string }[]>`
-          SELECT a."id"
-          FROM "Article" a, websearch_to_tsquery('portuguese', ${term}) AS q
-          WHERE a."status" = 'published'
-            AND a."searchVector" @@ q
-          ORDER BY ts_rank(a."searchVector", q) DESC, a."publishedAt" DESC NULLS LAST
-          LIMIT 24
-        `,
         prisma.franchise.findMany({
-          where: { name: { contains: term, mode: 'insensitive' } },
+          where: { name: { contains: termoLike } },
           select: { slug: true, name: true, logoUrl: true },
           orderBy: { followerCount: 'desc' },
           take: 6,
         }),
         prisma.category.findMany({
-          where: { name: { contains: term, mode: 'insensitive' } },
+          where: { name: { contains: termoLike } },
           select: { slug: true, name: true, description: true },
           orderBy: { monitoringPriority: 'asc' },
           take: 4,
         }),
       ]),
-    [[], [], []] as [{ id: string }[], SearchResults['franchises'], SearchResults['categories']],
+    [[], []] as [SearchResults['franchises'], SearchResults['categories']],
   );
+
+  // ---------------------------------------------------------------------------
+  // ETAPA 1c — REDE DE SEGURANÇA (`LIKE`)
+  // ---------------------------------------------------------------------------
+  // Roda SÓ quando o full-text não trouxe nada — custo zero no caminho feliz.
+  // Cobre os dois buracos conhecidos do FULLTEXT do InnoDB:
+  //   1. termos com menos de 3 caracteres ("IA", "PS"), que não estão no índice;
+  //   2. buscas por pedaço de palavra no MEIO ("elda" achando "Zelda"), que o
+  //      prefixo `termo*` não alcança.
+  // E, agora explicitamente, o terceiro caso: o full-text ter FALHADO. Aí ele é
+  // resposta de emergência, não complemento — e o log da etapa 1a já registrou.
+  //
+  // Só título e resumo: varrer `content` (MEDIUMTEXT) sem índice é justamente o
+  // que não pode. A ordem é só por data — `LIKE` não produz relevância nenhuma,
+  // e fingir que produz seria pior do que assumir que não há.
+  //
+  // ⚠ `termoLike`, e nunca `term` cru: é `%` e `_` escapados. Esta é a consulta
+  // mais cara da função e a única sem índice — é exatamente onde um curinga
+  // injetado pelo visitante faria mais estrago. Ver `escapeLikePattern`.
+  const precisaDeFallback = ftsHits.length === 0;
+
+  const articleHits = precisaDeFallback
+    ? await safeQuery(
+        ftsFalhou ? 'search:articles-fallback-apos-falha' : 'search:articles-fallback',
+        () =>
+          prisma.article.findMany({
+            where: {
+              status: 'published',
+              OR: [{ title: { contains: termoLike } }, { excerpt: { contains: termoLike } }],
+            },
+            select: { id: true },
+            orderBy: { publishedAt: 'desc' },
+            take: 24,
+          }),
+        [] as { id: string }[],
+      )
+    : ftsHits;
 
   // Segunda etapa: os cards vêm do `CARD_SELECT` de sempre.
   //

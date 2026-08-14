@@ -49,6 +49,11 @@ import {
 } from '@subcarioca/core';
 import type { Prisma } from '@prisma/client';
 
+// Sem extensão, como o resto de `src/` (ver `client`/`json` em index.ts): os
+// pacotes são consumidos como TypeScript-fonte pelo bundler do Next, e um
+// `./json.js` não resolve no webpack — o `tsc --noEmit` aceita, o build quebra.
+import { toStringArray } from './json';
+
 /**
  * Conjunto padrão de relações necessárias para montar um `Article` de domínio.
  *
@@ -159,7 +164,10 @@ export function mapAuthor(row: {
   avatarUrl: string | null;
   role: string;
   socialLinks: unknown;
-  expertiseAreas: string[];
+  // `unknown` e não `string[]`: a coluna é `Json` desde a migração para o MySQL,
+  // e o Prisma tipa o retorno como `JsonValue` (que inclui `null`). Ver
+  // `toStringArray` em ../json.ts.
+  expertiseAreas: unknown;
 }): Author {
   return {
     id: row.id,
@@ -172,7 +180,11 @@ export function mapAuthor(row: {
     // antes de confiar: um Json malformado não pode quebrar a renderização do
     // schema.org na página.
     socialLinks: parseSocialLinks(row.socialLinks),
-    expertiseAreas: row.expertiseAreas.filter(isCategorySlug),
+    // Dois filtros encadeados, com responsabilidades distintas:
+    // `toStringArray` garante a FORMA (é uma lista de strings?) e `isCategorySlug`
+    // garante o DOMÍNIO (essas strings são editorias que existem?). A primeira
+    // garantia era do banco antes da migração; a segunda sempre foi daqui.
+    expertiseAreas: toStringArray(row.expertiseAreas).filter(isCategorySlug),
   };
 }
 
@@ -191,7 +203,8 @@ export function mapFranchise(row: {
   id: string;
   slug: string;
   name: string;
-  aliases: string[];
+  // `unknown`: coluna `Json` desde a migração para o MySQL. Ver `toStringArray`.
+  aliases: unknown;
   description: string;
   heroImageUrl: string | null;
   audienceAffinityIndex: number;
@@ -203,7 +216,7 @@ export function mapFranchise(row: {
     id: row.id,
     slug: row.slug,
     name: row.name,
-    aliases: row.aliases,
+    aliases: toStringArray(row.aliases),
     description: row.description,
     primaryCategorySlug: isCategorySlug(categorySlug) ? categorySlug : 'games',
     heroImageUrl: row.heroImageUrl,

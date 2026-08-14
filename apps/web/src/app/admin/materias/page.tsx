@@ -20,7 +20,7 @@
  */
 
 import { CATEGORIES, can, routes } from '@subcarioca/core';
-import { prisma } from '@subcarioca/db';
+import { prisma, toStringArray } from '@subcarioca/db';
 
 import { AdminLogin } from '@/components/admin/admin-login';
 import { AdminNav } from '@/components/admin/admin-nav';
@@ -106,7 +106,12 @@ export default async function AdminArticlesPage() {
     authorId: article.authorId,
     authorName: article.author.name,
     format: article.format,
-    tldr: article.tldr,
+    // `tldr` é coluna `Json` desde a migração para o MySQL. Ao contrário de
+    // `blocks` (logo abaixo), que atravessa a fronteira cru e é normalizado no
+    // editor, aqui normalizamos no SERVIDOR: o formulário de edição inicializa
+    // seu estado com `article.tldr.length > 0 ? ... : ['', '', '']`, ou seja,
+    // já espera um array de verdade. Um `null` vindo do banco quebraria a tela.
+    tldr: toStringArray(article.tldr),
     coverImageUrl: article.coverImageUrl,
     coverImageAlt: article.coverImageAlt,
     isBreaking: article.isBreaking,

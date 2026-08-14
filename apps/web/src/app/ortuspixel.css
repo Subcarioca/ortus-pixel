@@ -2236,3 +2236,150 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
   .article-toc-rail > .toc a { line-height: 1.3; display: block; }
   .article-toc-rail > .toc .toc__sub { margin-left: var(--s-2); }
 }
+
+/* ==========================================================================
+   ==========================================================================
+   20. REVISÃO DE RISCO EDITORIAL (/admin) — ferramenta interna, sem protótipo
+   ==========================================================================
+   ==========================================================================
+
+   O painel que aparece quando o verificador de palavras-chave encontra trecho
+   com risco jurídico ou reputacional antes de publicar (ver
+   `components/admin/editorial-risk-panel.tsx`).
+
+   POR QUE ELE PODE USAR VERMELHO E ÂMBAR: a proibição do §7 do design — cor
+   quente reservada à TEMPERATURA da notícia — existe para proteger a leitura de
+   quem visita o site. Esta tela não tem visitante: é ferramenta de redação, e
+   aqui o vermelho tem o significado universal de "pare e leia". Mesmo argumento
+   já usado em `.tier--unverified` e `.price-age--stale`.
+
+   Nenhum token novo: tudo sai das custom properties da seção 1.
+   ========================================================================== */
+
+.risk-panel {
+  display: grid;
+  gap: var(--s-3);
+  padding: var(--s-4);
+  border: 1px solid var(--heat-rise);
+  border-radius: var(--r-md);
+  background: var(--heat-rise-soft);
+}
+
+/* O modo que INTERROMPEU a publicação tem contorno mais forte que o modo de
+   aviso passivo: são dois estados com urgências diferentes, e a tela precisa
+   distinguir os dois antes de a pessoa ler qualquer palavra. */
+.risk-panel--decisao {
+  border-width: 2px;
+  border-color: var(--heat-hot);
+  background: var(--heat-hot-soft);
+}
+
+.risk-panel__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.risk-panel__count {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xxs);
+  color: var(--ink-2);
+}
+
+.risk-panel__lead { margin: 0; font-size: var(--fs-sm); color: var(--ink-2); }
+
+.risk-list { display: grid; gap: var(--s-3); margin: 0; padding: 0; list-style: none; }
+
+/* Cada achado é um cartão sobre a superfície normal: o fundo colorido é do
+   painel, não do item — senão o texto do trecho ficaria ilegível sobre cor. */
+.risk-item {
+  display: grid;
+  gap: 6px;
+  padding: var(--s-3);
+  border-radius: var(--r-sm);
+  border-left: 3px solid var(--heat-rise);
+  background: var(--surface-1);
+}
+.risk-item--alto { border-left-color: var(--heat-hot); }
+
+.risk-item__head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: var(--fs-xxs);
+}
+
+/* A etiqueta de gravidade NUNCA é só cor: ela carrega a palavra ("Alto risco",
+   "Atenção"). Cor sozinha não chega a quem não a enxerga — e é a mesma regra já
+   aplicada em `.form-hint--error`. */
+.risk-item__badge {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--heat-rise);
+  color: var(--heat-rise-text);
+}
+.risk-item--alto .risk-item__badge {
+  border-color: var(--heat-hot-line);
+  color: var(--heat-hot-text);
+}
+
+.risk-item__cat { font-weight: 700; color: var(--ink); }
+.risk-item__field { color: var(--ink-3); }
+
+/* O TRECHO SINALIZADO. Mono e com fundo próprio para deixar claro que é uma
+   citação do texto da matéria, e não mais uma frase do painel falando sobre
+   ele — a confusão entre as duas coisas é o que faria a pessoa procurar no
+   lugar errado. */
+.risk-item__quote {
+  margin: 0;
+  padding: var(--s-2);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  line-height: 1.6;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+.risk-item__quote mark {
+  background: var(--heat-hot);
+  color: var(--heat-hot-ink);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+
+.risk-item__reason { margin: 0; font-size: var(--fs-sm); color: var(--ink-2); }
+.risk-item__fix { margin: 0; font-size: var(--fs-sm); color: var(--heat-ever-text); }
+
+.risk-panel__disclaimer {
+  margin: 0;
+  font-size: var(--fs-xxs);
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+
+.risk-panel__foot { display: grid; gap: var(--s-3); }
+.risk-panel__reason { display: grid; gap: 4px; font-size: var(--fs-xs); color: var(--ink-2); }
+.risk-panel__reason textarea {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+  background: var(--surface-1);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: var(--s-2);
+  font: inherit;
+  font-size: var(--fs-sm);
+}

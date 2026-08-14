@@ -34,6 +34,7 @@ import { AdminLogin } from '@/components/admin/admin-login';
 import { AdminNav } from '@/components/admin/admin-nav';
 import { TopicCreateForm } from '@/components/admin/topic-create-form';
 import { TopicRow } from '@/components/admin/topic-row';
+import { isAiDraftConfigured } from '@/server/ai-draft';
 import { getHotPublishRateSafe } from '@/server/admin-metrics';
 import { requireStaffPage } from '@/server/staff-auth';
 
@@ -93,6 +94,17 @@ export default async function AdminPage() {
 
   const categoryOptions = CATEGORIES.map((c) => ({ slug: c.slug, name: c.name }));
   const podeAfrouxarConteudo = can(user.accessLevel, 'reduzirRestricaoDeConteudo');
+
+  /**
+   * A SUGESTÃO POR IA ESTÁ LIGADA NESTE SERVIDOR?
+   *
+   * A pergunta é respondida UMA vez, aqui, e desce como prop — em vez de cada
+   * linha da fila consultar o ambiente. Não é economia: componente de cliente
+   * não lê `process.env` do servidor, e fazer a leitura na página é o que mantém
+   * a chave inteiramente do lado de cá (o que atravessa a fronteira é um
+   * booleano, nunca o valor).
+   */
+  const aiEnabled = isAiDraftConfigured();
 
   const hotTopics = topics.filter((t) => t.currentBand === 'HOT');
 
@@ -184,6 +196,19 @@ export default async function AdminPage() {
           <TopicCreateForm categories={categoryOptions} franchises={franchises} />
         )}
 
+        {/* GERAÇÃO DESLIGADA: o aviso aparece UMA vez, e só para quem pode
+            resolver. Um botão desabilitado repetido em cinquenta linhas seria
+            ruído para o redator — que não tem acesso ao ambiente do servidor e
+            só ficaria olhando para uma ferramenta que não pode usar.
+            `gerenciarContas` é a capacidade de quem administra a instalação. */}
+        {!aiEnabled && can(user.accessLevel, 'gerenciarContas') && (
+          <p className="form-hint">
+            Sugestão de matéria por IA desligada: falta a variável{' '}
+            <code>ANTHROPIC_API_KEY</code> no ambiente do servidor. A fila funciona
+            normalmente sem ela — só o botão “Gerar sugestão com IA” não aparece.
+          </p>
+        )}
+
         {topics.length === 0 ? (
           <p className="empty-state">
             Nenhum tópico na fila. O pipeline ainda não rodou ou nada foi descoberto.
@@ -199,6 +224,7 @@ export default async function AdminPage() {
                 franchises={franchises}
                 canCurate={podeCurar}
                 canLowerSensitivity={podeAfrouxarConteudo}
+                aiEnabled={aiEnabled}
                 topic={{
                   origin: toTopicOrigin(topic.origin),
                   id: topic.id,

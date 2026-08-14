@@ -24,12 +24,23 @@
  * precisam da largura toda.
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import { toContentSensitivity, type ArticleBlock, type ContentSensitivity } from '@subcarioca/core';
+import {
+  toContentSensitivity,
+  type ArticleBlock,
+  type ContentSensitivity,
+  type EditorialRiskFinding,
+} from '@subcarioca/core';
 
 import { readAdminResponse } from './admin-response';
+import {
+  EditorialRiskPanel,
+  readEditorialRiskHint,
+  readEditorialRiskReview,
+  type EditorialRiskReview,
+} from './editorial-risk-panel';
 import {
   ArticleClassificationFields,
   type ArticleClassification,
@@ -83,6 +94,22 @@ export function ArticleEditForm({
   const router = useRouter();
   const [busy, setBusy] = useState<'draft' | 'publish' | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  /**
+   * REVISÃO DE RISCO EDITORIAL (ver `editorial-risk-panel.tsx`).
+   *
+   * `riskReview` só existe quando o servidor INTERROMPEU a publicação e devolveu
+   * os trechos. `riskHint` é o caso passivo: o rascunho foi salvo e os avisos
+   * vieram junto, sem barrar nada.
+   *
+   * Guardar o formulário num `ref` é o que permite reenviar depois — a segunda
+   * tentativa (com o reconhecimento) nasce de um clique no painel, e não do
+   * evento de submit, então não há `event.currentTarget` para aproveitar.
+   */
+  const formRef = useRef<HTMLFormElement>(null);
+  const [riskReview, setRiskReview] = useState<EditorialRiskReview | null>(null);
+  const [riskHint, setRiskHint] = useState<EditorialRiskFinding[]>([]);
+  const [riskReason, setRiskReason] = useState('');
   const [format, setFormat] = useState(article.format);
   const [categorySlug, setCategorySlug] = useState(article.categorySlug);
   const [coverImageUrl, setCoverImageUrl] = useState(article.coverImageUrl ?? '');
@@ -115,12 +142,31 @@ export function ArticleEditForm({
     setTldr((prev) => prev.map((item, i) => (i === index ? value : item)));
   }
 
-  async function submit(formEl: HTMLFormElement, publish: boolean) {
+  /**
+   * @param acknowledgeRisk só vem `true` no clique de "Publicar mesmo assim",
+   * DEPOIS de o painel ter mostrado os trechos. Mandá-lo sempre faria o aviso
+   * nunca aparecer — e a trilha de auditoria diria que todo mundo reconheceu
+   * tudo, que é o mesmo que não registrar nada.
+   */
+  async function submit(formEl: HTMLFormElement, publish: boolean, acknowledgeRisk = false) {
     if (busy) return;
 
     const form = new FormData(formEl);
     setBusy(publish ? 'publish' : 'draft');
     setMessage(null);
+    /**
+     * Achados velhos saem da tela ao reenviar: eles falam de um texto que pode
+     * já ter sido corrigido, e aviso desatualizado é pior do que nenhum.
+     *
+     * EXCETO quando o reenvio É o reconhecimento — aí o painel precisa continuar
+     * de pé, porque é dele que saiu o clique e é nele que está o "Publicando…".
+     * Limpar aqui faria a tela ficar muda no único instante em que a pessoa está
+     * esperando uma resposta.
+     */
+    if (!acknowledgeRisk) {
+      setRiskReview(null);
+      setRiskHint([]);
+    }
 
     try {
       const response = await fetch(`/api/admin/articles/${article.id}`, {
@@ -148,16 +194,44 @@ export function ArticleEditForm({
           tags: classification.tags,
           contentSensitivity: classification.contentSensitivity,
           publish,
+          acknowledgeEditorialRisk: acknowledgeRisk,
+          editorialRiskReason: acknowledgeRisk ? riskReason : undefined,
         }),
       });
 
       const data = await readAdminResponse(response);
       setMessage(data.message);
 
+      /**
+       * A publicação parou para revisão. NÃO é erro: o formulário continua
+       * aberto, com o texto intacto, e o painel assume a conversa.
+       */
+      const review = readEditorialRiskReview(data);
+      if (review) {
+        setRiskReview(review);
+        return;
+      }
+
       // Fecha só no sucesso: se a matéria foi apagada em outra aba, ou a sessão
       // caiu, o texto editado continua na tela para ser copiado ou reenviado.
       if (data.ok) {
         router.refresh();
+
+        /**
+         * RASCUNHO SALVO COM TRECHO SINALIZADO: o formulário NÃO fecha.
+         *
+         * O trabalho já está gravado (o `refresh` acima é prova disso), então
+         * nada se perde — o que se ganha é a pessoa ler o aviso enquanto ainda
+         * está com o texto na frente, em vez de ser surpreendida na hora de
+         * publicar, com a pauta esfriando. Sem achado nenhum, o comportamento é
+         * o de sempre: salvou, fechou.
+         */
+        const hints = readEditorialRiskHint(data);
+        if (!publish && hints.length > 0) {
+          setRiskHint(hints);
+          return;
+        }
+
         onDone();
       }
     } catch {
@@ -169,6 +243,7 @@ export function ArticleEditForm({
 
   return (
     <form
+      ref={formRef}
       className="admin-form admin-form--cols"
       onSubmit={(event) => {
         event.preventDefault();
@@ -328,6 +403,36 @@ export function ArticleEditForm({
         <input type="checkbox" name="hasSpoiler" defaultChecked={article.hasSpoiler} />
         Contém spoiler
       </label>
+
+      {/*
+        O PAINEL FICA JUNTO DOS BOTÕES, e não no topo do formulário.
+
+        É onde os olhos já estão no momento em que ele aparece — quem acabou de
+        clicar em "Publicar" está olhando para o botão. Um aviso no topo de um
+        formulário longo exigiria rolar para descobrir por que nada aconteceu, e
+        "nada aconteceu" é como a pessoa leria a tela nesse meio-tempo.
+      */}
+      {riskReview && (
+        <EditorialRiskPanel
+          findings={riskReview.findings}
+          mode="decisao"
+          requiresReason={riskReview.requiresReason}
+          reason={riskReason}
+          onReasonChange={setRiskReason}
+          busy={busy !== null}
+          onBackToEdit={() => {
+            setRiskReview(null);
+            setMessage(null);
+          }}
+          onPublishAnyway={() => {
+            if (formRef.current) void submit(formRef.current, true, true);
+          }}
+        />
+      )}
+
+      {riskHint.length > 0 && !riskReview && (
+        <EditorialRiskPanel findings={riskHint} mode="aviso" />
+      )}
 
       <div className="admin-form__full admin-actions">
         <button type="submit" className="btn btn--ghost" disabled={busy !== null}>

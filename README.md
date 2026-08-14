@@ -128,6 +128,32 @@ Dois níveis de acesso, definidos em `packages/core/src/staff.ts`:
 | Fila de pautas | ver, assumir, sobrepor score, descartar | ver e assumir |
 | Comentários, afiliados, relatórios, contas | sim | não |
 
+### Sugestão de matéria por IA (opcional)
+
+Cada pauta da fila tem, ao lado de **Criar matéria**, o botão **Gerar sugestão com IA**.
+Ele chama a API da Anthropic com o que o tópico já sabe (título, resumo, fonte, nível de
+autoridade da fonte, editoria e franquias) e devolve um rascunho — manchete, resumo, corpo
+em blocos, TL;DR e a lista do que ainda falta apurar. O rascunho abre **no mesmo formulário
+de sempre**, com tudo editável; publicar continua sendo um clique humano.
+
+```bash
+ANTHROPIC_API_KEY="sk-ant-..."   # sem ela, o botão não aparece e nada quebra
+ANTHROPIC_MODEL=""               # vazio = claude-sonnet-5
+```
+
+Três limites que são de projeto, não de implementação:
+
+- **Não gera nem busca imagem.** A capa continua sendo escolha humana (upload ou URL).
+- **Não apura nada.** A página da fonte NUNCA é baixada — seria SSRF com URL de terceiro,
+  e reescrever a matéria alheia inteira não é apuração. O prompt exige atribuição
+  (“segundo o *veículo*”), proíbe inventar dado específico e proíbe fala entre aspas.
+- **Nunca publica.** Nasce rascunho, com aviso no topo do formulário, e a matéria fica
+  marcada com `contentOrigin = 'ai-assisted'` (`packages/core/src/content-origin.ts`) para
+  auditoria. A geração em si vira uma linha `topic.ai_suggestion` no `AuditLog`.
+
+Custo da ordem de US$ 0,02 por rascunho, com teto de tokens por chamada e limite de 8
+gerações por conta a cada 10 minutos. Detalhes e racional em `apps/web/src/server/ai-draft.ts`.
+
 ### Testes e verificação
 
 ```bash
@@ -1123,6 +1149,7 @@ Cuidados adicionais específicos deste domínio:
 | 0015 | **Política de anúncios como dado estático no front** | Tabela de densidade no banco, editável por painel | Densidade de anúncio é decisão editorial; decisão editorial editável por formulário acaba editada por quem tem meta de receita numa sexta à noite. Morar em `apps/web` também torna **estruturalmente impossível** o motor de score enxergá-la (pacote nunca importa quem o consome) |
 | 0016 | **`Product`/`Offer` só em review e comparativo, com preço fresco** | Emitir em todo artigo com oferta; não emitir nada | "Product snippet" é a família de dado estruturado para páginas onde **não se compra** — e a única elegível ao rich result de prós e contras, que o projeto já tem em `reviewData`. Marcar preço obsoleto viola política do Google e é caminho conhecido para ação manual, então oferta vencida simplesmente não entra no `@graph` |
 | 0017 | **Hardware como sub-categoria roteável** | Tag livre "hardware" | Tag não tem URL estável, não entra no menu e é filtrada por texto. Sub-categoria tem chave estrangeira com índice, `/categoria/tech/hardware` indexável e intenção de busca própria ("melhor placa de vídeo custo-benefício" não é "notícias de tecnologia") |
+| 0018 | **Verificador de risco editorial por regras estáticas, que AVISA e registra — nunca bloqueia** | Classificador por LLM; trava de publicação; capacidade nova só para admin | Regra explícita é auditável ("qual linha sinalizou, e ela deve continuar existindo?"), custa zero por publicação e não manda matéria embargada para servidor de terceiro. Bloquear seria pôr um verificador **heurístico** como editor-chefe: ele erra nos dois sentidos, e uma trava contornável treina a redação a contorná-la. A proteção real é o par **aviso visível + reconhecimento gravado em `AuditLog`** (com justificativa obrigatória no risco alto) — nenhuma capacidade nova foi criada, porque o redator já publica o que assina e uma trava a mais não impediria a mesma acusação escrita com outras palavras. Ver `packages/core/src/editorial-risk.ts` |
 
 ---
 

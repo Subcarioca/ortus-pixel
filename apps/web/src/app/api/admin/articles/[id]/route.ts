@@ -32,10 +32,13 @@ import {
   estimateReadingMinutes,
   hasBlocks,
   sensitivityRank,
+  summarizeRisk,
+  toAuditFindings,
   toContentSensitivity,
 } from '@subcarioca/core';
 
 import { parseArticleInput } from '@/server/article-input';
+import { editorialRiskGate } from '@/server/editorial-risk-gate';
 import { syncArticleTaxonomy } from '@/server/article-taxonomy';
 import { forbiddenArticleResponse, requireStaffApi } from '@/server/staff-auth';
 import { getClientIp, hashPersonalData } from '@/server/security';
@@ -140,6 +143,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     );
   }
 
+  /**
+   * O VERIFICADOR DE RISCO EDITORIAL — e por que ele precisa estar TAMBÉM aqui.
+   *
+   * Checar só na criação seria uma proteção de fachada: toda matéria publicada
+   * continua editável, e nada impediria de reintroduzir a acusação sem fonte no
+   * dia seguinte, num PATCH que ninguém verifica. Como o texto que sai daqui é o
+   * mesmo texto que vai ao ar, a checagem tem de acompanhar o caminho, não o
+   * momento.
+   *
+   * Vem DEPOIS das checagens de permissão de propósito: recusar por permissão é
+   * definitivo, e mostrar um painel de revisão para quem não podia editar a
+   * matéria seria responder à pergunta errada.
+   */
+  const riskGate = editorialRiskGate(payload, input);
+  if (!riskGate.ok) return riskGate.response;
+
   const wasPublished = existing.status === 'published';
   const now = new Date();
 
@@ -217,6 +236,34 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           ipHash: hashPersonalData(getClientIp(request.headers)),
         },
       });
+
+      /**
+       * LINHA PRÓPRIA PARA "PUBLIQUEI SABENDO DO AVISO".
+       *
+       * Poderia ser um campo dentro do `after` da linha acima. É uma linha
+       * separada por uma razão de consulta: a pergunta que esta trilha precisa
+       * responder um dia é "me mostre todas as publicações feitas apesar de um
+       * alerta". Com uma ação própria, isso é um `where: { action }` com índice;
+       * embutido no `after`, seria varredura de coluna Json em todas as edições
+       * já feitas — na prática, uma pergunta que ninguém faz.
+       */
+      if (riskGate.acknowledgement) {
+        await tx.auditLog.create({
+          data: {
+            action: 'article.risk_acknowledged',
+            entityType: 'Article',
+            entityId: id,
+            actorId: guard.user.id,
+            after: {
+              resumo: summarizeRisk(riskGate.acknowledgement.findings),
+              trechos: toAuditFindings(riskGate.acknowledgement.findings),
+            },
+            // Obrigatória quando há trecho de alto risco; opcional no resto.
+            reason: riskGate.acknowledgement.reason,
+            ipHash: hashPersonalData(getClientIp(request.headers)),
+          },
+        });
+      }
     });
   } catch (error) {
     // A matéria pode ter sido apagada em outra aba entre a leitura acima e a
@@ -242,6 +289,12 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     ok: true,
     slug: existing.slug,
     categorySlug: category.slug,
+    /**
+     * Os achados voltam mesmo no SUCESSO. É o caso do rascunho: nada foi
+     * publicado, o portão deixou passar, e ainda assim quem está escrevendo
+     * ganha o aviso agora em vez de ser surpreendido na hora de publicar.
+     */
+    riskFindings: input.riskFindings,
     message: publish
       ? wasPublished
         ? 'Matéria atualizada.'

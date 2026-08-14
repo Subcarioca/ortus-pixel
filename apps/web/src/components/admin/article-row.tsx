@@ -21,12 +21,23 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+import type { ContentOrigin } from '@subcarioca/core';
+
 import { readAdminResponse } from './admin-response';
 import type { FranchiseOption } from './article-classification-fields';
 import { ArticleEditForm, type EditableArticle } from './article-edit-form';
 
 export interface AdminArticleRowData extends EditableArticle {
   slug: string;
+  /**
+   * De onde veio o TEXTO INICIAL: 'human' | 'ai-assisted'.
+   *
+   * Fica nesta interface, e não em `EditableArticle`, porque não é um campo do
+   * formulário: é informação de leitura da linha. `EditableArticle` descreve o
+   * que a edição ENVIA de volta ao servidor — e a procedência não pode ser
+   * reescrita por uma edição (ver o comentário da coluna no schema).
+   */
+  contentOrigin: ContentOrigin;
   categoryName: string;
   authorName: string;
   publishedAt: string | null;
@@ -113,6 +124,16 @@ export function ArticleRow({
             <span className="admin-override">
               {isPublished ? 'PUBLICADA' : 'RASCUNHO'}
             </span>
+            {/* PROCEDÊNCIA — só aparece quando é IA, pelo mesmo motivo da
+                etiqueta de "pauta da redação" na fila: marcar o normal faz a
+                etiqueta desaparecer de tanto se repetir. O que precisa saltar é
+                a exceção — aqui, "este texto começou automático, leia com mais
+                desconfiança". Ver core/topic-origin.ts e core/content-origin.ts. */}
+            {article.contentOrigin === 'ai-assisted' && (
+              <span className="chip chip--sm" title="O texto inicial desta matéria foi gerado por IA e revisado pela redação.">
+                rascunho de IA
+              </span>
+            )}
             <span className="admin-row__detail">{article.categoryName}</span>
             <span className="admin-row__detail">{article.authorName}</span>
             {article.commentCount > 0 && (

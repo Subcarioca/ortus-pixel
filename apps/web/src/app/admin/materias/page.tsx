@@ -19,7 +19,7 @@
  * e trabalho inacabado que some da vista é trabalho esquecido.
  */
 
-import { CATEGORIES, can, routes, toContentSensitivity } from '@subcarioca/core';
+import { CATEGORIES, can, routes, toContentOrigin, toContentSensitivity } from '@subcarioca/core';
 import { prisma, toStringArray } from '@subcarioca/db';
 
 import { AdminLogin } from '@/components/admin/admin-login';
@@ -70,6 +70,9 @@ export default async function AdminArticlesPage() {
         isBreaking: true,
         hasSpoiler: true,
         contentSensitivity: true,
+        // Procedência do texto inicial: alimenta a etiqueta "rascunho de IA" da
+        // linha. Quem revisa precisa saber disso ANTES de abrir o texto.
+        contentOrigin: true,
         blocks: true,
         publishedAt: true,
         updatedAt: true,
@@ -134,6 +137,10 @@ export default async function AdminArticlesPage() {
     // níveis, e uma string estranha no banco viraria um `<select>` sem valor
     // selecionado — que salva 'none' sem ninguém ter escolhido isso.
     contentSensitivity: toContentSensitivity(article.contentSensitivity),
+    // Normalizado no servidor pelo mesmo motivo dos dois acima: o valor vem de
+    // uma coluna de texto, e a tela decide o que exibir a partir de um
+    // vocabulário fechado (ver core/content-origin.ts).
+    contentOrigin: toContentOrigin(article.contentOrigin),
     subcategorySlug: article.subcategory?.slug ?? null,
     franchiseIds: article.franchises.map((f) => f.franchiseId),
     tagNames: article.tags.map((t) => t.tag.name),

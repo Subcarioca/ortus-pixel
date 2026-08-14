@@ -13,14 +13,32 @@
  * 768px, 2 colunas a partir daí — ver ortuspixel.css). Título, corpo e TL;DR
  * usam `.admin-form__full` pra ocupar a largura toda mesmo no grid desktop,
  * porque são os campos que mais precisam de espaço horizontal pra digitar.
+ *
+ * -----------------------------------------------------------------------------
+ * ESTE MESMO FORMULÁRIO É O DA SUGESTÃO POR IA
+ * -----------------------------------------------------------------------------
+ * Quando `aiDraft` chega preenchido, os campos nascem com o texto gerado e o
+ * resto é idêntico: os mesmos campos editáveis, os mesmos botões, a mesma
+ * validação, o mesmo fluxo de publicação. Não existe "tela da IA".
+ *
+ * A decisão é do dono do produto e vale a pena entender por quê: uma segunda
+ * tela para revisar texto gerado viraria, na prática, uma tela de aprovar —
+ * onde se clica em "ok" sem ler. Entregando o rascunho DENTRO do formulário de
+ * sempre, o gesto seguinte do redator é o de sempre (escrever, ajustar,
+ * publicar), e a revisão acontece porque ele já está com as mãos no texto.
  */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import type { ArticleBlock } from '@subcarioca/core';
 
 import { readAdminResponse } from './admin-response';
+import {
+  EditorialRiskPanel,
+  readEditorialRiskReview,
+  type EditorialRiskReview,
+} from './editorial-risk-panel';
 import {
   ArticleClassificationFields,
   type ArticleClassification,
@@ -29,6 +47,16 @@ import {
 import { FORMAT_OPTIONS, formatRequiresTldr } from './article-format-options';
 import { BlockEditor } from './block-editor';
 import { ImageUrlField } from './image-url-field';
+
+/**
+ * O tipo vem do módulo de servidor — mas só o TIPO.
+ *
+ * `import type` é apagado na compilação: nenhuma linha de `ai-draft.ts` (que lê
+ * a chave da API) entra no pacote do navegador. Importar o tipo de lá, em vez de
+ * redeclarar a mesma forma aqui, é o que garante que uma mudança no rascunho
+ * gerado quebre o build em vez de silenciosamente deixar um campo para trás.
+ */
+import type { AiDraft } from '@/server/ai-draft';
 
 interface ArticleCreateFormProps {
   topicId: string;
@@ -44,6 +72,15 @@ interface ArticleCreateFormProps {
    * repetido que, em dia de correria, simplesmente não é feito.
    */
   defaultFranchiseIds?: string[];
+  /**
+   * Rascunho gerado por modelo de linguagem, quando houver.
+   *
+   * `null`/ausente é o caso normal: o botão "Criar matéria" de sempre abre o
+   * formulário vazio. Preenchido, ele SEMEIA os campos — e nada mais. Não trava
+   * botão, não muda validação, não muda o que é enviado ao servidor (além da
+   * marca de procedência). Ver o cabeçalho deste arquivo.
+   */
+  aiDraft?: AiDraft | null;
   categories: { slug: string; name: string }[];
   authors: { id: string; name: string }[];
   franchises: FranchiseOption[];
@@ -57,6 +94,7 @@ export function ArticleCreateForm({
   defaultExcerpt,
   defaultCategorySlug,
   defaultFranchiseIds = [],
+  aiDraft = null,
   categories,
   authors,
   franchises,
@@ -67,9 +105,38 @@ export function ArticleCreateForm({
   const [busy, setBusy] = useState<'draft' | 'publish' | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [format, setFormat] = useState('breaking');
-  const [tldr, setTldr] = useState<string[]>(['', '', '']);
-  const [blocks, setBlocks] = useState<ArticleBlock[]>([]);
+  /**
+   * O TL;DR gerado entra completando as três linhas de sempre.
+   *
+   * Nunca MENOS de três: o formato 'breaking' (o padrão deste formulário) exige
+   * de 3 a 5 pontos, e um formulário que nasce com duas linhas preenchidas e
+   * nenhuma vazia esconde do redator o campo que vai reprovar o salvamento.
+   */
+  const [tldr, setTldr] = useState<string[]>(() => seedTldr(aiDraft?.tldr));
+  const [blocks, setBlocks] = useState<ArticleBlock[]>(aiDraft?.blocks ?? []);
+  /**
+   * A CAPA NÃO É GERADA — e isso é decisão do dono do produto, não limitação.
+   *
+   * A funcionalidade de sugestão é só de TEXTO: a imagem continua sendo escolha
+   * humana, por upload ou URL, nos campos logo abaixo. Nada aqui preenche capa,
+   * e nenhum bloco de imagem vem do modelo (ver `parseDraftPayload`).
+   */
   const [coverImageUrl, setCoverImageUrl] = useState('');
+
+  /**
+   * REVISÃO DE RISCO EDITORIAL — o mesmo painel da edição
+   * (`editorial-risk-panel.tsx`), pela mesma razão pela qual a regra é uma só no
+   * servidor.
+   *
+   * Aqui só existe o modo BLOQUEANTE, e não o aviso passivo de rascunho que o
+   * formulário de edição tem. O motivo é do fluxo desta tela: salvar rascunho
+   * aqui já CRIA a matéria e marca o tópico como coberto, então o formulário
+   * precisa fechar — reenviá-lo bateria em "este tópico já virou matéria". Os
+   * avisos reaparecem na edição, que é onde o texto continua a ser trabalhado.
+   */
+  const formRef = useRef<HTMLFormElement>(null);
+  const [riskReview, setRiskReview] = useState<EditorialRiskReview | null>(null);
+  const [riskReason, setRiskReason] = useState('');
 
   /**
    * A editoria vira ESTADO (e não `defaultValue`) porque agora ela comanda
@@ -90,7 +157,12 @@ export function ArticleCreateForm({
   // O texto vive num `useState` (e não só no `defaultValue`) porque o editor de
   // blocos precisa dele para o botão "converter o texto atual em blocos": numa
   // matéria nova, o redator pode começar escrevendo corrido e converter depois.
-  const [content, setContent] = useState('');
+  //
+  // Com rascunho gerado, ele nasce com a MESMA matéria em texto corrido que está
+  // nos blocos. Parece redundante e não é: se o redator apagar todos os blocos,
+  // este campo reaparece na tela — e reaparecer vazio jogaria fora o texto
+  // gerado. O servidor ignora este valor enquanto houver blocos.
+  const [content, setContent] = useState(aiDraft?.content ?? '');
 
   const requiresTldr = formatRequiresTldr(format);
   const usaBlocos = blocks.length > 0;
@@ -107,13 +179,18 @@ export function ArticleCreateForm({
     setTldr((prev) => prev.filter((_, i) => i !== index));
   }
 
-  async function submit(formEl: HTMLFormElement, publish: boolean) {
+  /** Ver o mesmo parâmetro em `article-edit-form.tsx`: só vem `true` no clique
+   *  de "Publicar mesmo assim", depois de o painel ter mostrado os trechos. */
+  async function submit(formEl: HTMLFormElement, publish: boolean, acknowledgeRisk = false) {
     if (busy) return;
 
     const form = new FormData(formEl);
 
     setBusy(publish ? 'publish' : 'draft');
     setMessage(null);
+    // Não limpa quando o reenvio É o reconhecimento — ver o comentário
+    // equivalente, mais longo, em `article-edit-form.tsx`.
+    if (!acknowledgeRisk) setRiskReview(null);
 
     try {
       const response = await fetch(`/api/admin/topics/${topicId}`, {
@@ -138,12 +215,31 @@ export function ArticleCreateForm({
           franchiseIds: classification.franchiseIds,
           tags: classification.tags,
           contentSensitivity: classification.contentSensitivity,
+          /**
+           * PROCEDÊNCIA DO TEXTO INICIAL.
+           *
+           * Vai no envio (e não é deduzida no servidor) porque só esta tela sabe
+           * de onde o texto veio: a rota recebe um formulário igual nos dois
+           * casos. A marca acompanha a matéria mesmo que o redator reescreva
+           * tudo — a pergunta que ela responde é "como este texto NASCEU?".
+           */
+          contentOrigin: aiDraft ? 'ai-assisted' : 'human',
           publish,
+          acknowledgeEditorialRisk: acknowledgeRisk,
+          editorialRiskReason: acknowledgeRisk ? riskReason : undefined,
         }),
       });
 
       const data = await readAdminResponse(response);
       setMessage(data.message);
+
+      // Publicação interrompida para revisão — não é erro, e o tópico continua
+      // na fila: o portão roda ANTES de a matéria ser criada (ver a rota).
+      const review = readEditorialRiskReview(data);
+      if (review) {
+        setRiskReview(review);
+        return;
+      }
 
       // O formulário só fecha quando deu certo. Em qualquer falha ele
       // permanece aberto com tudo preenchido — inclusive quando a sessão
@@ -163,6 +259,7 @@ export function ArticleCreateForm({
 
   return (
     <form
+      ref={formRef}
       className="admin-form admin-form--cols"
       onSubmit={(event) => {
         event.preventDefault();
@@ -170,9 +267,42 @@ export function ArticleCreateForm({
       }}
       aria-label="Transformar tópico em matéria"
     >
+      {/* ---------- AVISO DE PROCEDÊNCIA ---------- */}
+      {/* Fica no TOPO do formulário, e não como uma etiqueta discreta ao lado do
+          botão: quem abre esta tela precisa saber, antes de ler a primeira
+          linha, que o texto abaixo não foi apurado por ninguém. A lista de
+          pendências vem junto porque é a informação mais acionável da tela —
+          é literalmente a pauta de apuração daquela matéria. */}
+      {aiDraft && (
+        <div className="admin-form__full admin-row__warning" role="status">
+          <strong>Rascunho gerado por IA a partir dos dados da pauta.</strong> Revise tudo antes de
+          publicar: confira os fatos na fonte, ajuste o texto e escolha a imagem — a geração não
+          apura nada e não busca imagem. Modelo: {aiDraft.model}.
+          {aiDraft.pendencias.length > 0 && (
+            <>
+              <p className="form-hint">O próprio gerador apontou o que falta confirmar:</p>
+              <ul className="side-list">
+                {aiDraft.pendencias.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </>
+          )}
+        </div>
+      )}
+
       <label className="admin-form__full">
         Título
-        <input name="title" required minLength={8} maxLength={180} defaultValue={defaultTitle} />
+        <input
+          name="title"
+          required
+          minLength={8}
+          maxLength={180}
+          // O título gerado vence o do tópico quando existe. Continua sendo um
+          // `defaultValue` (campo não controlado): o redator digita por cima sem
+          // nenhuma interferência de estado.
+          defaultValue={aiDraft?.title ?? defaultTitle}
+        />
       </label>
 
       <label>
@@ -236,7 +366,7 @@ export function ArticleCreateForm({
           minLength={20}
           maxLength={300}
           rows={2}
-          defaultValue={defaultExcerpt}
+          defaultValue={aiDraft?.excerpt ?? defaultExcerpt}
         />
       </label>
 
@@ -298,6 +428,26 @@ export function ArticleCreateForm({
         Contém spoiler
       </label>
 
+      {/* Junto dos botões, e não no topo — ver o comentário equivalente em
+          `article-edit-form.tsx`. */}
+      {riskReview && (
+        <EditorialRiskPanel
+          findings={riskReview.findings}
+          mode="decisao"
+          requiresReason={riskReview.requiresReason}
+          reason={riskReason}
+          onReasonChange={setRiskReason}
+          busy={busy !== null}
+          onBackToEdit={() => {
+            setRiskReview(null);
+            setMessage(null);
+          }}
+          onPublishAnyway={() => {
+            if (formRef.current) void submit(formRef.current, true, true);
+          }}
+        />
+      )}
+
       <div className="admin-form__full admin-actions">
         <button type="submit" className="btn btn--ghost" disabled={busy !== null}>
           {busy === 'draft' ? 'Salvando…' : 'Salvar rascunho'}
@@ -324,4 +474,19 @@ export function ArticleCreateForm({
       </div>
     </form>
   );
+}
+
+/**
+ * Estado inicial do TL;DR: o que o gerador trouxe, completado até três linhas.
+ *
+ * As linhas vazias importam. O campo é uma lista de `<input>`s renderizada a
+ * partir do estado — sem as vazias, um rascunho que veio com dois pontos
+ * mostraria dois campos, e o redator só descobriria a exigência de três ao ver
+ * o salvamento reprovar. Completar a lista transforma a regra em algo visível
+ * antes do erro.
+ */
+function seedTldr(generated?: string[]): string[] {
+  const pontos = (generated ?? []).filter((item) => item.trim().length > 0).slice(0, 5);
+  while (pontos.length < 3) pontos.push('');
+  return pontos;
 }

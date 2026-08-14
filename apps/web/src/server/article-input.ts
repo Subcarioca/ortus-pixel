@@ -33,12 +33,14 @@ import {
   can,
   isCategorySlug,
   isValidSubcategoryPath,
+  scanArticleForRisk,
   slugify,
   toContentSensitivity,
   validateTldrRequirement,
   type ArticleBlock,
   type ContentFormat,
   type ContentSensitivity,
+  type EditorialRiskFinding,
 } from '@subcarioca/core';
 
 import { ALLOWED_IMAGE_HOSTS_LABEL } from '@/lib/image-hosts';
@@ -87,6 +89,19 @@ export interface ArticleInput {
   tags: { slug: string; name: string }[];
   authorId: string;
   publish: boolean;
+  /**
+   * Trechos de risco jurídico/reputacional encontrados no texto FINAL.
+   *
+   * Note que isto NÃO reprova o formulário: `parseArticleInput` continua
+   * respondendo `ok: true` com a lista preenchida. A separação é proposital —
+   * validar é dizer "este dado não pode ser gravado"; aqui a resposta é "este
+   * texto merece um segundo olhar", que é decisão editorial, não de esquema.
+   *
+   * Quem decide o que fazer com a lista é o portão (`editorial-risk-gate.ts`),
+   * chamado pelas rotas: só elas sabem se a operação é publicar ou rascunhar, e
+   * só elas escrevem em `AuditLog`.
+   */
+  riskFindings: EditorialRiskFinding[];
 }
 
 /**
@@ -335,6 +350,25 @@ export async function parseArticleInput(
       tags,
       authorId: author.id,
       publish: payload.publish === true,
+      /**
+       * A VARREDURA ACONTECE AQUI, e o lugar não é acidental.
+       *
+       * Este é o ponto em que o texto já passou por todas as normalizações e é
+       * exatamente o que vai para o banco: o título aparado, o resumo aparado e
+       * o corpo que, havendo blocos, foi DERIVADO deles pelo servidor — nunca o
+       * `content` que o cliente mandou. Varrer antes disso examinaria um texto
+       * que não é o publicado; varrer na rota exigiria repetir a montagem nos
+       * dois endpoints, com o risco de um deles esquecer os blocos.
+       *
+       * Consequência prática e desejada: legenda de imagem e citação, que só
+       * existem dentro dos blocos, entram na varredura sem que este módulo
+       * precise saber o que é um bloco.
+       */
+      riskFindings: scanArticleForRisk({
+        title: title.value,
+        excerpt: excerpt.value,
+        content: content.value,
+      }),
     },
   };
 }

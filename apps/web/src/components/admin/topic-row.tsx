@@ -28,8 +28,13 @@ import {
 
 import { HeatBadge } from '../heat-badge';
 import { ScoreValue } from './score-value';
+import { readAdminResponse } from './admin-response';
 import type { FranchiseOption } from './article-classification-fields';
 import { ArticleCreateForm } from './article-create-form';
+
+// Só o TIPO do rascunho: `import type` some na compilação e nenhuma linha do
+// módulo de servidor entra no pacote do navegador. Ver `article-create-form`.
+import type { AiDraft } from '@/server/ai-draft';
 
 interface TopicRowProps {
   categories: { slug: string; name: string }[];
@@ -46,6 +51,19 @@ interface TopicRowProps {
    * recusa as duas ações por conta própria, e é ela que vale.
    */
   canCurate: boolean;
+  /**
+   * O servidor tem chave da API de geração de texto configurada?
+   *
+   * DEGRADAÇÃO GRACIOSA, igual à dos conectores do pipeline: sem chave, o botão
+   * simplesmente não existe — em vez de existir e falhar em todo clique. A
+   * explicação de por que ele sumiu aparece UMA vez no topo da fila, e só para
+   * quem administra o servidor (ver `apps/web/src/app/admin/page.tsx`); repetir
+   * um botão desabilitado em cinquenta linhas seria ruído para o redator, que
+   * não tem como resolver isso de qualquer forma.
+   *
+   * Esconder o botão não é a proteção: a rota recusa a ação por conta própria.
+   */
+  aiEnabled: boolean;
   topic: {
     id: string;
     title: string;
@@ -89,6 +107,7 @@ export function TopicRow({
   franchises,
   canCurate,
   canLowerSensitivity,
+  aiEnabled,
 }: TopicRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [creatingArticle, setCreatingArticle] = useState(false);
@@ -96,6 +115,17 @@ export function TopicRow({
   const [overrideReason, setOverrideReason] = useState('');
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState('');
+
+  /**
+   * Rascunho gerado, quando existir. `null` = formulário vazio de sempre.
+   *
+   * Ele mora AQUI (e não dentro do formulário) porque é a linha da fila que
+   * decide qual dos dois caminhos abre o formulário — e porque o formulário
+   * precisa nascer já com o texto: semear campos depois da montagem, via efeito,
+   * é como se sobrescreve o que o redator acabou de digitar.
+   */
+  const [aiDraft, setAiDraft] = useState<AiDraft | null>(null);
+  const [generating, setGenerating] = useState(false);
 
   /** Minutos restantes da meta de 30 min. Negativo = estourou. */
   const minutesLeft = topic.becameHotAt
@@ -122,6 +152,56 @@ export function TopicRow({
         setFeedback('Erro de conexão.');
       }
     });
+  }
+
+  /**
+   * PEDE A SUGESTÃO E ABRE O FORMULÁRIO — dando certo ou não.
+   *
+   * O ponto central desta função é o `catch`/`else`: em QUALQUER falha o
+   * formulário abre do mesmo jeito, vazio, com a explicação do que houve. O
+   * caminho de escrever a matéria não pode depender de uma API de terceiro estar
+   * no ar; o que a falha custa é o pré-preenchimento, não o trabalho.
+   *
+   * Não usa o `callAction` desta mesma tela de propósito: aquele recarrega a
+   * página inteira no sucesso (é o certo para "assumir"/"descartar", que mudam o
+   * estado do tópico no banco). Aqui não há nada gravado para recarregar — e um
+   * `reload` jogaria fora justamente o rascunho que acabou de chegar.
+   */
+  async function generateSuggestion() {
+    if (generating) return;
+
+    setFeedback('');
+    setGenerating(true);
+
+    try {
+      const response = await fetch(`/api/admin/topics/${topic.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'ai-suggestion' }),
+      });
+
+      const data = await readAdminResponse(response);
+
+      // `draft` chega como `unknown` (a resposta do painel é genérica). A forma
+      // é conferida no servidor; aqui basta não abrir o formulário "preenchido"
+      // com algo que não é um rascunho.
+      const draft = data.ok && isDraft(data.draft) ? data.draft : null;
+
+      setAiDraft(draft);
+      // Sem rascunho, a mensagem explica o que houve — e o formulário vazio
+      // abre do lado, pronto. É o "fallback para o formulário de sempre".
+      if (!draft) setFeedback(data.message);
+      setCreatingArticle(true);
+    } catch {
+      setAiDraft(null);
+      setFeedback(
+        'Não foi possível falar com o servidor para gerar a sugestão. ' +
+          'O formulário está aberto para você escrever normalmente.',
+      );
+      setCreatingArticle(true);
+    } finally {
+      setGenerating(false);
+    }
   }
 
   const contributions = Array.isArray(topic.contributions)
@@ -257,10 +337,40 @@ export function TopicRow({
           <button
             type="button"
             className="btn btn--primary btn--sm"
-            onClick={() => setCreatingArticle(!creatingArticle)}
+            onClick={() => {
+              // Fechar o formulário descarta o rascunho: reabrir por "Criar
+              // matéria" tem de dar o formulário VAZIO, senão o botão passaria a
+              // significar duas coisas diferentes dependendo do histórico.
+              if (creatingArticle) setAiDraft(null);
+              setCreatingArticle(!creatingArticle);
+            }}
             aria-expanded={creatingArticle}
           >
             {creatingArticle ? 'Cancelar matéria' : 'Criar matéria'}
+          </button>
+        )}
+
+        {/* ---------- SUGESTÃO POR IA ---------- */}
+        {/* Fica ao LADO de "Criar matéria", e não no lugar dela: são dois pontos
+            de partida para o mesmo trabalho, e o vazio continua sendo um caminho
+            legítimo (às vezes o redator já sabe o que escrever).
+
+            Some enquanto o formulário está aberto — de propósito. Gerar com o
+            formulário aberto teria de sobrescrever o que já estivesse digitado
+            ali, que é a maneira mais rápida de fazer alguém perder texto. Para
+            gerar outra, cancele e clique de novo. */}
+        {aiEnabled && !creatingArticle && topic.status !== 'published' && topic.status !== 'dismissed' && (
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            onClick={() => void generateSuggestion()}
+            disabled={generating}
+            // O rascunho leva dezenas de segundos e não tem barra de progresso:
+            // `aria-busy` é o que conta a quem usa leitor de tela que o botão
+            // não ficou mudo por defeito.
+            aria-busy={generating}
+          >
+            {generating ? 'Gerando sugestão…' : 'Gerar sugestão com IA'}
           </button>
         )}
 
@@ -285,6 +395,17 @@ export function TopicRow({
         )}
       </div>
 
+      {/* A MENSAGEM FICA COLADA NOS BOTÕES, e não no fim da linha. Quando a
+          geração falha, o formulário abre logo abaixo — e a explicação do que
+          houve, empurrada para depois de um formulário de vinte campos, não
+          seria lida por ninguém. `role="status"` faz o leitor de tela anunciá-la
+          sem roubar o foco de quem está digitando. */}
+      {feedback && (
+        <p className="form-hint" role="status">
+          {feedback}
+        </p>
+      )}
+
       {/* ---------- CRIAR MATÉRIA A PARTIR DESTE TÓPICO ---------- */}
       {creatingArticle && (
         <div className="admin-row__detail">
@@ -294,11 +415,15 @@ export function TopicRow({
             defaultExcerpt={topic.summary}
             defaultCategorySlug={topic.categorySlug}
             defaultFranchiseIds={topic.franchiseIds}
+            aiDraft={aiDraft}
             categories={categories}
             authors={authors}
             franchises={franchises}
             canLowerSensitivity={canLowerSensitivity}
-            onDone={() => setCreatingArticle(false)}
+            onDone={() => {
+              setCreatingArticle(false);
+              setAiDraft(null);
+            }}
           />
         </div>
       )}
@@ -388,13 +513,29 @@ export function TopicRow({
           )}
         </div>
       )}
-
-      {feedback && (
-        <p className="form-hint" role="status">
-          {feedback}
-        </p>
-      )}
     </li>
+  );
+}
+
+/**
+ * É mesmo um rascunho?
+ *
+ * A resposta do painel é genérica (`[key: string]: unknown`), então este é o
+ * ponto em que o valor volta a ter forma. A checagem é mínima de propósito — a
+ * validação de verdade é do servidor, e repeti-la aqui inteira só criaria duas
+ * regras para divergirem. O que ela impede é o caso que a tela não sobreviveria:
+ * abrir o formulário "preenchido" com `undefined` e estourar no primeiro
+ * `.map()` dos blocos.
+ */
+function isDraft(value: unknown): value is AiDraft {
+  if (typeof value !== 'object' || value === null) return false;
+  const draft = value as Partial<AiDraft>;
+  return (
+    typeof draft.title === 'string' &&
+    typeof draft.content === 'string' &&
+    Array.isArray(draft.blocks) &&
+    Array.isArray(draft.tldr) &&
+    Array.isArray(draft.pendencias)
   );
 }
 

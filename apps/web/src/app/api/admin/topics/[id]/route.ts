@@ -3,7 +3,9 @@
  * POST /api/admin/topics/[id] — ações editoriais sobre um tópico
  * =============================================================================
  *
- * Ações: `claim` (assumir), `override` (sobrepor score), `dismiss` (descartar).
+ * Ações: `claim` (assumir), `override` (sobrepor score), `create-article`
+ * (virar matéria), `ai-suggestion` (pré-preencher o formulário com um rascunho
+ * gerado por modelo de linguagem) e `dismiss` (descartar).
  *
  * TODA ação é registrada em `AuditLog` com autor, valor anterior, valor novo e
  * justificativa. Isso não é burocracia: é o que permite, semanas depois,
@@ -14,13 +16,23 @@
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 
-import { prisma, toJsonColumn } from '@subcarioca/db';
-import { blocksReadingMinutes, estimateReadingMinutes, hasBlocks, slugify } from '@subcarioca/core';
+import { prisma, toJsonColumn, toStringArray } from '@subcarioca/db';
+import {
+  blocksReadingMinutes,
+  estimateReadingMinutes,
+  hasBlocks,
+  slugify,
+  summarizeRisk,
+  toAuditFindings,
+  toContentOrigin,
+} from '@subcarioca/core';
 
+import { generateArticleDraft, isAiDraftConfigured } from '@/server/ai-draft';
 import { parseArticleInput } from '@/server/article-input';
+import { editorialRiskGate } from '@/server/editorial-risk-gate';
 import { syncArticleTaxonomy } from '@/server/article-taxonomy';
 import { requireStaffApi } from '@/server/staff-auth';
-import { getClientIp, hashPersonalData } from '@/server/security';
+import { checkRateLimit, getClientIp, hashPersonalData } from '@/server/security';
 import { CACHE_TAGS } from '@/server/queries';
 
 export const dynamic = 'force-dynamic';
@@ -162,6 +174,177 @@ export async function POST(
     }
 
     // -------------------------------------------------------------------------
+    case 'ai-suggestion': {
+      /**
+       * PRÉ-PREENCHE o formulário de matéria com um rascunho gerado a partir do
+       * que a fila já sabe sobre a pauta. NÃO grava nada: a resposta é o
+       * rascunho, que o navegador joga nos campos do MESMO formulário de sempre.
+       *
+       * -----------------------------------------------------------------------
+       * POR QUE ESTA AÇÃO MORA AQUI, e não numa rota `/api/admin/ai/...` própria
+       * -----------------------------------------------------------------------
+       * Porque ela é uma ação SOBRE UM TÓPICO, como as outras quatro: precisa do
+       * mesmo guard, da mesma validação de id, da mesma checagem de existência e
+       * do mesmo tópico carregado. Uma rota nova duplicaria esses quatro passos —
+       * e duplicar guard de permissão é como se perde permissão.
+       *
+       * -----------------------------------------------------------------------
+       * PERMISSÃO: A MESMA DE `create-article`. NENHUMA CAPACIDADE NOVA.
+       * -----------------------------------------------------------------------
+       * Quem pode transformar a pauta em matéria pode pedir a sugestão — porque
+       * é exatamente o mesmo trabalho, com um ponto de partida diferente.
+       * Restringir a geração a administrador foi considerado e descartado: o
+       * argumento a favor seria o custo por chamada, e ele não se sustenta
+       * (centavos por rascunho, com teto de tokens na chamada). O argumento
+       * contra é forte: quem está às 23h com uma pauta quente e um formulário
+       * vazio é justamente o redator, e uma ferramenta de redação que o
+       * administrador precisa acionar não é uma ferramenta de redação.
+       *
+       * O custo é controlado onde ele de fato nasce — no VOLUME de chamadas —,
+       * pelo limitador logo abaixo. Uma trava por nível de acesso não impediria
+       * um administrador de clicar cem vezes; o limitador impede os dois.
+       */
+      if (!isAiDraftConfigured()) {
+        // A tela já esconde o botão neste caso. Isto aqui é a verificação que
+        // vale: esconder botão nunca foi proteção (ver core/staff.ts).
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              'A geração por IA não está configurada neste servidor. ' +
+              'Use "Criar matéria" e escreva normalmente.',
+          },
+          { status: 503 },
+        );
+      }
+
+      // Tópico já coberto não deve gastar uma chamada paga: o rascunho seria
+      // descartado no salvamento pela trava de matéria duplicada.
+      if (topic.status === 'published') {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: 'Este tópico já virou matéria. Edite a matéria existente em Matérias.',
+          },
+          { status: 409 },
+        );
+      }
+
+      /**
+       * LIMITE DE VOLUME POR CONTA — 8 gerações a cada 10 minutos.
+       *
+       * É a única defesa de CUSTO desta funcionalidade, e o número saiu do uso
+       * real: escrever e revisar uma matéria leva bem mais de um minuto, então 8
+       * em 10 minutos já é generoso para trabalho de verdade e baixo o bastante
+       * para que um botão clicado em looping (por engano, por impaciência ou por
+       * uma sessão roubada) não vire uma fatura.
+       *
+       * A chave é a CONTA, não o IP: a redação inteira pode estar atrás do mesmo
+       * IP do escritório, e limitar por IP puniria o colega ao lado. A limitação
+       * conhecida do contador em memória (uma cópia por instância) está
+       * documentada em `security.ts` e é aceitável aqui — o teto real vira N×8, o
+       * que continua sendo um teto.
+       */
+      const limite = checkRateLimit(`ai-draft:${guard.user.id}`, {
+        maxRequests: 8,
+        windowSeconds: 600,
+      });
+
+      if (!limite.allowed) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              `Você já pediu várias sugestões seguidas. Espere ${Math.ceil(limite.resetInSeconds / 60)} ` +
+              'minuto(s) ou escreva a matéria pelo formulário.',
+          },
+          { status: 429 },
+        );
+      }
+
+      // O contexto da pauta é buscado AQUI, e não no `findUnique` do topo: são
+      // dois JOINs e um snapshot de score que as outras quatro ações não usam, e
+      // que sairiam caro em toda ação de "assumir pauta" da fila.
+      const contexto = await prisma.topic.findUnique({
+        where: { id },
+        select: {
+          title: true,
+          summary: true,
+          sourceName: true,
+          sourceUrl: true,
+          sourceTier: true,
+          scoreSummary: true,
+          emotionalTriggers: true,
+          category: { select: { name: true } },
+          franchises: { include: { franchise: { select: { name: true } } } },
+        },
+      });
+
+      if (!contexto) {
+        return NextResponse.json({ ok: false, message: 'Tópico não encontrado.' }, { status: 404 });
+      }
+
+      const resultado = await generateArticleDraft({
+        title: contexto.title,
+        summary: contexto.summary,
+        sourceName: contexto.sourceName,
+        sourceUrl: contexto.sourceUrl,
+        sourceTier: contexto.sourceTier,
+        categoryName: contexto.category?.name ?? null,
+        franchises: contexto.franchises.map((f) => f.franchise.name),
+        scoreSummary: contexto.scoreSummary || null,
+        // Coluna `Json` desde a migração para o MySQL — normalizada na borda,
+        // como no resto do projeto.
+        emotionalTriggers: toStringArray(contexto.emotionalTriggers),
+      });
+
+      if (!resultado.ok) {
+        // O status vem do módulo, e nunca é 401: ver o comentário de
+        // `AiDraftFailure` em `ai-draft.ts`.
+        return NextResponse.json(
+          { ok: false, message: resultado.message },
+          { status: resultado.status },
+        );
+      }
+
+      /**
+       * REGISTRO DA GERAÇÃO — no `AuditLog`, e mesmo que o rascunho seja jogado
+       * fora em seguida.
+       *
+       * A coluna `contentOrigin` da matéria só existe se o rascunho virar
+       * matéria. Este registro responde a outra pergunta, que a coluna não
+       * responde: "quanto a redação está PEDINDO ao modelo, e o que ela pediu?".
+       * É o que permite, no fim do mês, cruzar volume de geração com a fatura da
+       * API e com quantas sugestões viraram matéria de fato.
+       *
+       * O TEXTO GERADO NÃO É GRAVADO AQUI de propósito: ele ainda não é conteúdo
+       * editorial — é um rascunho na tela de alguém, que pode ser inteiramente
+       * reescrito. Guardá-lo encheria a tabela de auditoria de texto morto.
+       */
+      await prisma.auditLog.create({
+        data: {
+          action: 'topic.ai_suggestion',
+          entityType: 'Topic',
+          entityId: id,
+          actorId: guard.user.id,
+          after: {
+            model: resultado.draft.model,
+            blocos: resultado.draft.blocks.length,
+            caracteres: resultado.draft.content.length,
+            pendencias: resultado.draft.pendencias.length,
+          },
+          ipHash,
+        },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        message: 'Rascunho gerado. Revise tudo antes de publicar.',
+        draft: resultado.draft,
+      });
+    }
+
+    // -------------------------------------------------------------------------
     case 'create-article': {
       // Transforma um tópico da fila numa matéria de verdade. É a peça que
       // faltava entre "o pipeline descobriu e pontuou" e "o leitor consegue
@@ -173,6 +356,38 @@ export async function POST(
 
       const input = parsed.data;
       const { publish, category } = input;
+
+      /**
+       * VERIFICADOR DE RISCO EDITORIAL — a mesma regra da rota de edição, vinda
+       * do mesmo módulo (`editorial-risk-gate.ts`).
+       *
+       * Fica ANTES do laço de gravação, e isso importa: o laço marca o tópico
+       * como coberto e cria a matéria. Chamar o portão lá dentro faria a
+       * primeira tentativa de publicação (a que só existe para MOSTRAR o aviso)
+       * consumir o tópico — e o redator voltaria de um aviso para descobrir que
+       * a pauta virou "já coberta" sem que nada tivesse sido escrito.
+       */
+      const riskGate = editorialRiskGate(payload, input);
+      if (!riskGate.ok) return riskGate.response;
+
+      /**
+       * PROCEDÊNCIA DO TEXTO INICIAL — 'human' ou 'ai-assisted'.
+       *
+       * Fica FORA de `parseArticleInput` de propósito: aquele módulo é a
+       * validação do FORMULÁRIO, compartilhada com a rota de EDIÇÃO, e este
+       * campo é gravado uma única vez, no nascimento da matéria. Passar por lá
+       * abriria a porta para a edição reescrever a procedência — que é
+       * exatamente o que ele não pode permitir.
+       *
+       * O valor é uma DECLARAÇÃO do formulário (o navegador o envia depois de
+       * uma geração bem-sucedida), e isso é suficiente para o que ele serve:
+       * rastreabilidade editorial, não controle de acesso. Quem quisesse mentir
+       * aqui — omitindo a marca — ainda deixaria a linha `topic.ai_suggestion` no
+       * `AuditLog`, gravada no servidor, no momento da geração. As duas fontes
+       * juntas é que fecham a auditoria; nenhuma delas sozinha depende da
+       * honestidade do cliente.
+       */
+      const contentOrigin = toContentOrigin(payload.contentOrigin);
 
       // Título sem NENHUMA letra ou número latino (só emoji, pontuação ou
       // escrita não-latina) faz `slugify` devolver string vazia — e uma matéria
@@ -244,6 +459,8 @@ export async function POST(
                 // "esta matéria foi escrita no editor de blocos?", e um array
                 // vazio responderia "sim, e está vazia" — que é outra coisa.
                 blocks: hasBlocks(input.blocks) ? toJsonColumn(input.blocks) : undefined,
+                // Ver o bloco de comentário de `contentOrigin`, acima.
+                contentOrigin,
                 status: publish ? 'published' : 'draft',
                 categoryId: category.id,
                 subcategoryId: input.subcategoryId,
@@ -288,10 +505,39 @@ export async function POST(
                 // `actorId` finalmente diz QUEM. Era o campo que o segredo
                 // compartilhado deixava vazio e que tornava a auditoria inútil.
                 actorId: guard.user.id,
-                after: { title: input.title, slug, categorySlug: category.slug, publish },
+                after: {
+                  title: input.title,
+                  slug,
+                  categorySlug: category.slug,
+                  publish,
+                  // Repetido aqui (além da coluna da matéria) porque a auditoria
+                  // precisa responder "como esta matéria NASCEU?" mesmo que a
+                  // linha do artigo seja apagada depois.
+                  contentOrigin,
+                },
                 ipHash,
               },
             });
+
+            // Ver o comentário equivalente na rota de edição: ação PRÓPRIA para
+            // que "quais matérias foram publicadas apesar do alerta?" seja uma
+            // consulta por índice, e não uma varredura de coluna Json.
+            if (riskGate.acknowledgement) {
+              await tx.auditLog.create({
+                data: {
+                  action: 'article.risk_acknowledged',
+                  entityType: 'Article',
+                  entityId: created.id,
+                  actorId: guard.user.id,
+                  after: {
+                    resumo: summarizeRisk(riskGate.acknowledgement.findings),
+                    trechos: toAuditFindings(riskGate.acknowledgement.findings),
+                  },
+                  reason: riskGate.acknowledgement.reason,
+                  ipHash,
+                },
+              });
+            }
 
             return { slug: created.slug };
           });
@@ -337,6 +583,8 @@ export async function POST(
         ok: true,
         slug: outcome.slug,
         categorySlug: category.slug,
+        // Aviso passivo do rascunho — ver o comentário na rota de edição.
+        riskFindings: input.riskFindings,
         message: publish ? 'Matéria publicada.' : 'Rascunho salvo.',
       });
     }

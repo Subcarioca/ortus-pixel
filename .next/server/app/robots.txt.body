@@ -1,10 +1,3 @@
 User-Agent: *
-Allow: /
-Disallow: /admin
-Disallow: /api/
-Disallow: /newsletter/confirmado
-Disallow: /newsletter/descadastro
-Disallow: /*?utm_
-Disallow: /*?fbclid
+Disallow: /
 
-Sitemap: https://ortuspixel.com/sitemap.xml

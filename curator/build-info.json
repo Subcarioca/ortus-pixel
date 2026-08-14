@@ -1,0 +1,10 @@
+{
+  "geradoEm": "2026-08-14T15:22:51.877Z",
+  "nodeDoBuild": "v24.19.0",
+  "alvoDeTranspilacao": "node20",
+  "engines": [
+    "libquery_engine-debian-openssl-1.1.x.so.node"
+  ],
+  "minificado": false,
+  "comando": "node --env-file=.env curator.cjs --once"
+}

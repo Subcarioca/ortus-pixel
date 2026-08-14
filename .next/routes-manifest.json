@@ -138,6 +138,14 @@
       "namedRegex": "^/franquia/(?<nxtPslug>[^/]+?)(?:/)?$"
     },
     {
+      "page": "/uploads/[...caminho]",
+      "regex": "^/uploads/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPcaminho": "nxtPcaminho"
+      },
+      "namedRegex": "^/uploads/(?<nxtPcaminho>.+?)(?:/)?$"
+    },
+    {
       "page": "/[categoria]/[slug]",
       "regex": "^/([^/]+?)/([^/]+?)(?:/)?$",
       "routeKeys": {
@@ -171,6 +179,12 @@
       "regex": "^/admin/afiliados(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/admin/afiliados(?:/)?$"
+    },
+    {
+      "page": "/admin/analytics",
+      "regex": "^/admin/analytics(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/analytics(?:/)?$"
     },
     {
       "page": "/admin/comentarios",

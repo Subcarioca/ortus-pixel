@@ -428,6 +428,34 @@ model StaffSession {
 /// para o motivo de serem tabelas separadas.
 model Topic {
   id      String @id @default(cuid())
+
+  /// DE ONDE VEIO ESTA PAUTA: 'curator' (o pipeline achou) ou 'manual' (alguém
+  /// da redação criou pelo painel).
+  ///
+  /// POR QUE UMA COLUNA, E NÃO UMA TABELA `ManualTopic` SEPARADA: pauta é pauta.
+  /// As duas viram matéria pelo mesmo fluxo (`create-article`), aparecem na
+  /// mesma fila, competem pelo mesmo tempo da redação e são ordenadas pelo mesmo
+  /// score. Duas tabelas obrigariam TODA leitura da fila a virar `UNION`, e a
+  /// primeira consulta que alguém esquecesse de unir passaria a esconder metade
+  /// do trabalho do dia — sem erro nenhum aparecer.
+  ///
+  /// O padrão é 'curator' porque é o que as linhas JÁ EXISTENTES são: o valor
+  /// default é aplicado a elas na migração, e nenhum código que lê `Topic` hoje
+  /// precisa saber que esta coluna existe.
+  ///
+  /// `VarChar(16)`: vocabulário fechado e curto (ver `core/topic-origin.ts`).
+  /// Não é `enum` do Prisma pelo mesmo motivo dos outros vocabulários fechados
+  /// deste schema — ver o comentário de `Author.systemRole`.
+  origin String @default("curator") @db.VarChar(16)
+
+  /// Quem criou a pauta manual. Nulo em tudo que veio do pipeline.
+  ///
+  /// String solta e não relação com `Author`: é o mesmo tratamento que
+  /// `manualOverrideById` e `claimedById` já recebem neste model. Uniformidade
+  /// aqui vale mais que a integridade referencial — e a integridade que importa
+  /// (quem fez o quê) está em `AuditLog`, que sobrevive à remoção da conta.
+  createdById String?
+
   /// Termo canônico usado nas consultas aos conectores.
   ///
   /// ⚠ `VarChar(255)` NÃO É ENFEITE — é o campo mais perigoso desta migração.
@@ -507,6 +535,31 @@ model Topic {
   claimedById   String?
   /// Quando o primeiro artigo derivado foi publicado.
   publishedAt   DateTime?
+
+  // ---- Alerta de potencial viral (e-mail para a redação) ----
+  //
+  /// Quando o alerta "esta pauta tem cara de hit" foi ENVIADO por e-mail.
+  ///
+  /// ESTA COLUNA É O ANTIFLOOD, e ela é a razão de o alerta não ser calculado na
+  /// hora do envio. O ciclo do curator recalcula score de minuto em minuto: sem
+  /// uma marca persistida, todo recálculo que mantivesse o tópico acima do
+  /// limiar mandaria um e-mail novo — e uma pauta quente por seis horas viraria
+  /// setenta e duas mensagens para a redação inteira. O resultado previsível não
+  /// é irritação: é a redação criando uma regra no Gmail que joga TODOS os
+  /// alertas na lixeira, inclusive o que importava.
+  ///
+  /// Nulo = nunca alertado. Ver `server/viral-alert.ts` para a regra completa
+  /// (inclusive o rearme, que é o que permite um segundo alerta legítimo dias
+  /// depois sem transformar isto num "uma vez na vida").
+  viralAlertSentAt DateTime?
+
+  /// Faixa em que o tópico estava quando o alerta saiu ('HOT', 'RISING'...).
+  ///
+  /// Guardar a faixa, e não só o instante, é o que permite alertar DE NOVO
+  /// quando o tópico SOBE mais uma faixa (RISING → HOT é notícia; HOT → HOT não
+  /// é). Sem ela, a única política possível seria "um alerta por tópico para
+  /// sempre" — e a subida que realmente importa passaria em silêncio.
+  viralAlertBand String? @db.VarChar(16)
 
   articles       Article[]
   scoreSnapshots ScoreSnapshot[]
@@ -738,6 +791,38 @@ model Article {
   /// Liga o bloco de revelação por escolha (blur + "Mostrar mesmo assim").
   /// Prevenção de erro para o público de séries e anime.
   hasSpoiler Boolean @default(false)
+
+  /// GRAU DE SENSIBILIDADE DO CONTEÚDO: 'none' | 'sensitive' | 'adult'.
+  ///
+  /// POR QUE TRÊS NÍVEIS E NÃO UM BOOLEANO `isAdult`: as consequências são
+  /// diferentes, e um booleano obrigaria a escolher a errada para metade dos
+  /// casos.
+  ///
+  ///   sensitive → tema pesado tratado jornalisticamente (violência real,
+  ///               suicídio, abuso, tragédia). O leitor merece um aviso; o
+  ///               anúncio automático continua sendo um risco de contexto
+  ///               (banner de brinquedo ao lado de notícia de tragédia), então
+  ///               a densidade cai, mas a matéria não sai do circuito.
+  ///   adult     → conteúdo adulto propriamente dito. Fica FORA de toda
+  ///               superfície monetizada por anúncio automático — não por
+  ///               pudor, mas porque veicular AdSense em página adulta é
+  ///               violação da política do programa, e a punição não é a página:
+  ///               é a CONTA inteira, com todo o histórico de receita junto.
+  ///
+  /// A regra de quem pode BAIXAR este nível é de permissão, não de schema, e
+  /// vive em `core/staff.ts` (`canLowerSensitivity`): qualquer pessoa da redação
+  /// pode marcar como mais sensível; só administrador pode desmarcar. A
+  /// assimetria é deliberada — errar para mais custa alguns centavos de receita,
+  /// errar para menos custa a conta do AdSense.
+  ///
+  /// SEM ÍNDICE, de propósito: nenhuma listagem filtra por este campo hoje (a
+  /// decisão é tomada ao RENDERIZAR a matéria, com a linha já em mãos), e cada
+  /// `@@index` a mais em `Article` é custo em toda escrita de uma tabela que já
+  /// carrega seis. Quando existir uma tela "matérias marcadas como adulto", aí
+  /// sim o índice se paga.
+  ///
+  /// `VarChar(16)`: vocabulário fechado e curto (ver `core/content-sensitivity.ts`).
+  contentSensitivity String @default("none") @db.VarChar(16)
 
   /// Resumo em 3 a 5 bullets. OBRIGATÓRIO em 'breaking' e 'review' — a
   /// validação vive em core/presentation.ts e é aplicada no painel editorial.
@@ -1439,6 +1524,103 @@ model Comment {
 // =============================================================================
 // INSTRUMENTAÇÃO INTERNA — KPIs que o GA4 não entrega
 // =============================================================================
+
+/// EVENTO DE AUDIÊNCIA — o que o leitor fez, com granularidade de clique.
+///
+/// -----------------------------------------------------------------------------
+/// POR QUE ESTA TABELA PRECISOU EXISTIR
+/// -----------------------------------------------------------------------------
+/// `Article` já tem `viewCount`, `pageviews24h`, `shareCount` e companhia. Eles
+/// são CONTADORES AGREGADOS: respondem "quantas visitas?" e não respondem
+/// NENHUMA das perguntas que a redação faz de verdade — "esta matéria puxou
+/// gente para outras?", "o bloco de ofertas converte?", "vale manter anúncio no
+/// meio do texto?". Um contador não se desagrega depois: a informação não foi
+/// perdida, ela nunca existiu.
+///
+/// -----------------------------------------------------------------------------
+/// TRÊS DECISÕES DE MODELAGEM QUE VÃO PARECER ERRADAS SEM ESTA EXPLICAÇÃO
+/// -----------------------------------------------------------------------------
+///
+/// 1. NÃO HÁ CHAVE ESTRANGEIRA PARA `Article` NEM PARA `AffiliateOffer`.
+///    É a decisão mais contraintuitiva do arquivo, e tem três motivos concretos:
+///
+///    (a) ESCRITA. Toda linha inserida com FK adquire um lock compartilhado na
+///        linha-pai (o InnoDB precisa provar que ela existe). Esta é a tabela
+///        mais escrita do sistema — uma matéria em alta gera milhares de
+///        inserções por minuto, TODAS apontando para a MESMA linha de `Article`.
+///        É a receita clássica de contenção num ponto único.
+///    (b) REMOÇÃO. Com `onDelete: Cascade`, apagar uma matéria com 300 mil
+///        eventos vira um `DELETE` de 300 mil linhas dentro da transação do
+///        editor que clicou em "apagar" — que, na melhor hipótese, trava a tela
+///        por minutos e, na pior, estoura o timeout e desfaz tudo.
+///    (c) SIGNIFICADO. Este log é HISTÓRICO. "A matéria que apagamos em março
+///        tinha 40 mil visitas" continua sendo verdade depois de a matéria
+///        deixar de existir, e um `Cascade` apagaria justamente o registro de
+///        que aquilo aconteceu.
+///
+///    O QUE SE PERDE, dito sem maquiagem: linhas órfãs (evento apontando para
+///    matéria inexistente) passam a ser possíveis, e o banco não impede mais um
+///    `articleId` inventado. Quem trata isso é a borda de escrita — a rota de
+///    ingestão só grava id que ela mesma resolveu no banco — e a borda de
+///    leitura, que faz `IN (...)` sobre os artigos que existem e ignora o resto.
+///
+/// 2. NÃO GUARDAMOS NADA DO LEITOR. Sem IP (nem em hash), sem user-agent, sem
+///    identificador de visitante, sem `referer`. A consequência é conhecida e
+///    aceita: NÃO dá para deduplicar "a mesma pessoa recarregou a página 5
+///    vezes", então "visualizações" aqui é contagem de EVENTOS, não de gente.
+///    Para a pergunta que esta tela responde — "qual matéria puxa mais que a
+///    outra?" — a comparação relativa basta, e a alternativa custaria caro: um
+///    identificador de visitante é dado pessoal sob a LGPD, com direito de
+///    eliminação, base legal e política de retenção próprios. Não construímos
+///    esse passivo para ganhar precisão que a decisão editorial não usa.
+///
+/// 3. A RETENÇÃO É PARTE DO DESENHO, NÃO UM PROBLEMA PARA DEPOIS. Esta tabela
+///    cresce de forma linear com o tráfego e não tem teto natural. O caminho
+///    previsto, na ordem: (i) hoje, consultas SEMPRE com janela de tempo (a tela
+///    do painel usa 30 dias e o índice cobre isso); (ii) quando incomodar, um
+///    job diário que agrega em `AnalyticsDaily` (uma linha por matéria/tipo/dia)
+///    e APAGA o detalhe com mais de 90 dias — o mesmo caminho já documentado
+///    para `ScoreSnapshot`. Nada no formato desta tabela atrapalha esse passo:
+///    a agregação é um `GROUP BY` sobre as colunas que já existem.
+model AnalyticsEvent {
+  id String @id @default(cuid())
+
+  /// O QUE aconteceu. Vocabulário fechado em `core/analytics.ts`:
+  /// 'article.view' | 'article.link' | 'ad.click' | 'affiliate.click'.
+  kind String @db.VarChar(24)
+
+  /// A matéria ONDE o evento aconteceu. É a coluna que a tela do painel agrupa,
+  /// e a que decide de quem é a métrica (a regra "redator só vê o que assina" é
+  /// aplicada resolvendo os ids de matéria do autor ANTES da agregação).
+  ///
+  /// `VarChar(40)` e não o `VarChar(191)` padrão do Prisma: guarda um `cuid()`,
+  /// que tem 25 caracteres. Numa tabela deste volume, a diferença aparece no
+  /// tamanho dos DOIS índices compostos abaixo, não só na coluna.
+  articleId String? @db.VarChar(40)
+
+  /// Para 'article.link': a matéria de DESTINO do clique. É o par que responde
+  /// "o que puxa leitura para o quê" — a métrica que justifica (ou condena) o
+  /// bloco "Leia também" no meio do texto.
+  targetArticleId String? @db.VarChar(40)
+
+  /// Para 'affiliate.click': a oferta clicada.
+  offerId String? @db.VarChar(40)
+
+  /// Para 'ad.click': o identificador do slot ('artigo-meio', 'artigo-fim'...),
+  /// como definido em `lib/ads.ts`. Serve para comparar posições entre si.
+  slotId String? @db.VarChar(64)
+
+  createdAt DateTime @default(now())
+
+  // Índice da tela por matéria: "eventos desta matéria, deste tipo, na janela".
+  // A ordem das colunas é a da seletividade decrescente e casa com o `WHERE`
+  // real da consulta — índice cuja ordem não casa com a consulta é índice que
+  // não é usado, e o `EXPLAIN` é o único jeito de descobrir isso.
+  @@index([articleId, kind, createdAt])
+  // Índice da visão do SITE INTEIRO (só administrador): "todos os cliques em
+  // afiliado dos últimos 30 dias", sem passar por matéria.
+  @@index([kind, createdAt])
+}
 
 /// Log de eventos do pipeline editorial.
 ///

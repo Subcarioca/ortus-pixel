@@ -252,6 +252,67 @@ export type CommentSession = $Result.DefaultSelection<Prisma.$CommentSessionPayl
  */
 export type Comment = $Result.DefaultSelection<Prisma.$CommentPayload>
 /**
+ * Model AnalyticsEvent
+ * EVENTO DE AUDIÊNCIA — o que o leitor fez, com granularidade de clique.
+ * 
+ * -----------------------------------------------------------------------------
+ * POR QUE ESTA TABELA PRECISOU EXISTIR
+ * -----------------------------------------------------------------------------
+ * `Article` já tem `viewCount`, `pageviews24h`, `shareCount` e companhia. Eles
+ * são CONTADORES AGREGADOS: respondem "quantas visitas?" e não respondem
+ * NENHUMA das perguntas que a redação faz de verdade — "esta matéria puxou
+ * gente para outras?", "o bloco de ofertas converte?", "vale manter anúncio no
+ * meio do texto?". Um contador não se desagrega depois: a informação não foi
+ * perdida, ela nunca existiu.
+ * 
+ * -----------------------------------------------------------------------------
+ * TRÊS DECISÕES DE MODELAGEM QUE VÃO PARECER ERRADAS SEM ESTA EXPLICAÇÃO
+ * -----------------------------------------------------------------------------
+ * 
+ * 1. NÃO HÁ CHAVE ESTRANGEIRA PARA `Article` NEM PARA `AffiliateOffer`.
+ * É a decisão mais contraintuitiva do arquivo, e tem três motivos concretos:
+ * 
+ * (a) ESCRITA. Toda linha inserida com FK adquire um lock compartilhado na
+ * linha-pai (o InnoDB precisa provar que ela existe). Esta é a tabela
+ * mais escrita do sistema — uma matéria em alta gera milhares de
+ * inserções por minuto, TODAS apontando para a MESMA linha de `Article`.
+ * É a receita clássica de contenção num ponto único.
+ * (b) REMOÇÃO. Com `onDelete: Cascade`, apagar uma matéria com 300 mil
+ * eventos vira um `DELETE` de 300 mil linhas dentro da transação do
+ * editor que clicou em "apagar" — que, na melhor hipótese, trava a tela
+ * por minutos e, na pior, estoura o timeout e desfaz tudo.
+ * (c) SIGNIFICADO. Este log é HISTÓRICO. "A matéria que apagamos em março
+ * tinha 40 mil visitas" continua sendo verdade depois de a matéria
+ * deixar de existir, e um `Cascade` apagaria justamente o registro de
+ * que aquilo aconteceu.
+ * 
+ * O QUE SE PERDE, dito sem maquiagem: linhas órfãs (evento apontando para
+ * matéria inexistente) passam a ser possíveis, e o banco não impede mais um
+ * `articleId` inventado. Quem trata isso é a borda de escrita — a rota de
+ * ingestão só grava id que ela mesma resolveu no banco — e a borda de
+ * leitura, que faz `IN (...)` sobre os artigos que existem e ignora o resto.
+ * 
+ * 2. NÃO GUARDAMOS NADA DO LEITOR. Sem IP (nem em hash), sem user-agent, sem
+ * identificador de visitante, sem `referer`. A consequência é conhecida e
+ * aceita: NÃO dá para deduplicar "a mesma pessoa recarregou a página 5
+ * vezes", então "visualizações" aqui é contagem de EVENTOS, não de gente.
+ * Para a pergunta que esta tela responde — "qual matéria puxa mais que a
+ * outra?" — a comparação relativa basta, e a alternativa custaria caro: um
+ * identificador de visitante é dado pessoal sob a LGPD, com direito de
+ * eliminação, base legal e política de retenção próprios. Não construímos
+ * esse passivo para ganhar precisão que a decisão editorial não usa.
+ * 
+ * 3. A RETENÇÃO É PARTE DO DESENHO, NÃO UM PROBLEMA PARA DEPOIS. Esta tabela
+ * cresce de forma linear com o tráfego e não tem teto natural. O caminho
+ * previsto, na ordem: (i) hoje, consultas SEMPRE com janela de tempo (a tela
+ * do painel usa 30 dias e o índice cobre isso); (ii) quando incomodar, um
+ * job diário que agrega em `AnalyticsDaily` (uma linha por matéria/tipo/dia)
+ * e APAGA o detalhe com mais de 90 dias — o mesmo caminho já documentado
+ * para `ScoreSnapshot`. Nada no formato desta tabela atrapalha esse passo:
+ * a agregação é um `GROUP BY` sobre as colunas que já existem.
+ */
+export type AnalyticsEvent = $Result.DefaultSelection<Prisma.$AnalyticsEventPayload>
+/**
  * Model PipelineEvent
  * Log de eventos do pipeline editorial.
  * 
@@ -651,6 +712,16 @@ export class PrismaClient<
     * ```
     */
   get comment(): Prisma.CommentDelegate<ExtArgs, ClientOptions>;
+
+  /**
+   * `prisma.analyticsEvent`: Exposes CRUD operations for the **AnalyticsEvent** model.
+    * Example usage:
+    * ```ts
+    * // Fetch zero or more AnalyticsEvents
+    * const analyticsEvents = await prisma.analyticsEvent.findMany()
+    * ```
+    */
+  get analyticsEvent(): Prisma.AnalyticsEventDelegate<ExtArgs, ClientOptions>;
 
   /**
    * `prisma.pipelineEvent`: Exposes CRUD operations for the **PipelineEvent** model.
@@ -1148,6 +1219,7 @@ export namespace Prisma {
     CommentAuthor: 'CommentAuthor',
     CommentSession: 'CommentSession',
     Comment: 'Comment',
+    AnalyticsEvent: 'AnalyticsEvent',
     PipelineEvent: 'PipelineEvent',
     PipelineRun: 'PipelineRun',
     AuditLog: 'AuditLog'
@@ -1169,7 +1241,7 @@ export namespace Prisma {
       omit: GlobalOmitOptions
     }
     meta: {
-      modelProps: "category" | "subcategory" | "franchise" | "tag" | "author" | "staffSession" | "topic" | "topicFranchise" | "scoreSnapshot" | "signalReading" | "connectorHealth" | "article" | "articleFranchise" | "articleTag" | "liveUpdate" | "affiliateOffer" | "articleAffiliateOffer" | "releaseEvent" | "subscriber" | "pushSubscription" | "pushNotification" | "pushDelivery" | "franchiseFollow" | "commentAuthor" | "commentSession" | "comment" | "pipelineEvent" | "pipelineRun" | "auditLog"
+      modelProps: "category" | "subcategory" | "franchise" | "tag" | "author" | "staffSession" | "topic" | "topicFranchise" | "scoreSnapshot" | "signalReading" | "connectorHealth" | "article" | "articleFranchise" | "articleTag" | "liveUpdate" | "affiliateOffer" | "articleAffiliateOffer" | "releaseEvent" | "subscriber" | "pushSubscription" | "pushNotification" | "pushDelivery" | "franchiseFollow" | "commentAuthor" | "commentSession" | "comment" | "analyticsEvent" | "pipelineEvent" | "pipelineRun" | "auditLog"
       txIsolationLevel: Prisma.TransactionIsolationLevel
     }
     model: {
@@ -2889,6 +2961,72 @@ export namespace Prisma {
           }
         }
       }
+      AnalyticsEvent: {
+        payload: Prisma.$AnalyticsEventPayload<ExtArgs>
+        fields: Prisma.AnalyticsEventFieldRefs
+        operations: {
+          findUnique: {
+            args: Prisma.AnalyticsEventFindUniqueArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnalyticsEventPayload> | null
+          }
+          findUniqueOrThrow: {
+            args: Prisma.AnalyticsEventFindUniqueOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnalyticsEventPayload>
+          }
+          findFirst: {
+            args: Prisma.AnalyticsEventFindFirstArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnalyticsEventPayload> | null
+          }
+          findFirstOrThrow: {
+            args: Prisma.AnalyticsEventFindFirstOrThrowArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnalyticsEventPayload>
+          }
+          findMany: {
+            args: Prisma.AnalyticsEventFindManyArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnalyticsEventPayload>[]
+          }
+          create: {
+            args: Prisma.AnalyticsEventCreateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnalyticsEventPayload>
+          }
+          createMany: {
+            args: Prisma.AnalyticsEventCreateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          delete: {
+            args: Prisma.AnalyticsEventDeleteArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnalyticsEventPayload>
+          }
+          update: {
+            args: Prisma.AnalyticsEventUpdateArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnalyticsEventPayload>
+          }
+          deleteMany: {
+            args: Prisma.AnalyticsEventDeleteManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          updateMany: {
+            args: Prisma.AnalyticsEventUpdateManyArgs<ExtArgs>
+            result: BatchPayload
+          }
+          upsert: {
+            args: Prisma.AnalyticsEventUpsertArgs<ExtArgs>
+            result: $Utils.PayloadToResult<Prisma.$AnalyticsEventPayload>
+          }
+          aggregate: {
+            args: Prisma.AnalyticsEventAggregateArgs<ExtArgs>
+            result: $Utils.Optional<AggregateAnalyticsEvent>
+          }
+          groupBy: {
+            args: Prisma.AnalyticsEventGroupByArgs<ExtArgs>
+            result: $Utils.Optional<AnalyticsEventGroupByOutputType>[]
+          }
+          count: {
+            args: Prisma.AnalyticsEventCountArgs<ExtArgs>
+            result: $Utils.Optional<AnalyticsEventCountAggregateOutputType> | number
+          }
+        }
+      }
       PipelineEvent: {
         payload: Prisma.$PipelineEventPayload<ExtArgs>
         fields: Prisma.PipelineEventFieldRefs
@@ -3209,6 +3347,7 @@ export namespace Prisma {
     commentAuthor?: CommentAuthorOmit
     commentSession?: CommentSessionOmit
     comment?: CommentOmit
+    analyticsEvent?: AnalyticsEventOmit
     pipelineEvent?: PipelineEventOmit
     pipelineRun?: PipelineRunOmit
     auditLog?: AuditLogOmit
@@ -10341,6 +10480,8 @@ export namespace Prisma {
 
   export type TopicMinAggregateOutputType = {
     id: string | null
+    origin: string | null
+    createdById: string | null
     query: string | null
     title: string | null
     summary: string | null
@@ -10369,12 +10510,16 @@ export namespace Prisma {
     claimedAt: Date | null
     claimedById: string | null
     publishedAt: Date | null
+    viralAlertSentAt: Date | null
+    viralAlertBand: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
 
   export type TopicMaxAggregateOutputType = {
     id: string | null
+    origin: string | null
+    createdById: string | null
     query: string | null
     title: string | null
     summary: string | null
@@ -10403,12 +10548,16 @@ export namespace Prisma {
     claimedAt: Date | null
     claimedById: string | null
     publishedAt: Date | null
+    viralAlertSentAt: Date | null
+    viralAlertBand: string | null
     createdAt: Date | null
     updatedAt: Date | null
   }
 
   export type TopicCountAggregateOutputType = {
     id: number
+    origin: number
+    createdById: number
     query: number
     aliases: number
     title: number
@@ -10439,6 +10588,8 @@ export namespace Prisma {
     claimedAt: number
     claimedById: number
     publishedAt: number
+    viralAlertSentAt: number
+    viralAlertBand: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -10463,6 +10614,8 @@ export namespace Prisma {
 
   export type TopicMinAggregateInputType = {
     id?: true
+    origin?: true
+    createdById?: true
     query?: true
     title?: true
     summary?: true
@@ -10491,12 +10644,16 @@ export namespace Prisma {
     claimedAt?: true
     claimedById?: true
     publishedAt?: true
+    viralAlertSentAt?: true
+    viralAlertBand?: true
     createdAt?: true
     updatedAt?: true
   }
 
   export type TopicMaxAggregateInputType = {
     id?: true
+    origin?: true
+    createdById?: true
     query?: true
     title?: true
     summary?: true
@@ -10525,12 +10682,16 @@ export namespace Prisma {
     claimedAt?: true
     claimedById?: true
     publishedAt?: true
+    viralAlertSentAt?: true
+    viralAlertBand?: true
     createdAt?: true
     updatedAt?: true
   }
 
   export type TopicCountAggregateInputType = {
     id?: true
+    origin?: true
+    createdById?: true
     query?: true
     aliases?: true
     title?: true
@@ -10561,6 +10722,8 @@ export namespace Prisma {
     claimedAt?: true
     claimedById?: true
     publishedAt?: true
+    viralAlertSentAt?: true
+    viralAlertBand?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -10654,6 +10817,8 @@ export namespace Prisma {
 
   export type TopicGroupByOutputType = {
     id: string
+    origin: string
+    createdById: string | null
     query: string
     aliases: JsonValue
     title: string
@@ -10684,6 +10849,8 @@ export namespace Prisma {
     claimedAt: Date | null
     claimedById: string | null
     publishedAt: Date | null
+    viralAlertSentAt: Date | null
+    viralAlertBand: string | null
     createdAt: Date
     updatedAt: Date
     _count: TopicCountAggregateOutputType | null
@@ -10709,6 +10876,8 @@ export namespace Prisma {
 
   export type TopicSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
     id?: boolean
+    origin?: boolean
+    createdById?: boolean
     query?: boolean
     aliases?: boolean
     title?: boolean
@@ -10739,6 +10908,8 @@ export namespace Prisma {
     claimedAt?: boolean
     claimedById?: boolean
     publishedAt?: boolean
+    viralAlertSentAt?: boolean
+    viralAlertBand?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     category?: boolean | Topic$categoryArgs<ExtArgs>
@@ -10753,6 +10924,8 @@ export namespace Prisma {
 
   export type TopicSelectScalar = {
     id?: boolean
+    origin?: boolean
+    createdById?: boolean
     query?: boolean
     aliases?: boolean
     title?: boolean
@@ -10783,11 +10956,13 @@ export namespace Prisma {
     claimedAt?: boolean
     claimedById?: boolean
     publishedAt?: boolean
+    viralAlertSentAt?: boolean
+    viralAlertBand?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type TopicOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "query" | "aliases" | "title" | "summary" | "categoryId" | "sourceUrl" | "sourceName" | "sourceTier" | "dedupeHash" | "currentScore" | "currentBand" | "scoreDelta1h" | "seoOpportunity" | "confidence" | "termType" | "emotionalTriggers" | "requiresHumanReview" | "scoreSummary" | "weightsVersion" | "manualScoreOverride" | "manualOverrideReason" | "manualOverrideById" | "manualOverrideAt" | "status" | "firstSeenAt" | "lastScoredAt" | "becameHotAt" | "claimedAt" | "claimedById" | "publishedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["topic"]>
+  export type TopicOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "origin" | "createdById" | "query" | "aliases" | "title" | "summary" | "categoryId" | "sourceUrl" | "sourceName" | "sourceTier" | "dedupeHash" | "currentScore" | "currentBand" | "scoreDelta1h" | "seoOpportunity" | "confidence" | "termType" | "emotionalTriggers" | "requiresHumanReview" | "scoreSummary" | "weightsVersion" | "manualScoreOverride" | "manualOverrideReason" | "manualOverrideById" | "manualOverrideAt" | "status" | "firstSeenAt" | "lastScoredAt" | "becameHotAt" | "claimedAt" | "claimedById" | "publishedAt" | "viralAlertSentAt" | "viralAlertBand" | "createdAt" | "updatedAt", ExtArgs["result"]["topic"]>
   export type TopicInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     category?: boolean | Topic$categoryArgs<ExtArgs>
     franchises?: boolean | Topic$franchisesArgs<ExtArgs>
@@ -10808,6 +10983,35 @@ export namespace Prisma {
     }
     scalars: $Extensions.GetPayloadResult<{
       id: string
+      /**
+       * DE ONDE VEIO ESTA PAUTA: 'curator' (o pipeline achou) ou 'manual' (alguém
+       * da redação criou pelo painel).
+       * 
+       * POR QUE UMA COLUNA, E NÃO UMA TABELA `ManualTopic` SEPARADA: pauta é pauta.
+       * As duas viram matéria pelo mesmo fluxo (`create-article`), aparecem na
+       * mesma fila, competem pelo mesmo tempo da redação e são ordenadas pelo mesmo
+       * score. Duas tabelas obrigariam TODA leitura da fila a virar `UNION`, e a
+       * primeira consulta que alguém esquecesse de unir passaria a esconder metade
+       * do trabalho do dia — sem erro nenhum aparecer.
+       * 
+       * O padrão é 'curator' porque é o que as linhas JÁ EXISTENTES são: o valor
+       * default é aplicado a elas na migração, e nenhum código que lê `Topic` hoje
+       * precisa saber que esta coluna existe.
+       * 
+       * `VarChar(16)`: vocabulário fechado e curto (ver `core/topic-origin.ts`).
+       * Não é `enum` do Prisma pelo mesmo motivo dos outros vocabulários fechados
+       * deste schema — ver o comentário de `Author.systemRole`.
+       */
+      origin: string
+      /**
+       * Quem criou a pauta manual. Nulo em tudo que veio do pipeline.
+       * 
+       * String solta e não relação com `Author`: é o mesmo tratamento que
+       * `manualOverrideById` e `claimedById` já recebem neste model. Uniformidade
+       * aqui vale mais que a integridade referencial — e a integridade que importa
+       * (quem fez o quê) está em `AuditLog`, que sobrevive à remoção da conta.
+       */
+      createdById: string | null
       /**
        * Termo canônico usado nas consultas aos conectores.
        * 
@@ -10881,6 +11085,31 @@ export namespace Prisma {
        * Quando o primeiro artigo derivado foi publicado.
        */
       publishedAt: Date | null
+      /**
+       * Quando o alerta "esta pauta tem cara de hit" foi ENVIADO por e-mail.
+       * 
+       * ESTA COLUNA É O ANTIFLOOD, e ela é a razão de o alerta não ser calculado na
+       * hora do envio. O ciclo do curator recalcula score de minuto em minuto: sem
+       * uma marca persistida, todo recálculo que mantivesse o tópico acima do
+       * limiar mandaria um e-mail novo — e uma pauta quente por seis horas viraria
+       * setenta e duas mensagens para a redação inteira. O resultado previsível não
+       * é irritação: é a redação criando uma regra no Gmail que joga TODOS os
+       * alertas na lixeira, inclusive o que importava.
+       * 
+       * Nulo = nunca alertado. Ver `server/viral-alert.ts` para a regra completa
+       * (inclusive o rearme, que é o que permite um segundo alerta legítimo dias
+       * depois sem transformar isto num "uma vez na vida").
+       */
+      viralAlertSentAt: Date | null
+      /**
+       * Faixa em que o tópico estava quando o alerta saiu ('HOT', 'RISING'...).
+       * 
+       * Guardar a faixa, e não só o instante, é o que permite alertar DE NOVO
+       * quando o tópico SOBE mais uma faixa (RISING → HOT é notícia; HOT → HOT não
+       * é). Sem ela, a única política possível seria "um alerta por tópico para
+       * sempre" — e a subida que realmente importa passaria em silêncio.
+       */
+      viralAlertBand: string | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["topic"]>
@@ -11258,6 +11487,8 @@ export namespace Prisma {
    */
   interface TopicFieldRefs {
     readonly id: FieldRef<"Topic", 'String'>
+    readonly origin: FieldRef<"Topic", 'String'>
+    readonly createdById: FieldRef<"Topic", 'String'>
     readonly query: FieldRef<"Topic", 'String'>
     readonly aliases: FieldRef<"Topic", 'Json'>
     readonly title: FieldRef<"Topic", 'String'>
@@ -11288,6 +11519,8 @@ export namespace Prisma {
     readonly claimedAt: FieldRef<"Topic", 'DateTime'>
     readonly claimedById: FieldRef<"Topic", 'String'>
     readonly publishedAt: FieldRef<"Topic", 'DateTime'>
+    readonly viralAlertSentAt: FieldRef<"Topic", 'DateTime'>
+    readonly viralAlertBand: FieldRef<"Topic", 'String'>
     readonly createdAt: FieldRef<"Topic", 'DateTime'>
     readonly updatedAt: FieldRef<"Topic", 'DateTime'>
   }
@@ -15835,6 +16068,7 @@ export namespace Prisma {
     isLive: boolean | null
     updatesCount: number | null
     hasSpoiler: boolean | null
+    contentSensitivity: string | null
     scoreAtPublish: number | null
     currentScore: number | null
     currentBand: string | null
@@ -15877,6 +16111,7 @@ export namespace Prisma {
     isLive: boolean | null
     updatesCount: number | null
     hasSpoiler: boolean | null
+    contentSensitivity: string | null
     scoreAtPublish: number | null
     currentScore: number | null
     currentBand: string | null
@@ -15920,6 +16155,7 @@ export namespace Prisma {
     isLive: number
     updatesCount: number
     hasSpoiler: number
+    contentSensitivity: number
     tldr: number
     reviewData: number
     scoreAtPublish: number
@@ -15994,6 +16230,7 @@ export namespace Prisma {
     isLive?: true
     updatesCount?: true
     hasSpoiler?: true
+    contentSensitivity?: true
     scoreAtPublish?: true
     currentScore?: true
     currentBand?: true
@@ -16036,6 +16273,7 @@ export namespace Prisma {
     isLive?: true
     updatesCount?: true
     hasSpoiler?: true
+    contentSensitivity?: true
     scoreAtPublish?: true
     currentScore?: true
     currentBand?: true
@@ -16079,6 +16317,7 @@ export namespace Prisma {
     isLive?: true
     updatesCount?: true
     hasSpoiler?: true
+    contentSensitivity?: true
     tldr?: true
     reviewData?: true
     scoreAtPublish?: true
@@ -16211,6 +16450,7 @@ export namespace Prisma {
     isLive: boolean
     updatesCount: number
     hasSpoiler: boolean
+    contentSensitivity: string
     tldr: JsonValue
     reviewData: JsonValue | null
     scoreAtPublish: number | null
@@ -16275,6 +16515,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: boolean
     hasSpoiler?: boolean
+    contentSensitivity?: boolean
     tldr?: boolean
     reviewData?: boolean
     scoreAtPublish?: boolean
@@ -16333,6 +16574,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: boolean
     hasSpoiler?: boolean
+    contentSensitivity?: boolean
     tldr?: boolean
     reviewData?: boolean
     scoreAtPublish?: boolean
@@ -16351,7 +16593,7 @@ export namespace Prisma {
     hasAffiliateLinks?: boolean
   }
 
-  export type ArticleOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "slug" | "title" | "excerpt" | "content" | "blocks" | "status" | "categoryId" | "subcategoryId" | "authorId" | "topicId" | "coverImageUrl" | "coverImageAlt" | "videoUrl" | "videoThumbnailUrl" | "videoDurationSeconds" | "seoTitle" | "seoDescription" | "canonicalUrl" | "noIndex" | "isBreaking" | "readingMinutes" | "format" | "isLive" | "updatesCount" | "hasSpoiler" | "tldr" | "reviewData" | "scoreAtPublish" | "currentScore" | "currentBand" | "scoreDelta1h" | "scoreUpdatedAt" | "viewCount" | "pageviews24h" | "avgTimeOnPageSeconds" | "scrollDepthAvg" | "shareCount" | "publishedAt" | "createdAt" | "updatedAt" | "hasAffiliateLinks", ExtArgs["result"]["article"]>
+  export type ArticleOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "slug" | "title" | "excerpt" | "content" | "blocks" | "status" | "categoryId" | "subcategoryId" | "authorId" | "topicId" | "coverImageUrl" | "coverImageAlt" | "videoUrl" | "videoThumbnailUrl" | "videoDurationSeconds" | "seoTitle" | "seoDescription" | "canonicalUrl" | "noIndex" | "isBreaking" | "readingMinutes" | "format" | "isLive" | "updatesCount" | "hasSpoiler" | "contentSensitivity" | "tldr" | "reviewData" | "scoreAtPublish" | "currentScore" | "currentBand" | "scoreDelta1h" | "scoreUpdatedAt" | "viewCount" | "pageviews24h" | "avgTimeOnPageSeconds" | "scrollDepthAvg" | "shareCount" | "publishedAt" | "createdAt" | "updatedAt" | "hasAffiliateLinks", ExtArgs["result"]["article"]>
   export type ArticleInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     category?: boolean | CategoryDefaultArgs<ExtArgs>
     subcategory?: boolean | Article$subcategoryArgs<ExtArgs>
@@ -16483,6 +16725,39 @@ export namespace Prisma {
        * Prevenção de erro para o público de séries e anime.
        */
       hasSpoiler: boolean
+      /**
+       * GRAU DE SENSIBILIDADE DO CONTEÚDO: 'none' | 'sensitive' | 'adult'.
+       * 
+       * POR QUE TRÊS NÍVEIS E NÃO UM BOOLEANO `isAdult`: as consequências são
+       * diferentes, e um booleano obrigaria a escolher a errada para metade dos
+       * casos.
+       * 
+       * sensitive → tema pesado tratado jornalisticamente (violência real,
+       * suicídio, abuso, tragédia). O leitor merece um aviso; o
+       * anúncio automático continua sendo um risco de contexto
+       * (banner de brinquedo ao lado de notícia de tragédia), então
+       * a densidade cai, mas a matéria não sai do circuito.
+       * adult     → conteúdo adulto propriamente dito. Fica FORA de toda
+       * superfície monetizada por anúncio automático — não por
+       * pudor, mas porque veicular AdSense em página adulta é
+       * violação da política do programa, e a punição não é a página:
+       * é a CONTA inteira, com todo o histórico de receita junto.
+       * 
+       * A regra de quem pode BAIXAR este nível é de permissão, não de schema, e
+       * vive em `core/staff.ts` (`canLowerSensitivity`): qualquer pessoa da redação
+       * pode marcar como mais sensível; só administrador pode desmarcar. A
+       * assimetria é deliberada — errar para mais custa alguns centavos de receita,
+       * errar para menos custa a conta do AdSense.
+       * 
+       * SEM ÍNDICE, de propósito: nenhuma listagem filtra por este campo hoje (a
+       * decisão é tomada ao RENDERIZAR a matéria, com a linha já em mãos), e cada
+       * `@@index` a mais em `Article` é custo em toda escrita de uma tabela que já
+       * carrega seis. Quando existir uma tela "matérias marcadas como adulto", aí
+       * sim o índice se paga.
+       * 
+       * `VarChar(16)`: vocabulário fechado e curto (ver `core/content-sensitivity.ts`).
+       */
+      contentSensitivity: string
       /**
        * Resumo em 3 a 5 bullets. OBRIGATÓRIO em 'breaking' e 'review' — a
        * validação vive em core/presentation.ts e é aplicada no painel editorial.
@@ -16948,6 +17223,7 @@ export namespace Prisma {
     readonly isLive: FieldRef<"Article", 'Boolean'>
     readonly updatesCount: FieldRef<"Article", 'Int'>
     readonly hasSpoiler: FieldRef<"Article", 'Boolean'>
+    readonly contentSensitivity: FieldRef<"Article", 'String'>
     readonly tldr: FieldRef<"Article", 'Json'>
     readonly reviewData: FieldRef<"Article", 'Json'>
     readonly scoreAtPublish: FieldRef<"Article", 'Float'>
@@ -32032,6 +32308,935 @@ export namespace Prisma {
 
 
   /**
+   * Model AnalyticsEvent
+   */
+
+  export type AggregateAnalyticsEvent = {
+    _count: AnalyticsEventCountAggregateOutputType | null
+    _min: AnalyticsEventMinAggregateOutputType | null
+    _max: AnalyticsEventMaxAggregateOutputType | null
+  }
+
+  export type AnalyticsEventMinAggregateOutputType = {
+    id: string | null
+    kind: string | null
+    articleId: string | null
+    targetArticleId: string | null
+    offerId: string | null
+    slotId: string | null
+    createdAt: Date | null
+  }
+
+  export type AnalyticsEventMaxAggregateOutputType = {
+    id: string | null
+    kind: string | null
+    articleId: string | null
+    targetArticleId: string | null
+    offerId: string | null
+    slotId: string | null
+    createdAt: Date | null
+  }
+
+  export type AnalyticsEventCountAggregateOutputType = {
+    id: number
+    kind: number
+    articleId: number
+    targetArticleId: number
+    offerId: number
+    slotId: number
+    createdAt: number
+    _all: number
+  }
+
+
+  export type AnalyticsEventMinAggregateInputType = {
+    id?: true
+    kind?: true
+    articleId?: true
+    targetArticleId?: true
+    offerId?: true
+    slotId?: true
+    createdAt?: true
+  }
+
+  export type AnalyticsEventMaxAggregateInputType = {
+    id?: true
+    kind?: true
+    articleId?: true
+    targetArticleId?: true
+    offerId?: true
+    slotId?: true
+    createdAt?: true
+  }
+
+  export type AnalyticsEventCountAggregateInputType = {
+    id?: true
+    kind?: true
+    articleId?: true
+    targetArticleId?: true
+    offerId?: true
+    slotId?: true
+    createdAt?: true
+    _all?: true
+  }
+
+  export type AnalyticsEventAggregateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which AnalyticsEvent to aggregate.
+     */
+    where?: AnalyticsEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AnalyticsEvents to fetch.
+     */
+    orderBy?: AnalyticsEventOrderByWithRelationInput | AnalyticsEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the start position
+     */
+    cursor?: AnalyticsEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AnalyticsEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AnalyticsEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Count returned AnalyticsEvents
+    **/
+    _count?: true | AnalyticsEventCountAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the minimum value
+    **/
+    _min?: AnalyticsEventMinAggregateInputType
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/aggregations Aggregation Docs}
+     * 
+     * Select which fields to find the maximum value
+    **/
+    _max?: AnalyticsEventMaxAggregateInputType
+  }
+
+  export type GetAnalyticsEventAggregateType<T extends AnalyticsEventAggregateArgs> = {
+        [P in keyof T & keyof AggregateAnalyticsEvent]: P extends '_count' | 'count'
+      ? T[P] extends true
+        ? number
+        : GetScalarType<T[P], AggregateAnalyticsEvent[P]>
+      : GetScalarType<T[P], AggregateAnalyticsEvent[P]>
+  }
+
+
+
+
+  export type AnalyticsEventGroupByArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    where?: AnalyticsEventWhereInput
+    orderBy?: AnalyticsEventOrderByWithAggregationInput | AnalyticsEventOrderByWithAggregationInput[]
+    by: AnalyticsEventScalarFieldEnum[] | AnalyticsEventScalarFieldEnum
+    having?: AnalyticsEventScalarWhereWithAggregatesInput
+    take?: number
+    skip?: number
+    _count?: AnalyticsEventCountAggregateInputType | true
+    _min?: AnalyticsEventMinAggregateInputType
+    _max?: AnalyticsEventMaxAggregateInputType
+  }
+
+  export type AnalyticsEventGroupByOutputType = {
+    id: string
+    kind: string
+    articleId: string | null
+    targetArticleId: string | null
+    offerId: string | null
+    slotId: string | null
+    createdAt: Date
+    _count: AnalyticsEventCountAggregateOutputType | null
+    _min: AnalyticsEventMinAggregateOutputType | null
+    _max: AnalyticsEventMaxAggregateOutputType | null
+  }
+
+  type GetAnalyticsEventGroupByPayload<T extends AnalyticsEventGroupByArgs> = Prisma.PrismaPromise<
+    Array<
+      PickEnumerable<AnalyticsEventGroupByOutputType, T['by']> &
+        {
+          [P in ((keyof T) & (keyof AnalyticsEventGroupByOutputType))]: P extends '_count'
+            ? T[P] extends boolean
+              ? number
+              : GetScalarType<T[P], AnalyticsEventGroupByOutputType[P]>
+            : GetScalarType<T[P], AnalyticsEventGroupByOutputType[P]>
+        }
+      >
+    >
+
+
+  export type AnalyticsEventSelect<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
+    id?: boolean
+    kind?: boolean
+    articleId?: boolean
+    targetArticleId?: boolean
+    offerId?: boolean
+    slotId?: boolean
+    createdAt?: boolean
+  }, ExtArgs["result"]["analyticsEvent"]>
+
+
+
+  export type AnalyticsEventSelectScalar = {
+    id?: boolean
+    kind?: boolean
+    articleId?: boolean
+    targetArticleId?: boolean
+    offerId?: boolean
+    slotId?: boolean
+    createdAt?: boolean
+  }
+
+  export type AnalyticsEventOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "kind" | "articleId" | "targetArticleId" | "offerId" | "slotId" | "createdAt", ExtArgs["result"]["analyticsEvent"]>
+
+  export type $AnalyticsEventPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    name: "AnalyticsEvent"
+    objects: {}
+    scalars: $Extensions.GetPayloadResult<{
+      id: string
+      /**
+       * O QUE aconteceu. Vocabulário fechado em `core/analytics.ts`:
+       * 'article.view' | 'article.link' | 'ad.click' | 'affiliate.click'.
+       */
+      kind: string
+      /**
+       * A matéria ONDE o evento aconteceu. É a coluna que a tela do painel agrupa,
+       * e a que decide de quem é a métrica (a regra "redator só vê o que assina" é
+       * aplicada resolvendo os ids de matéria do autor ANTES da agregação).
+       * 
+       * `VarChar(40)` e não o `VarChar(191)` padrão do Prisma: guarda um `cuid()`,
+       * que tem 25 caracteres. Numa tabela deste volume, a diferença aparece no
+       * tamanho dos DOIS índices compostos abaixo, não só na coluna.
+       */
+      articleId: string | null
+      /**
+       * Para 'article.link': a matéria de DESTINO do clique. É o par que responde
+       * "o que puxa leitura para o quê" — a métrica que justifica (ou condena) o
+       * bloco "Leia também" no meio do texto.
+       */
+      targetArticleId: string | null
+      /**
+       * Para 'affiliate.click': a oferta clicada.
+       */
+      offerId: string | null
+      /**
+       * Para 'ad.click': o identificador do slot ('artigo-meio', 'artigo-fim'...),
+       * como definido em `lib/ads.ts`. Serve para comparar posições entre si.
+       */
+      slotId: string | null
+      createdAt: Date
+    }, ExtArgs["result"]["analyticsEvent"]>
+    composites: {}
+  }
+
+  type AnalyticsEventGetPayload<S extends boolean | null | undefined | AnalyticsEventDefaultArgs> = $Result.GetResult<Prisma.$AnalyticsEventPayload, S>
+
+  type AnalyticsEventCountArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> =
+    Omit<AnalyticsEventFindManyArgs, 'select' | 'include' | 'distinct' | 'omit'> & {
+      select?: AnalyticsEventCountAggregateInputType | true
+    }
+
+  export interface AnalyticsEventDelegate<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> {
+    [K: symbol]: { types: Prisma.TypeMap<ExtArgs>['model']['AnalyticsEvent'], meta: { name: 'AnalyticsEvent' } }
+    /**
+     * Find zero or one AnalyticsEvent that matches the filter.
+     * @param {AnalyticsEventFindUniqueArgs} args - Arguments to find a AnalyticsEvent
+     * @example
+     * // Get one AnalyticsEvent
+     * const analyticsEvent = await prisma.analyticsEvent.findUnique({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUnique<T extends AnalyticsEventFindUniqueArgs>(args: SelectSubset<T, AnalyticsEventFindUniqueArgs<ExtArgs>>): Prisma__AnalyticsEventClient<$Result.GetResult<Prisma.$AnalyticsEventPayload<ExtArgs>, T, "findUnique", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find one AnalyticsEvent that matches the filter or throw an error with `error.code='P2025'`
+     * if no matches were found.
+     * @param {AnalyticsEventFindUniqueOrThrowArgs} args - Arguments to find a AnalyticsEvent
+     * @example
+     * // Get one AnalyticsEvent
+     * const analyticsEvent = await prisma.analyticsEvent.findUniqueOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findUniqueOrThrow<T extends AnalyticsEventFindUniqueOrThrowArgs>(args: SelectSubset<T, AnalyticsEventFindUniqueOrThrowArgs<ExtArgs>>): Prisma__AnalyticsEventClient<$Result.GetResult<Prisma.$AnalyticsEventPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first AnalyticsEvent that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AnalyticsEventFindFirstArgs} args - Arguments to find a AnalyticsEvent
+     * @example
+     * // Get one AnalyticsEvent
+     * const analyticsEvent = await prisma.analyticsEvent.findFirst({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirst<T extends AnalyticsEventFindFirstArgs>(args?: SelectSubset<T, AnalyticsEventFindFirstArgs<ExtArgs>>): Prisma__AnalyticsEventClient<$Result.GetResult<Prisma.$AnalyticsEventPayload<ExtArgs>, T, "findFirst", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find the first AnalyticsEvent that matches the filter or
+     * throw `PrismaKnownClientError` with `P2025` code if no matches were found.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AnalyticsEventFindFirstOrThrowArgs} args - Arguments to find a AnalyticsEvent
+     * @example
+     * // Get one AnalyticsEvent
+     * const analyticsEvent = await prisma.analyticsEvent.findFirstOrThrow({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     */
+    findFirstOrThrow<T extends AnalyticsEventFindFirstOrThrowArgs>(args?: SelectSubset<T, AnalyticsEventFindFirstOrThrowArgs<ExtArgs>>): Prisma__AnalyticsEventClient<$Result.GetResult<Prisma.$AnalyticsEventPayload<ExtArgs>, T, "findFirstOrThrow", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Find zero or more AnalyticsEvents that matches the filter.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AnalyticsEventFindManyArgs} args - Arguments to filter and select certain fields only.
+     * @example
+     * // Get all AnalyticsEvents
+     * const analyticsEvents = await prisma.analyticsEvent.findMany()
+     * 
+     * // Get first 10 AnalyticsEvents
+     * const analyticsEvents = await prisma.analyticsEvent.findMany({ take: 10 })
+     * 
+     * // Only select the `id`
+     * const analyticsEventWithIdOnly = await prisma.analyticsEvent.findMany({ select: { id: true } })
+     * 
+     */
+    findMany<T extends AnalyticsEventFindManyArgs>(args?: SelectSubset<T, AnalyticsEventFindManyArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AnalyticsEventPayload<ExtArgs>, T, "findMany", GlobalOmitOptions>>
+
+    /**
+     * Create a AnalyticsEvent.
+     * @param {AnalyticsEventCreateArgs} args - Arguments to create a AnalyticsEvent.
+     * @example
+     * // Create one AnalyticsEvent
+     * const AnalyticsEvent = await prisma.analyticsEvent.create({
+     *   data: {
+     *     // ... data to create a AnalyticsEvent
+     *   }
+     * })
+     * 
+     */
+    create<T extends AnalyticsEventCreateArgs>(args: SelectSubset<T, AnalyticsEventCreateArgs<ExtArgs>>): Prisma__AnalyticsEventClient<$Result.GetResult<Prisma.$AnalyticsEventPayload<ExtArgs>, T, "create", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Create many AnalyticsEvents.
+     * @param {AnalyticsEventCreateManyArgs} args - Arguments to create many AnalyticsEvents.
+     * @example
+     * // Create many AnalyticsEvents
+     * const analyticsEvent = await prisma.analyticsEvent.createMany({
+     *   data: [
+     *     // ... provide data here
+     *   ]
+     * })
+     *     
+     */
+    createMany<T extends AnalyticsEventCreateManyArgs>(args?: SelectSubset<T, AnalyticsEventCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Delete a AnalyticsEvent.
+     * @param {AnalyticsEventDeleteArgs} args - Arguments to delete one AnalyticsEvent.
+     * @example
+     * // Delete one AnalyticsEvent
+     * const AnalyticsEvent = await prisma.analyticsEvent.delete({
+     *   where: {
+     *     // ... filter to delete one AnalyticsEvent
+     *   }
+     * })
+     * 
+     */
+    delete<T extends AnalyticsEventDeleteArgs>(args: SelectSubset<T, AnalyticsEventDeleteArgs<ExtArgs>>): Prisma__AnalyticsEventClient<$Result.GetResult<Prisma.$AnalyticsEventPayload<ExtArgs>, T, "delete", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Update one AnalyticsEvent.
+     * @param {AnalyticsEventUpdateArgs} args - Arguments to update one AnalyticsEvent.
+     * @example
+     * // Update one AnalyticsEvent
+     * const analyticsEvent = await prisma.analyticsEvent.update({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    update<T extends AnalyticsEventUpdateArgs>(args: SelectSubset<T, AnalyticsEventUpdateArgs<ExtArgs>>): Prisma__AnalyticsEventClient<$Result.GetResult<Prisma.$AnalyticsEventPayload<ExtArgs>, T, "update", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+    /**
+     * Delete zero or more AnalyticsEvents.
+     * @param {AnalyticsEventDeleteManyArgs} args - Arguments to filter AnalyticsEvents to delete.
+     * @example
+     * // Delete a few AnalyticsEvents
+     * const { count } = await prisma.analyticsEvent.deleteMany({
+     *   where: {
+     *     // ... provide filter here
+     *   }
+     * })
+     * 
+     */
+    deleteMany<T extends AnalyticsEventDeleteManyArgs>(args?: SelectSubset<T, AnalyticsEventDeleteManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Update zero or more AnalyticsEvents.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AnalyticsEventUpdateManyArgs} args - Arguments to update one or more rows.
+     * @example
+     * // Update many AnalyticsEvents
+     * const analyticsEvent = await prisma.analyticsEvent.updateMany({
+     *   where: {
+     *     // ... provide filter here
+     *   },
+     *   data: {
+     *     // ... provide data here
+     *   }
+     * })
+     * 
+     */
+    updateMany<T extends AnalyticsEventUpdateManyArgs>(args: SelectSubset<T, AnalyticsEventUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
+
+    /**
+     * Create or update one AnalyticsEvent.
+     * @param {AnalyticsEventUpsertArgs} args - Arguments to update or create a AnalyticsEvent.
+     * @example
+     * // Update or create a AnalyticsEvent
+     * const analyticsEvent = await prisma.analyticsEvent.upsert({
+     *   create: {
+     *     // ... data to create a AnalyticsEvent
+     *   },
+     *   update: {
+     *     // ... in case it already exists, update
+     *   },
+     *   where: {
+     *     // ... the filter for the AnalyticsEvent we want to update
+     *   }
+     * })
+     */
+    upsert<T extends AnalyticsEventUpsertArgs>(args: SelectSubset<T, AnalyticsEventUpsertArgs<ExtArgs>>): Prisma__AnalyticsEventClient<$Result.GetResult<Prisma.$AnalyticsEventPayload<ExtArgs>, T, "upsert", GlobalOmitOptions>, never, ExtArgs, GlobalOmitOptions>
+
+
+    /**
+     * Count the number of AnalyticsEvents.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AnalyticsEventCountArgs} args - Arguments to filter AnalyticsEvents to count.
+     * @example
+     * // Count the number of AnalyticsEvents
+     * const count = await prisma.analyticsEvent.count({
+     *   where: {
+     *     // ... the filter for the AnalyticsEvents we want to count
+     *   }
+     * })
+    **/
+    count<T extends AnalyticsEventCountArgs>(
+      args?: Subset<T, AnalyticsEventCountArgs>,
+    ): Prisma.PrismaPromise<
+      T extends $Utils.Record<'select', any>
+        ? T['select'] extends true
+          ? number
+          : GetScalarType<T['select'], AnalyticsEventCountAggregateOutputType>
+        : number
+    >
+
+    /**
+     * Allows you to perform aggregations operations on a AnalyticsEvent.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AnalyticsEventAggregateArgs} args - Select which aggregations you would like to apply and on what fields.
+     * @example
+     * // Ordered by age ascending
+     * // Where email contains prisma.io
+     * // Limited to the 10 users
+     * const aggregations = await prisma.user.aggregate({
+     *   _avg: {
+     *     age: true,
+     *   },
+     *   where: {
+     *     email: {
+     *       contains: "prisma.io",
+     *     },
+     *   },
+     *   orderBy: {
+     *     age: "asc",
+     *   },
+     *   take: 10,
+     * })
+    **/
+    aggregate<T extends AnalyticsEventAggregateArgs>(args: Subset<T, AnalyticsEventAggregateArgs>): Prisma.PrismaPromise<GetAnalyticsEventAggregateType<T>>
+
+    /**
+     * Group by AnalyticsEvent.
+     * Note, that providing `undefined` is treated as the value not being there.
+     * Read more here: https://pris.ly/d/null-undefined
+     * @param {AnalyticsEventGroupByArgs} args - Group by arguments.
+     * @example
+     * // Group by city, order by createdAt, get count
+     * const result = await prisma.user.groupBy({
+     *   by: ['city', 'createdAt'],
+     *   orderBy: {
+     *     createdAt: true
+     *   },
+     *   _count: {
+     *     _all: true
+     *   },
+     * })
+     * 
+    **/
+    groupBy<
+      T extends AnalyticsEventGroupByArgs,
+      HasSelectOrTake extends Or<
+        Extends<'skip', Keys<T>>,
+        Extends<'take', Keys<T>>
+      >,
+      OrderByArg extends True extends HasSelectOrTake
+        ? { orderBy: AnalyticsEventGroupByArgs['orderBy'] }
+        : { orderBy?: AnalyticsEventGroupByArgs['orderBy'] },
+      OrderFields extends ExcludeUnderscoreKeys<Keys<MaybeTupleToUnion<T['orderBy']>>>,
+      ByFields extends MaybeTupleToUnion<T['by']>,
+      ByValid extends Has<ByFields, OrderFields>,
+      HavingFields extends GetHavingFields<T['having']>,
+      HavingValid extends Has<ByFields, HavingFields>,
+      ByEmpty extends T['by'] extends never[] ? True : False,
+      InputErrors extends ByEmpty extends True
+      ? `Error: "by" must not be empty.`
+      : HavingValid extends False
+      ? {
+          [P in HavingFields]: P extends ByFields
+            ? never
+            : P extends string
+            ? `Error: Field "${P}" used in "having" needs to be provided in "by".`
+            : [
+                Error,
+                'Field ',
+                P,
+                ` in "having" needs to be provided in "by"`,
+              ]
+        }[HavingFields]
+      : 'take' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "take", you also need to provide "orderBy"'
+      : 'skip' extends Keys<T>
+      ? 'orderBy' extends Keys<T>
+        ? ByValid extends True
+          ? {}
+          : {
+              [P in OrderFields]: P extends ByFields
+                ? never
+                : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+            }[OrderFields]
+        : 'Error: If you provide "skip", you also need to provide "orderBy"'
+      : ByValid extends True
+      ? {}
+      : {
+          [P in OrderFields]: P extends ByFields
+            ? never
+            : `Error: Field "${P}" in "orderBy" needs to be provided in "by"`
+        }[OrderFields]
+    >(args: SubsetIntersection<T, AnalyticsEventGroupByArgs, OrderByArg> & InputErrors): {} extends InputErrors ? GetAnalyticsEventGroupByPayload<T> : Prisma.PrismaPromise<InputErrors>
+  /**
+   * Fields of the AnalyticsEvent model
+   */
+  readonly fields: AnalyticsEventFieldRefs;
+  }
+
+  /**
+   * The delegate class that acts as a "Promise-like" for AnalyticsEvent.
+   * Why is this prefixed with `Prisma__`?
+   * Because we want to prevent naming conflicts as mentioned in
+   * https://github.com/prisma/prisma-client-js/issues/707
+   */
+  export interface Prisma__AnalyticsEventClient<T, Null = never, ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
+    readonly [Symbol.toStringTag]: "PrismaPromise"
+    /**
+     * Attaches callbacks for the resolution and/or rejection of the Promise.
+     * @param onfulfilled The callback to execute when the Promise is resolved.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of which ever callback is executed.
+     */
+    then<TResult1 = T, TResult2 = never>(onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null, onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): $Utils.JsPromise<TResult1 | TResult2>
+    /**
+     * Attaches a callback for only the rejection of the Promise.
+     * @param onrejected The callback to execute when the Promise is rejected.
+     * @returns A Promise for the completion of the callback.
+     */
+    catch<TResult = never>(onrejected?: ((reason: any) => TResult | PromiseLike<TResult>) | undefined | null): $Utils.JsPromise<T | TResult>
+    /**
+     * Attaches a callback that is invoked when the Promise is settled (fulfilled or rejected). The
+     * resolved value cannot be modified from the callback.
+     * @param onfinally The callback to execute when the Promise is settled (fulfilled or rejected).
+     * @returns A Promise for the completion of the callback.
+     */
+    finally(onfinally?: (() => void) | undefined | null): $Utils.JsPromise<T>
+  }
+
+
+
+
+  /**
+   * Fields of the AnalyticsEvent model
+   */
+  interface AnalyticsEventFieldRefs {
+    readonly id: FieldRef<"AnalyticsEvent", 'String'>
+    readonly kind: FieldRef<"AnalyticsEvent", 'String'>
+    readonly articleId: FieldRef<"AnalyticsEvent", 'String'>
+    readonly targetArticleId: FieldRef<"AnalyticsEvent", 'String'>
+    readonly offerId: FieldRef<"AnalyticsEvent", 'String'>
+    readonly slotId: FieldRef<"AnalyticsEvent", 'String'>
+    readonly createdAt: FieldRef<"AnalyticsEvent", 'DateTime'>
+  }
+    
+
+  // Custom InputTypes
+  /**
+   * AnalyticsEvent findUnique
+   */
+  export type AnalyticsEventFindUniqueArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnalyticsEvent
+     */
+    select?: AnalyticsEventSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnalyticsEvent
+     */
+    omit?: AnalyticsEventOmit<ExtArgs> | null
+    /**
+     * Filter, which AnalyticsEvent to fetch.
+     */
+    where: AnalyticsEventWhereUniqueInput
+  }
+
+  /**
+   * AnalyticsEvent findUniqueOrThrow
+   */
+  export type AnalyticsEventFindUniqueOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnalyticsEvent
+     */
+    select?: AnalyticsEventSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnalyticsEvent
+     */
+    omit?: AnalyticsEventOmit<ExtArgs> | null
+    /**
+     * Filter, which AnalyticsEvent to fetch.
+     */
+    where: AnalyticsEventWhereUniqueInput
+  }
+
+  /**
+   * AnalyticsEvent findFirst
+   */
+  export type AnalyticsEventFindFirstArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnalyticsEvent
+     */
+    select?: AnalyticsEventSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnalyticsEvent
+     */
+    omit?: AnalyticsEventOmit<ExtArgs> | null
+    /**
+     * Filter, which AnalyticsEvent to fetch.
+     */
+    where?: AnalyticsEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AnalyticsEvents to fetch.
+     */
+    orderBy?: AnalyticsEventOrderByWithRelationInput | AnalyticsEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for AnalyticsEvents.
+     */
+    cursor?: AnalyticsEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AnalyticsEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AnalyticsEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of AnalyticsEvents.
+     */
+    distinct?: AnalyticsEventScalarFieldEnum | AnalyticsEventScalarFieldEnum[]
+  }
+
+  /**
+   * AnalyticsEvent findFirstOrThrow
+   */
+  export type AnalyticsEventFindFirstOrThrowArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnalyticsEvent
+     */
+    select?: AnalyticsEventSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnalyticsEvent
+     */
+    omit?: AnalyticsEventOmit<ExtArgs> | null
+    /**
+     * Filter, which AnalyticsEvent to fetch.
+     */
+    where?: AnalyticsEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AnalyticsEvents to fetch.
+     */
+    orderBy?: AnalyticsEventOrderByWithRelationInput | AnalyticsEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for searching for AnalyticsEvents.
+     */
+    cursor?: AnalyticsEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AnalyticsEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AnalyticsEvents.
+     */
+    skip?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+     * 
+     * Filter by unique combinations of AnalyticsEvents.
+     */
+    distinct?: AnalyticsEventScalarFieldEnum | AnalyticsEventScalarFieldEnum[]
+  }
+
+  /**
+   * AnalyticsEvent findMany
+   */
+  export type AnalyticsEventFindManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnalyticsEvent
+     */
+    select?: AnalyticsEventSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnalyticsEvent
+     */
+    omit?: AnalyticsEventOmit<ExtArgs> | null
+    /**
+     * Filter, which AnalyticsEvents to fetch.
+     */
+    where?: AnalyticsEventWhereInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/sorting Sorting Docs}
+     * 
+     * Determine the order of AnalyticsEvents to fetch.
+     */
+    orderBy?: AnalyticsEventOrderByWithRelationInput | AnalyticsEventOrderByWithRelationInput[]
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination#cursor-based-pagination Cursor Docs}
+     * 
+     * Sets the position for listing AnalyticsEvents.
+     */
+    cursor?: AnalyticsEventWhereUniqueInput
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Take `±n` AnalyticsEvents from the position of the cursor.
+     */
+    take?: number
+    /**
+     * {@link https://www.prisma.io/docs/concepts/components/prisma-client/pagination Pagination Docs}
+     * 
+     * Skip the first `n` AnalyticsEvents.
+     */
+    skip?: number
+    distinct?: AnalyticsEventScalarFieldEnum | AnalyticsEventScalarFieldEnum[]
+  }
+
+  /**
+   * AnalyticsEvent create
+   */
+  export type AnalyticsEventCreateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnalyticsEvent
+     */
+    select?: AnalyticsEventSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnalyticsEvent
+     */
+    omit?: AnalyticsEventOmit<ExtArgs> | null
+    /**
+     * The data needed to create a AnalyticsEvent.
+     */
+    data: XOR<AnalyticsEventCreateInput, AnalyticsEventUncheckedCreateInput>
+  }
+
+  /**
+   * AnalyticsEvent createMany
+   */
+  export type AnalyticsEventCreateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to create many AnalyticsEvents.
+     */
+    data: AnalyticsEventCreateManyInput | AnalyticsEventCreateManyInput[]
+    skipDuplicates?: boolean
+  }
+
+  /**
+   * AnalyticsEvent update
+   */
+  export type AnalyticsEventUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnalyticsEvent
+     */
+    select?: AnalyticsEventSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnalyticsEvent
+     */
+    omit?: AnalyticsEventOmit<ExtArgs> | null
+    /**
+     * The data needed to update a AnalyticsEvent.
+     */
+    data: XOR<AnalyticsEventUpdateInput, AnalyticsEventUncheckedUpdateInput>
+    /**
+     * Choose, which AnalyticsEvent to update.
+     */
+    where: AnalyticsEventWhereUniqueInput
+  }
+
+  /**
+   * AnalyticsEvent updateMany
+   */
+  export type AnalyticsEventUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * The data used to update AnalyticsEvents.
+     */
+    data: XOR<AnalyticsEventUpdateManyMutationInput, AnalyticsEventUncheckedUpdateManyInput>
+    /**
+     * Filter which AnalyticsEvents to update
+     */
+    where?: AnalyticsEventWhereInput
+    /**
+     * Limit how many AnalyticsEvents to update.
+     */
+    limit?: number
+  }
+
+  /**
+   * AnalyticsEvent upsert
+   */
+  export type AnalyticsEventUpsertArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnalyticsEvent
+     */
+    select?: AnalyticsEventSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnalyticsEvent
+     */
+    omit?: AnalyticsEventOmit<ExtArgs> | null
+    /**
+     * The filter to search for the AnalyticsEvent to update in case it exists.
+     */
+    where: AnalyticsEventWhereUniqueInput
+    /**
+     * In case the AnalyticsEvent found by the `where` argument doesn't exist, create a new AnalyticsEvent with this data.
+     */
+    create: XOR<AnalyticsEventCreateInput, AnalyticsEventUncheckedCreateInput>
+    /**
+     * In case the AnalyticsEvent was found with the provided `where` argument, update it with this data.
+     */
+    update: XOR<AnalyticsEventUpdateInput, AnalyticsEventUncheckedUpdateInput>
+  }
+
+  /**
+   * AnalyticsEvent delete
+   */
+  export type AnalyticsEventDeleteArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnalyticsEvent
+     */
+    select?: AnalyticsEventSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnalyticsEvent
+     */
+    omit?: AnalyticsEventOmit<ExtArgs> | null
+    /**
+     * Filter which AnalyticsEvent to delete.
+     */
+    where: AnalyticsEventWhereUniqueInput
+  }
+
+  /**
+   * AnalyticsEvent deleteMany
+   */
+  export type AnalyticsEventDeleteManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Filter which AnalyticsEvents to delete
+     */
+    where?: AnalyticsEventWhereInput
+    /**
+     * Limit how many AnalyticsEvents to delete.
+     */
+    limit?: number
+  }
+
+  /**
+   * AnalyticsEvent without action
+   */
+  export type AnalyticsEventDefaultArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
+    /**
+     * Select specific fields to fetch from the AnalyticsEvent
+     */
+    select?: AnalyticsEventSelect<ExtArgs> | null
+    /**
+     * Omit specific fields from the AnalyticsEvent
+     */
+    omit?: AnalyticsEventOmit<ExtArgs> | null
+  }
+
+
+  /**
    * Model PipelineEvent
    */
 
@@ -35145,6 +36350,8 @@ export namespace Prisma {
 
   export const TopicScalarFieldEnum: {
     id: 'id',
+    origin: 'origin',
+    createdById: 'createdById',
     query: 'query',
     aliases: 'aliases',
     title: 'title',
@@ -35175,6 +36382,8 @@ export namespace Prisma {
     claimedAt: 'claimedAt',
     claimedById: 'claimedById',
     publishedAt: 'publishedAt',
+    viralAlertSentAt: 'viralAlertSentAt',
+    viralAlertBand: 'viralAlertBand',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -35270,6 +36479,7 @@ export namespace Prisma {
     isLive: 'isLive',
     updatesCount: 'updatesCount',
     hasSpoiler: 'hasSpoiler',
+    contentSensitivity: 'contentSensitivity',
     tldr: 'tldr',
     reviewData: 'reviewData',
     scoreAtPublish: 'scoreAtPublish',
@@ -35517,6 +36727,19 @@ export namespace Prisma {
   export type CommentScalarFieldEnum = (typeof CommentScalarFieldEnum)[keyof typeof CommentScalarFieldEnum]
 
 
+  export const AnalyticsEventScalarFieldEnum: {
+    id: 'id',
+    kind: 'kind',
+    articleId: 'articleId',
+    targetArticleId: 'targetArticleId',
+    offerId: 'offerId',
+    slotId: 'slotId',
+    createdAt: 'createdAt'
+  };
+
+  export type AnalyticsEventScalarFieldEnum = (typeof AnalyticsEventScalarFieldEnum)[keyof typeof AnalyticsEventScalarFieldEnum]
+
+
   export const PipelineEventScalarFieldEnum: {
     id: 'id',
     eventType: 'eventType',
@@ -35691,6 +36914,8 @@ export namespace Prisma {
 
   export const TopicOrderByRelevanceFieldEnum: {
     id: 'id',
+    origin: 'origin',
+    createdById: 'createdById',
     query: 'query',
     title: 'title',
     summary: 'summary',
@@ -35706,7 +36931,8 @@ export namespace Prisma {
     manualOverrideReason: 'manualOverrideReason',
     manualOverrideById: 'manualOverrideById',
     status: 'status',
-    claimedById: 'claimedById'
+    claimedById: 'claimedById',
+    viralAlertBand: 'viralAlertBand'
   };
 
   export type TopicOrderByRelevanceFieldEnum = (typeof TopicOrderByRelevanceFieldEnum)[keyof typeof TopicOrderByRelevanceFieldEnum]
@@ -35771,6 +36997,7 @@ export namespace Prisma {
     seoDescription: 'seoDescription',
     canonicalUrl: 'canonicalUrl',
     format: 'format',
+    contentSensitivity: 'contentSensitivity',
     currentBand: 'currentBand'
   };
 
@@ -35945,6 +37172,18 @@ export namespace Prisma {
   };
 
   export type CommentOrderByRelevanceFieldEnum = (typeof CommentOrderByRelevanceFieldEnum)[keyof typeof CommentOrderByRelevanceFieldEnum]
+
+
+  export const AnalyticsEventOrderByRelevanceFieldEnum: {
+    id: 'id',
+    kind: 'kind',
+    articleId: 'articleId',
+    targetArticleId: 'targetArticleId',
+    offerId: 'offerId',
+    slotId: 'slotId'
+  };
+
+  export type AnalyticsEventOrderByRelevanceFieldEnum = (typeof AnalyticsEventOrderByRelevanceFieldEnum)[keyof typeof AnalyticsEventOrderByRelevanceFieldEnum]
 
 
   export const PipelineEventOrderByRelevanceFieldEnum: {
@@ -36567,6 +37806,8 @@ export namespace Prisma {
     OR?: TopicWhereInput[]
     NOT?: TopicWhereInput | TopicWhereInput[]
     id?: StringFilter<"Topic"> | string
+    origin?: StringFilter<"Topic"> | string
+    createdById?: StringNullableFilter<"Topic"> | string | null
     query?: StringFilter<"Topic"> | string
     aliases?: JsonFilter<"Topic">
     title?: StringFilter<"Topic"> | string
@@ -36597,6 +37838,8 @@ export namespace Prisma {
     claimedAt?: DateTimeNullableFilter<"Topic"> | Date | string | null
     claimedById?: StringNullableFilter<"Topic"> | string | null
     publishedAt?: DateTimeNullableFilter<"Topic"> | Date | string | null
+    viralAlertSentAt?: DateTimeNullableFilter<"Topic"> | Date | string | null
+    viralAlertBand?: StringNullableFilter<"Topic"> | string | null
     createdAt?: DateTimeFilter<"Topic"> | Date | string
     updatedAt?: DateTimeFilter<"Topic"> | Date | string
     category?: XOR<CategoryNullableScalarRelationFilter, CategoryWhereInput> | null
@@ -36608,6 +37851,8 @@ export namespace Prisma {
 
   export type TopicOrderByWithRelationInput = {
     id?: SortOrder
+    origin?: SortOrder
+    createdById?: SortOrderInput | SortOrder
     query?: SortOrder
     aliases?: SortOrder
     title?: SortOrder
@@ -36638,6 +37883,8 @@ export namespace Prisma {
     claimedAt?: SortOrderInput | SortOrder
     claimedById?: SortOrderInput | SortOrder
     publishedAt?: SortOrderInput | SortOrder
+    viralAlertSentAt?: SortOrderInput | SortOrder
+    viralAlertBand?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     category?: CategoryOrderByWithRelationInput
@@ -36654,6 +37901,8 @@ export namespace Prisma {
     AND?: TopicWhereInput | TopicWhereInput[]
     OR?: TopicWhereInput[]
     NOT?: TopicWhereInput | TopicWhereInput[]
+    origin?: StringFilter<"Topic"> | string
+    createdById?: StringNullableFilter<"Topic"> | string | null
     query?: StringFilter<"Topic"> | string
     aliases?: JsonFilter<"Topic">
     title?: StringFilter<"Topic"> | string
@@ -36683,6 +37932,8 @@ export namespace Prisma {
     claimedAt?: DateTimeNullableFilter<"Topic"> | Date | string | null
     claimedById?: StringNullableFilter<"Topic"> | string | null
     publishedAt?: DateTimeNullableFilter<"Topic"> | Date | string | null
+    viralAlertSentAt?: DateTimeNullableFilter<"Topic"> | Date | string | null
+    viralAlertBand?: StringNullableFilter<"Topic"> | string | null
     createdAt?: DateTimeFilter<"Topic"> | Date | string
     updatedAt?: DateTimeFilter<"Topic"> | Date | string
     category?: XOR<CategoryNullableScalarRelationFilter, CategoryWhereInput> | null
@@ -36694,6 +37945,8 @@ export namespace Prisma {
 
   export type TopicOrderByWithAggregationInput = {
     id?: SortOrder
+    origin?: SortOrder
+    createdById?: SortOrderInput | SortOrder
     query?: SortOrder
     aliases?: SortOrder
     title?: SortOrder
@@ -36724,6 +37977,8 @@ export namespace Prisma {
     claimedAt?: SortOrderInput | SortOrder
     claimedById?: SortOrderInput | SortOrder
     publishedAt?: SortOrderInput | SortOrder
+    viralAlertSentAt?: SortOrderInput | SortOrder
+    viralAlertBand?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: TopicCountOrderByAggregateInput
@@ -36738,6 +37993,8 @@ export namespace Prisma {
     OR?: TopicScalarWhereWithAggregatesInput[]
     NOT?: TopicScalarWhereWithAggregatesInput | TopicScalarWhereWithAggregatesInput[]
     id?: StringWithAggregatesFilter<"Topic"> | string
+    origin?: StringWithAggregatesFilter<"Topic"> | string
+    createdById?: StringNullableWithAggregatesFilter<"Topic"> | string | null
     query?: StringWithAggregatesFilter<"Topic"> | string
     aliases?: JsonWithAggregatesFilter<"Topic">
     title?: StringWithAggregatesFilter<"Topic"> | string
@@ -36768,6 +38025,8 @@ export namespace Prisma {
     claimedAt?: DateTimeNullableWithAggregatesFilter<"Topic"> | Date | string | null
     claimedById?: StringNullableWithAggregatesFilter<"Topic"> | string | null
     publishedAt?: DateTimeNullableWithAggregatesFilter<"Topic"> | Date | string | null
+    viralAlertSentAt?: DateTimeNullableWithAggregatesFilter<"Topic"> | Date | string | null
+    viralAlertBand?: StringNullableWithAggregatesFilter<"Topic"> | string | null
     createdAt?: DateTimeWithAggregatesFilter<"Topic"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Topic"> | Date | string
   }
@@ -37118,6 +38377,7 @@ export namespace Prisma {
     isLive?: BoolFilter<"Article"> | boolean
     updatesCount?: IntFilter<"Article"> | number
     hasSpoiler?: BoolFilter<"Article"> | boolean
+    contentSensitivity?: StringFilter<"Article"> | string
     tldr?: JsonFilter<"Article">
     reviewData?: JsonNullableFilter<"Article">
     scoreAtPublish?: FloatNullableFilter<"Article"> | number | null
@@ -37173,6 +38433,7 @@ export namespace Prisma {
     isLive?: SortOrder
     updatesCount?: SortOrder
     hasSpoiler?: SortOrder
+    contentSensitivity?: SortOrder
     tldr?: SortOrder
     reviewData?: SortOrderInput | SortOrder
     scoreAtPublish?: SortOrderInput | SortOrder
@@ -37232,6 +38493,7 @@ export namespace Prisma {
     isLive?: BoolFilter<"Article"> | boolean
     updatesCount?: IntFilter<"Article"> | number
     hasSpoiler?: BoolFilter<"Article"> | boolean
+    contentSensitivity?: StringFilter<"Article"> | string
     tldr?: JsonFilter<"Article">
     reviewData?: JsonNullableFilter<"Article">
     scoreAtPublish?: FloatNullableFilter<"Article"> | number | null
@@ -37287,6 +38549,7 @@ export namespace Prisma {
     isLive?: SortOrder
     updatesCount?: SortOrder
     hasSpoiler?: SortOrder
+    contentSensitivity?: SortOrder
     tldr?: SortOrder
     reviewData?: SortOrderInput | SortOrder
     scoreAtPublish?: SortOrderInput | SortOrder
@@ -37340,6 +38603,7 @@ export namespace Prisma {
     isLive?: BoolWithAggregatesFilter<"Article"> | boolean
     updatesCount?: IntWithAggregatesFilter<"Article"> | number
     hasSpoiler?: BoolWithAggregatesFilter<"Article"> | boolean
+    contentSensitivity?: StringWithAggregatesFilter<"Article"> | string
     tldr?: JsonWithAggregatesFilter<"Article">
     reviewData?: JsonNullableWithAggregatesFilter<"Article">
     scoreAtPublish?: FloatNullableWithAggregatesFilter<"Article"> | number | null
@@ -38553,6 +39817,69 @@ export namespace Prisma {
     updatedAt?: DateTimeWithAggregatesFilter<"Comment"> | Date | string
   }
 
+  export type AnalyticsEventWhereInput = {
+    AND?: AnalyticsEventWhereInput | AnalyticsEventWhereInput[]
+    OR?: AnalyticsEventWhereInput[]
+    NOT?: AnalyticsEventWhereInput | AnalyticsEventWhereInput[]
+    id?: StringFilter<"AnalyticsEvent"> | string
+    kind?: StringFilter<"AnalyticsEvent"> | string
+    articleId?: StringNullableFilter<"AnalyticsEvent"> | string | null
+    targetArticleId?: StringNullableFilter<"AnalyticsEvent"> | string | null
+    offerId?: StringNullableFilter<"AnalyticsEvent"> | string | null
+    slotId?: StringNullableFilter<"AnalyticsEvent"> | string | null
+    createdAt?: DateTimeFilter<"AnalyticsEvent"> | Date | string
+  }
+
+  export type AnalyticsEventOrderByWithRelationInput = {
+    id?: SortOrder
+    kind?: SortOrder
+    articleId?: SortOrderInput | SortOrder
+    targetArticleId?: SortOrderInput | SortOrder
+    offerId?: SortOrderInput | SortOrder
+    slotId?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    _relevance?: AnalyticsEventOrderByRelevanceInput
+  }
+
+  export type AnalyticsEventWhereUniqueInput = Prisma.AtLeast<{
+    id?: string
+    AND?: AnalyticsEventWhereInput | AnalyticsEventWhereInput[]
+    OR?: AnalyticsEventWhereInput[]
+    NOT?: AnalyticsEventWhereInput | AnalyticsEventWhereInput[]
+    kind?: StringFilter<"AnalyticsEvent"> | string
+    articleId?: StringNullableFilter<"AnalyticsEvent"> | string | null
+    targetArticleId?: StringNullableFilter<"AnalyticsEvent"> | string | null
+    offerId?: StringNullableFilter<"AnalyticsEvent"> | string | null
+    slotId?: StringNullableFilter<"AnalyticsEvent"> | string | null
+    createdAt?: DateTimeFilter<"AnalyticsEvent"> | Date | string
+  }, "id">
+
+  export type AnalyticsEventOrderByWithAggregationInput = {
+    id?: SortOrder
+    kind?: SortOrder
+    articleId?: SortOrderInput | SortOrder
+    targetArticleId?: SortOrderInput | SortOrder
+    offerId?: SortOrderInput | SortOrder
+    slotId?: SortOrderInput | SortOrder
+    createdAt?: SortOrder
+    _count?: AnalyticsEventCountOrderByAggregateInput
+    _max?: AnalyticsEventMaxOrderByAggregateInput
+    _min?: AnalyticsEventMinOrderByAggregateInput
+  }
+
+  export type AnalyticsEventScalarWhereWithAggregatesInput = {
+    AND?: AnalyticsEventScalarWhereWithAggregatesInput | AnalyticsEventScalarWhereWithAggregatesInput[]
+    OR?: AnalyticsEventScalarWhereWithAggregatesInput[]
+    NOT?: AnalyticsEventScalarWhereWithAggregatesInput | AnalyticsEventScalarWhereWithAggregatesInput[]
+    id?: StringWithAggregatesFilter<"AnalyticsEvent"> | string
+    kind?: StringWithAggregatesFilter<"AnalyticsEvent"> | string
+    articleId?: StringNullableWithAggregatesFilter<"AnalyticsEvent"> | string | null
+    targetArticleId?: StringNullableWithAggregatesFilter<"AnalyticsEvent"> | string | null
+    offerId?: StringNullableWithAggregatesFilter<"AnalyticsEvent"> | string | null
+    slotId?: StringNullableWithAggregatesFilter<"AnalyticsEvent"> | string | null
+    createdAt?: DateTimeWithAggregatesFilter<"AnalyticsEvent"> | Date | string
+  }
+
   export type PipelineEventWhereInput = {
     AND?: PipelineEventWhereInput | PipelineEventWhereInput[]
     OR?: PipelineEventWhereInput[]
@@ -39401,6 +40728,8 @@ export namespace Prisma {
 
   export type TopicCreateInput = {
     id?: string
+    origin?: string
+    createdById?: string | null
     query: string
     aliases?: JsonNullValueInput | InputJsonValue
     title: string
@@ -39430,6 +40759,8 @@ export namespace Prisma {
     claimedAt?: Date | string | null
     claimedById?: string | null
     publishedAt?: Date | string | null
+    viralAlertSentAt?: Date | string | null
+    viralAlertBand?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     category?: CategoryCreateNestedOneWithoutTopicsInput
@@ -39441,6 +40772,8 @@ export namespace Prisma {
 
   export type TopicUncheckedCreateInput = {
     id?: string
+    origin?: string
+    createdById?: string | null
     query: string
     aliases?: JsonNullValueInput | InputJsonValue
     title: string
@@ -39471,6 +40804,8 @@ export namespace Prisma {
     claimedAt?: Date | string | null
     claimedById?: string | null
     publishedAt?: Date | string | null
+    viralAlertSentAt?: Date | string | null
+    viralAlertBand?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     franchises?: TopicFranchiseUncheckedCreateNestedManyWithoutTopicInput
@@ -39481,6 +40816,8 @@ export namespace Prisma {
 
   export type TopicUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
+    origin?: StringFieldUpdateOperationsInput | string
+    createdById?: NullableStringFieldUpdateOperationsInput | string | null
     query?: StringFieldUpdateOperationsInput | string
     aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
@@ -39510,6 +40847,8 @@ export namespace Prisma {
     claimedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     claimedById?: NullableStringFieldUpdateOperationsInput | string | null
     publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertSentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertBand?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     category?: CategoryUpdateOneWithoutTopicsNestedInput
@@ -39521,6 +40860,8 @@ export namespace Prisma {
 
   export type TopicUncheckedUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
+    origin?: StringFieldUpdateOperationsInput | string
+    createdById?: NullableStringFieldUpdateOperationsInput | string | null
     query?: StringFieldUpdateOperationsInput | string
     aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
@@ -39551,6 +40892,8 @@ export namespace Prisma {
     claimedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     claimedById?: NullableStringFieldUpdateOperationsInput | string | null
     publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertSentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertBand?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     franchises?: TopicFranchiseUncheckedUpdateManyWithoutTopicNestedInput
@@ -39561,6 +40904,8 @@ export namespace Prisma {
 
   export type TopicCreateManyInput = {
     id?: string
+    origin?: string
+    createdById?: string | null
     query: string
     aliases?: JsonNullValueInput | InputJsonValue
     title: string
@@ -39591,12 +40936,16 @@ export namespace Prisma {
     claimedAt?: Date | string | null
     claimedById?: string | null
     publishedAt?: Date | string | null
+    viralAlertSentAt?: Date | string | null
+    viralAlertBand?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
 
   export type TopicUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
+    origin?: StringFieldUpdateOperationsInput | string
+    createdById?: NullableStringFieldUpdateOperationsInput | string | null
     query?: StringFieldUpdateOperationsInput | string
     aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
@@ -39626,12 +40975,16 @@ export namespace Prisma {
     claimedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     claimedById?: NullableStringFieldUpdateOperationsInput | string | null
     publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertSentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertBand?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
   export type TopicUncheckedUpdateManyInput = {
     id?: StringFieldUpdateOperationsInput | string
+    origin?: StringFieldUpdateOperationsInput | string
+    createdById?: NullableStringFieldUpdateOperationsInput | string | null
     query?: StringFieldUpdateOperationsInput | string
     aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
@@ -39662,6 +41015,8 @@ export namespace Prisma {
     claimedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     claimedById?: NullableStringFieldUpdateOperationsInput | string | null
     publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertSentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertBand?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -40029,6 +41384,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -40084,6 +41440,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -40131,6 +41488,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -40186,6 +41544,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -40237,6 +41596,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -40278,6 +41638,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -40323,6 +41684,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -41642,6 +43004,76 @@ export namespace Prisma {
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
 
+  export type AnalyticsEventCreateInput = {
+    id?: string
+    kind: string
+    articleId?: string | null
+    targetArticleId?: string | null
+    offerId?: string | null
+    slotId?: string | null
+    createdAt?: Date | string
+  }
+
+  export type AnalyticsEventUncheckedCreateInput = {
+    id?: string
+    kind: string
+    articleId?: string | null
+    targetArticleId?: string | null
+    offerId?: string | null
+    slotId?: string | null
+    createdAt?: Date | string
+  }
+
+  export type AnalyticsEventUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    articleId?: NullableStringFieldUpdateOperationsInput | string | null
+    targetArticleId?: NullableStringFieldUpdateOperationsInput | string | null
+    offerId?: NullableStringFieldUpdateOperationsInput | string | null
+    slotId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AnalyticsEventUncheckedUpdateInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    articleId?: NullableStringFieldUpdateOperationsInput | string | null
+    targetArticleId?: NullableStringFieldUpdateOperationsInput | string | null
+    offerId?: NullableStringFieldUpdateOperationsInput | string | null
+    slotId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AnalyticsEventCreateManyInput = {
+    id?: string
+    kind: string
+    articleId?: string | null
+    targetArticleId?: string | null
+    offerId?: string | null
+    slotId?: string | null
+    createdAt?: Date | string
+  }
+
+  export type AnalyticsEventUpdateManyMutationInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    articleId?: NullableStringFieldUpdateOperationsInput | string | null
+    targetArticleId?: NullableStringFieldUpdateOperationsInput | string | null
+    offerId?: NullableStringFieldUpdateOperationsInput | string | null
+    slotId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
+  export type AnalyticsEventUncheckedUpdateManyInput = {
+    id?: StringFieldUpdateOperationsInput | string
+    kind?: StringFieldUpdateOperationsInput | string
+    articleId?: NullableStringFieldUpdateOperationsInput | string | null
+    targetArticleId?: NullableStringFieldUpdateOperationsInput | string | null
+    offerId?: NullableStringFieldUpdateOperationsInput | string | null
+    slotId?: NullableStringFieldUpdateOperationsInput | string | null
+    createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
+  }
+
   export type PipelineEventCreateInput = {
     id?: string
     eventType: string
@@ -42628,6 +44060,8 @@ export namespace Prisma {
 
   export type TopicCountOrderByAggregateInput = {
     id?: SortOrder
+    origin?: SortOrder
+    createdById?: SortOrder
     query?: SortOrder
     aliases?: SortOrder
     title?: SortOrder
@@ -42658,6 +44092,8 @@ export namespace Prisma {
     claimedAt?: SortOrder
     claimedById?: SortOrder
     publishedAt?: SortOrder
+    viralAlertSentAt?: SortOrder
+    viralAlertBand?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -42672,6 +44108,8 @@ export namespace Prisma {
 
   export type TopicMaxOrderByAggregateInput = {
     id?: SortOrder
+    origin?: SortOrder
+    createdById?: SortOrder
     query?: SortOrder
     title?: SortOrder
     summary?: SortOrder
@@ -42700,12 +44138,16 @@ export namespace Prisma {
     claimedAt?: SortOrder
     claimedById?: SortOrder
     publishedAt?: SortOrder
+    viralAlertSentAt?: SortOrder
+    viralAlertBand?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
 
   export type TopicMinOrderByAggregateInput = {
     id?: SortOrder
+    origin?: SortOrder
+    createdById?: SortOrder
     query?: SortOrder
     title?: SortOrder
     summary?: SortOrder
@@ -42734,6 +44176,8 @@ export namespace Prisma {
     claimedAt?: SortOrder
     claimedById?: SortOrder
     publishedAt?: SortOrder
+    viralAlertSentAt?: SortOrder
+    viralAlertBand?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -43125,6 +44569,7 @@ export namespace Prisma {
     isLive?: SortOrder
     updatesCount?: SortOrder
     hasSpoiler?: SortOrder
+    contentSensitivity?: SortOrder
     tldr?: SortOrder
     reviewData?: SortOrder
     scoreAtPublish?: SortOrder
@@ -43183,6 +44628,7 @@ export namespace Prisma {
     isLive?: SortOrder
     updatesCount?: SortOrder
     hasSpoiler?: SortOrder
+    contentSensitivity?: SortOrder
     scoreAtPublish?: SortOrder
     currentScore?: SortOrder
     currentBand?: SortOrder
@@ -43225,6 +44671,7 @@ export namespace Prisma {
     isLive?: SortOrder
     updatesCount?: SortOrder
     hasSpoiler?: SortOrder
+    contentSensitivity?: SortOrder
     scoreAtPublish?: SortOrder
     currentScore?: SortOrder
     currentBand?: SortOrder
@@ -44071,6 +45518,42 @@ export namespace Prisma {
 
   export type CommentSumOrderByAggregateInput = {
     upvotes?: SortOrder
+  }
+
+  export type AnalyticsEventOrderByRelevanceInput = {
+    fields: AnalyticsEventOrderByRelevanceFieldEnum | AnalyticsEventOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
+  export type AnalyticsEventCountOrderByAggregateInput = {
+    id?: SortOrder
+    kind?: SortOrder
+    articleId?: SortOrder
+    targetArticleId?: SortOrder
+    offerId?: SortOrder
+    slotId?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type AnalyticsEventMaxOrderByAggregateInput = {
+    id?: SortOrder
+    kind?: SortOrder
+    articleId?: SortOrder
+    targetArticleId?: SortOrder
+    offerId?: SortOrder
+    slotId?: SortOrder
+    createdAt?: SortOrder
+  }
+
+  export type AnalyticsEventMinOrderByAggregateInput = {
+    id?: SortOrder
+    kind?: SortOrder
+    articleId?: SortOrder
+    targetArticleId?: SortOrder
+    offerId?: SortOrder
+    slotId?: SortOrder
+    createdAt?: SortOrder
   }
 
   export type PipelineEventOrderByRelevanceInput = {
@@ -46295,6 +47778,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -46348,6 +47832,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -46384,6 +47869,8 @@ export namespace Prisma {
 
   export type TopicCreateWithoutCategoryInput = {
     id?: string
+    origin?: string
+    createdById?: string | null
     query: string
     aliases?: JsonNullValueInput | InputJsonValue
     title: string
@@ -46413,6 +47900,8 @@ export namespace Prisma {
     claimedAt?: Date | string | null
     claimedById?: string | null
     publishedAt?: Date | string | null
+    viralAlertSentAt?: Date | string | null
+    viralAlertBand?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     franchises?: TopicFranchiseCreateNestedManyWithoutTopicInput
@@ -46423,6 +47912,8 @@ export namespace Prisma {
 
   export type TopicUncheckedCreateWithoutCategoryInput = {
     id?: string
+    origin?: string
+    createdById?: string | null
     query: string
     aliases?: JsonNullValueInput | InputJsonValue
     title: string
@@ -46452,6 +47943,8 @@ export namespace Prisma {
     claimedAt?: Date | string | null
     claimedById?: string | null
     publishedAt?: Date | string | null
+    viralAlertSentAt?: Date | string | null
+    viralAlertBand?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     franchises?: TopicFranchiseUncheckedCreateNestedManyWithoutTopicInput
@@ -46594,6 +48087,7 @@ export namespace Prisma {
     isLive?: BoolFilter<"Article"> | boolean
     updatesCount?: IntFilter<"Article"> | number
     hasSpoiler?: BoolFilter<"Article"> | boolean
+    contentSensitivity?: StringFilter<"Article"> | string
     tldr?: JsonFilter<"Article">
     reviewData?: JsonNullableFilter<"Article">
     scoreAtPublish?: FloatNullableFilter<"Article"> | number | null
@@ -46633,6 +48127,8 @@ export namespace Prisma {
     OR?: TopicScalarWhereInput[]
     NOT?: TopicScalarWhereInput | TopicScalarWhereInput[]
     id?: StringFilter<"Topic"> | string
+    origin?: StringFilter<"Topic"> | string
+    createdById?: StringNullableFilter<"Topic"> | string | null
     query?: StringFilter<"Topic"> | string
     aliases?: JsonFilter<"Topic">
     title?: StringFilter<"Topic"> | string
@@ -46663,6 +48159,8 @@ export namespace Prisma {
     claimedAt?: DateTimeNullableFilter<"Topic"> | Date | string | null
     claimedById?: StringNullableFilter<"Topic"> | string | null
     publishedAt?: DateTimeNullableFilter<"Topic"> | Date | string | null
+    viralAlertSentAt?: DateTimeNullableFilter<"Topic"> | Date | string | null
+    viralAlertBand?: StringNullableFilter<"Topic"> | string | null
     createdAt?: DateTimeFilter<"Topic"> | Date | string
     updatedAt?: DateTimeFilter<"Topic"> | Date | string
   }
@@ -46797,6 +48295,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -46850,6 +48349,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -47310,6 +48810,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -47363,6 +48864,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -47716,6 +49218,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -47769,6 +49272,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -48018,6 +49522,8 @@ export namespace Prisma {
 
   export type TopicCreateWithoutFranchisesInput = {
     id?: string
+    origin?: string
+    createdById?: string | null
     query: string
     aliases?: JsonNullValueInput | InputJsonValue
     title: string
@@ -48047,6 +49553,8 @@ export namespace Prisma {
     claimedAt?: Date | string | null
     claimedById?: string | null
     publishedAt?: Date | string | null
+    viralAlertSentAt?: Date | string | null
+    viralAlertBand?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     category?: CategoryCreateNestedOneWithoutTopicsInput
@@ -48057,6 +49565,8 @@ export namespace Prisma {
 
   export type TopicUncheckedCreateWithoutFranchisesInput = {
     id?: string
+    origin?: string
+    createdById?: string | null
     query: string
     aliases?: JsonNullValueInput | InputJsonValue
     title: string
@@ -48087,6 +49597,8 @@ export namespace Prisma {
     claimedAt?: Date | string | null
     claimedById?: string | null
     publishedAt?: Date | string | null
+    viralAlertSentAt?: Date | string | null
+    viralAlertBand?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     articles?: ArticleUncheckedCreateNestedManyWithoutTopicInput
@@ -48153,6 +49665,8 @@ export namespace Prisma {
 
   export type TopicUpdateWithoutFranchisesInput = {
     id?: StringFieldUpdateOperationsInput | string
+    origin?: StringFieldUpdateOperationsInput | string
+    createdById?: NullableStringFieldUpdateOperationsInput | string | null
     query?: StringFieldUpdateOperationsInput | string
     aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
@@ -48182,6 +49696,8 @@ export namespace Prisma {
     claimedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     claimedById?: NullableStringFieldUpdateOperationsInput | string | null
     publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertSentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertBand?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     category?: CategoryUpdateOneWithoutTopicsNestedInput
@@ -48192,6 +49708,8 @@ export namespace Prisma {
 
   export type TopicUncheckedUpdateWithoutFranchisesInput = {
     id?: StringFieldUpdateOperationsInput | string
+    origin?: StringFieldUpdateOperationsInput | string
+    createdById?: NullableStringFieldUpdateOperationsInput | string | null
     query?: StringFieldUpdateOperationsInput | string
     aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
@@ -48222,6 +49740,8 @@ export namespace Prisma {
     claimedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     claimedById?: NullableStringFieldUpdateOperationsInput | string | null
     publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertSentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertBand?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     articles?: ArticleUncheckedUpdateManyWithoutTopicNestedInput
@@ -48278,6 +49798,8 @@ export namespace Prisma {
 
   export type TopicCreateWithoutScoreSnapshotsInput = {
     id?: string
+    origin?: string
+    createdById?: string | null
     query: string
     aliases?: JsonNullValueInput | InputJsonValue
     title: string
@@ -48307,6 +49829,8 @@ export namespace Prisma {
     claimedAt?: Date | string | null
     claimedById?: string | null
     publishedAt?: Date | string | null
+    viralAlertSentAt?: Date | string | null
+    viralAlertBand?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     category?: CategoryCreateNestedOneWithoutTopicsInput
@@ -48317,6 +49841,8 @@ export namespace Prisma {
 
   export type TopicUncheckedCreateWithoutScoreSnapshotsInput = {
     id?: string
+    origin?: string
+    createdById?: string | null
     query: string
     aliases?: JsonNullValueInput | InputJsonValue
     title: string
@@ -48347,6 +49873,8 @@ export namespace Prisma {
     claimedAt?: Date | string | null
     claimedById?: string | null
     publishedAt?: Date | string | null
+    viralAlertSentAt?: Date | string | null
+    viralAlertBand?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     franchises?: TopicFranchiseUncheckedCreateNestedManyWithoutTopicInput
@@ -48372,6 +49900,8 @@ export namespace Prisma {
 
   export type TopicUpdateWithoutScoreSnapshotsInput = {
     id?: StringFieldUpdateOperationsInput | string
+    origin?: StringFieldUpdateOperationsInput | string
+    createdById?: NullableStringFieldUpdateOperationsInput | string | null
     query?: StringFieldUpdateOperationsInput | string
     aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
@@ -48401,6 +49931,8 @@ export namespace Prisma {
     claimedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     claimedById?: NullableStringFieldUpdateOperationsInput | string | null
     publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertSentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertBand?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     category?: CategoryUpdateOneWithoutTopicsNestedInput
@@ -48411,6 +49943,8 @@ export namespace Prisma {
 
   export type TopicUncheckedUpdateWithoutScoreSnapshotsInput = {
     id?: StringFieldUpdateOperationsInput | string
+    origin?: StringFieldUpdateOperationsInput | string
+    createdById?: NullableStringFieldUpdateOperationsInput | string | null
     query?: StringFieldUpdateOperationsInput | string
     aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
@@ -48441,6 +49975,8 @@ export namespace Prisma {
     claimedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     claimedById?: NullableStringFieldUpdateOperationsInput | string | null
     publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertSentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertBand?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     franchises?: TopicFranchiseUncheckedUpdateManyWithoutTopicNestedInput
@@ -48450,6 +49986,8 @@ export namespace Prisma {
 
   export type TopicCreateWithoutSignalReadingsInput = {
     id?: string
+    origin?: string
+    createdById?: string | null
     query: string
     aliases?: JsonNullValueInput | InputJsonValue
     title: string
@@ -48479,6 +50017,8 @@ export namespace Prisma {
     claimedAt?: Date | string | null
     claimedById?: string | null
     publishedAt?: Date | string | null
+    viralAlertSentAt?: Date | string | null
+    viralAlertBand?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     category?: CategoryCreateNestedOneWithoutTopicsInput
@@ -48489,6 +50029,8 @@ export namespace Prisma {
 
   export type TopicUncheckedCreateWithoutSignalReadingsInput = {
     id?: string
+    origin?: string
+    createdById?: string | null
     query: string
     aliases?: JsonNullValueInput | InputJsonValue
     title: string
@@ -48519,6 +50061,8 @@ export namespace Prisma {
     claimedAt?: Date | string | null
     claimedById?: string | null
     publishedAt?: Date | string | null
+    viralAlertSentAt?: Date | string | null
+    viralAlertBand?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     franchises?: TopicFranchiseUncheckedCreateNestedManyWithoutTopicInput
@@ -48544,6 +50088,8 @@ export namespace Prisma {
 
   export type TopicUpdateWithoutSignalReadingsInput = {
     id?: StringFieldUpdateOperationsInput | string
+    origin?: StringFieldUpdateOperationsInput | string
+    createdById?: NullableStringFieldUpdateOperationsInput | string | null
     query?: StringFieldUpdateOperationsInput | string
     aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
@@ -48573,6 +50119,8 @@ export namespace Prisma {
     claimedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     claimedById?: NullableStringFieldUpdateOperationsInput | string | null
     publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertSentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertBand?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     category?: CategoryUpdateOneWithoutTopicsNestedInput
@@ -48583,6 +50131,8 @@ export namespace Prisma {
 
   export type TopicUncheckedUpdateWithoutSignalReadingsInput = {
     id?: StringFieldUpdateOperationsInput | string
+    origin?: StringFieldUpdateOperationsInput | string
+    createdById?: NullableStringFieldUpdateOperationsInput | string | null
     query?: StringFieldUpdateOperationsInput | string
     aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
@@ -48613,6 +50163,8 @@ export namespace Prisma {
     claimedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     claimedById?: NullableStringFieldUpdateOperationsInput | string | null
     publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertSentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertBand?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     franchises?: TopicFranchiseUncheckedUpdateManyWithoutTopicNestedInput
@@ -48773,6 +50325,8 @@ export namespace Prisma {
 
   export type TopicCreateWithoutArticlesInput = {
     id?: string
+    origin?: string
+    createdById?: string | null
     query: string
     aliases?: JsonNullValueInput | InputJsonValue
     title: string
@@ -48802,6 +50356,8 @@ export namespace Prisma {
     claimedAt?: Date | string | null
     claimedById?: string | null
     publishedAt?: Date | string | null
+    viralAlertSentAt?: Date | string | null
+    viralAlertBand?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     category?: CategoryCreateNestedOneWithoutTopicsInput
@@ -48812,6 +50368,8 @@ export namespace Prisma {
 
   export type TopicUncheckedCreateWithoutArticlesInput = {
     id?: string
+    origin?: string
+    createdById?: string | null
     query: string
     aliases?: JsonNullValueInput | InputJsonValue
     title: string
@@ -48842,6 +50400,8 @@ export namespace Prisma {
     claimedAt?: Date | string | null
     claimedById?: string | null
     publishedAt?: Date | string | null
+    viralAlertSentAt?: Date | string | null
+    viralAlertBand?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
     franchises?: TopicFranchiseUncheckedCreateNestedManyWithoutTopicInput
@@ -49180,6 +50740,8 @@ export namespace Prisma {
 
   export type TopicUpdateWithoutArticlesInput = {
     id?: StringFieldUpdateOperationsInput | string
+    origin?: StringFieldUpdateOperationsInput | string
+    createdById?: NullableStringFieldUpdateOperationsInput | string | null
     query?: StringFieldUpdateOperationsInput | string
     aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
@@ -49209,6 +50771,8 @@ export namespace Prisma {
     claimedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     claimedById?: NullableStringFieldUpdateOperationsInput | string | null
     publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertSentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertBand?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     category?: CategoryUpdateOneWithoutTopicsNestedInput
@@ -49219,6 +50783,8 @@ export namespace Prisma {
 
   export type TopicUncheckedUpdateWithoutArticlesInput = {
     id?: StringFieldUpdateOperationsInput | string
+    origin?: StringFieldUpdateOperationsInput | string
+    createdById?: NullableStringFieldUpdateOperationsInput | string | null
     query?: StringFieldUpdateOperationsInput | string
     aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
@@ -49249,6 +50815,8 @@ export namespace Prisma {
     claimedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     claimedById?: NullableStringFieldUpdateOperationsInput | string | null
     publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertSentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertBand?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     franchises?: TopicFranchiseUncheckedUpdateManyWithoutTopicNestedInput
@@ -49411,6 +50979,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -49465,6 +51034,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -49568,6 +51138,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -49622,6 +51193,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -49715,6 +51287,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -49769,6 +51342,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -49852,6 +51426,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -49906,6 +51481,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -49979,6 +51555,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -50033,6 +51610,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -50095,6 +51673,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -50149,6 +51728,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -50239,6 +51819,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -50293,6 +51874,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -50404,6 +51986,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -50458,6 +52041,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -50704,6 +52288,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -50758,6 +52343,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -50848,6 +52434,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -50902,6 +52489,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -51559,6 +53147,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -51613,6 +53202,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -51801,6 +53391,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -51855,6 +53446,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -52108,6 +53700,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -52128,6 +53721,8 @@ export namespace Prisma {
 
   export type TopicCreateManyCategoryInput = {
     id?: string
+    origin?: string
+    createdById?: string | null
     query: string
     aliases?: JsonNullValueInput | InputJsonValue
     title: string
@@ -52157,6 +53752,8 @@ export namespace Prisma {
     claimedAt?: Date | string | null
     claimedById?: string | null
     publishedAt?: Date | string | null
+    viralAlertSentAt?: Date | string | null
+    viralAlertBand?: string | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -52208,6 +53805,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -52261,6 +53859,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -52311,6 +53910,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -52331,6 +53931,8 @@ export namespace Prisma {
 
   export type TopicUpdateWithoutCategoryInput = {
     id?: StringFieldUpdateOperationsInput | string
+    origin?: StringFieldUpdateOperationsInput | string
+    createdById?: NullableStringFieldUpdateOperationsInput | string | null
     query?: StringFieldUpdateOperationsInput | string
     aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
@@ -52360,6 +53962,8 @@ export namespace Prisma {
     claimedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     claimedById?: NullableStringFieldUpdateOperationsInput | string | null
     publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertSentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertBand?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     franchises?: TopicFranchiseUpdateManyWithoutTopicNestedInput
@@ -52370,6 +53974,8 @@ export namespace Prisma {
 
   export type TopicUncheckedUpdateWithoutCategoryInput = {
     id?: StringFieldUpdateOperationsInput | string
+    origin?: StringFieldUpdateOperationsInput | string
+    createdById?: NullableStringFieldUpdateOperationsInput | string | null
     query?: StringFieldUpdateOperationsInput | string
     aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
@@ -52399,6 +54005,8 @@ export namespace Prisma {
     claimedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     claimedById?: NullableStringFieldUpdateOperationsInput | string | null
     publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertSentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertBand?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     franchises?: TopicFranchiseUncheckedUpdateManyWithoutTopicNestedInput
@@ -52409,6 +54017,8 @@ export namespace Prisma {
 
   export type TopicUncheckedUpdateManyWithoutCategoryInput = {
     id?: StringFieldUpdateOperationsInput | string
+    origin?: StringFieldUpdateOperationsInput | string
+    createdById?: NullableStringFieldUpdateOperationsInput | string | null
     query?: StringFieldUpdateOperationsInput | string
     aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
@@ -52438,6 +54048,8 @@ export namespace Prisma {
     claimedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     claimedById?: NullableStringFieldUpdateOperationsInput | string | null
     publishedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertSentAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    viralAlertBand?: NullableStringFieldUpdateOperationsInput | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -52550,6 +54162,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -52591,6 +54204,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -52644,6 +54258,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -52694,6 +54309,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -52866,6 +54482,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -52928,6 +54545,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -52981,6 +54599,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -53031,6 +54650,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -53142,6 +54762,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
+    contentSensitivity?: string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
@@ -53219,6 +54840,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -53272,6 +54894,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
@@ -53322,6 +54945,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
+    contentSensitivity?: StringFieldUpdateOperationsInput | string
     tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null

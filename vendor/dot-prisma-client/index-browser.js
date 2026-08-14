@@ -201,6 +201,8 @@ exports.Prisma.StaffSessionScalarFieldEnum = {
 
 exports.Prisma.TopicScalarFieldEnum = {
   id: 'id',
+  origin: 'origin',
+  createdById: 'createdById',
   query: 'query',
   aliases: 'aliases',
   title: 'title',
@@ -231,6 +233,8 @@ exports.Prisma.TopicScalarFieldEnum = {
   claimedAt: 'claimedAt',
   claimedById: 'claimedById',
   publishedAt: 'publishedAt',
+  viralAlertSentAt: 'viralAlertSentAt',
+  viralAlertBand: 'viralAlertBand',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -311,6 +315,7 @@ exports.Prisma.ArticleScalarFieldEnum = {
   isLive: 'isLive',
   updatesCount: 'updatesCount',
   hasSpoiler: 'hasSpoiler',
+  contentSensitivity: 'contentSensitivity',
   tldr: 'tldr',
   reviewData: 'reviewData',
   scoreAtPublish: 'scoreAtPublish',
@@ -513,6 +518,16 @@ exports.Prisma.CommentScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.AnalyticsEventScalarFieldEnum = {
+  id: 'id',
+  kind: 'kind',
+  articleId: 'articleId',
+  targetArticleId: 'targetArticleId',
+  offerId: 'offerId',
+  slotId: 'slotId',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.PipelineEventScalarFieldEnum = {
   id: 'id',
   eventType: 'eventType',
@@ -642,6 +657,8 @@ exports.Prisma.StaffSessionOrderByRelevanceFieldEnum = {
 
 exports.Prisma.TopicOrderByRelevanceFieldEnum = {
   id: 'id',
+  origin: 'origin',
+  createdById: 'createdById',
   query: 'query',
   title: 'title',
   summary: 'summary',
@@ -657,7 +674,8 @@ exports.Prisma.TopicOrderByRelevanceFieldEnum = {
   manualOverrideReason: 'manualOverrideReason',
   manualOverrideById: 'manualOverrideById',
   status: 'status',
-  claimedById: 'claimedById'
+  claimedById: 'claimedById',
+  viralAlertBand: 'viralAlertBand'
 };
 
 exports.Prisma.TopicFranchiseOrderByRelevanceFieldEnum = {
@@ -707,6 +725,7 @@ exports.Prisma.ArticleOrderByRelevanceFieldEnum = {
   seoDescription: 'seoDescription',
   canonicalUrl: 'canonicalUrl',
   format: 'format',
+  contentSensitivity: 'contentSensitivity',
   currentBand: 'currentBand'
 };
 
@@ -838,6 +857,15 @@ exports.Prisma.CommentOrderByRelevanceFieldEnum = {
   ipHash: 'ipHash'
 };
 
+exports.Prisma.AnalyticsEventOrderByRelevanceFieldEnum = {
+  id: 'id',
+  kind: 'kind',
+  articleId: 'articleId',
+  targetArticleId: 'targetArticleId',
+  offerId: 'offerId',
+  slotId: 'slotId'
+};
+
 exports.Prisma.PipelineEventOrderByRelevanceFieldEnum = {
   id: 'id',
   eventType: 'eventType',
@@ -892,6 +920,7 @@ exports.Prisma.ModelName = {
   CommentAuthor: 'CommentAuthor',
   CommentSession: 'CommentSession',
   Comment: 'Comment',
+  AnalyticsEvent: 'AnalyticsEvent',
   PipelineEvent: 'PipelineEvent',
   PipelineRun: 'PipelineRun',
   AuditLog: 'AuditLog'

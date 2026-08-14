@@ -217,6 +217,49 @@ function widthClass(width: BlockWidth): string {
   return width === 'medida' ? '' : ` media--${width === 'larga' ? 'wide' : 'full'}`;
 }
 
+/**
+ * O `sizes` de cada largura — e por que ele NÃO pode ser um valor só.
+ *
+ * `sizes` é a única forma de dizer ao navegador quanto espaço a foto vai ocupar
+ * ANTES de o CSS existir; é com ele que o navegador escolhe qual arquivo do
+ * `srcset` baixar. Um valor genérico erra nos dois sentidos: declarar 860px
+ * numa imagem que vai ser renderizada com 1088px faz o navegador baixar uma
+ * versão pequena e esticá-la (a foto de abertura, justamente a mais importante,
+ * sai borrada); declarar 1088px numa imagem de 704px torra banda de 4G em
+ * pixels que ninguém vai ver.
+ *
+ * Os números vêm dos mesmos `--media-max` do CSS (seção 18.1 da folha):
+ *   medida         44rem = 704px   · a partir de 768px
+ *   larga          54rem = 864px   · a partir de 912px  (864 + 2×24 de recuo)
+ *   borda-a-borda  68rem = 1088px  · a partir de 1136px (1088 + 2×24)
+ *
+ * Abaixo desses pontos de corte a imagem ocupa a largura da janela — inclusive
+ * no celular, onde 'larga' e 'borda-a-borda' sangram de borda a borda.
+ *
+ * ⚠ Se um dos valores de `--media-max` mudar no CSS, mude aqui junto. São dois
+ * lugares porque `sizes` é atributo de HTML e não enxerga custom property.
+ */
+const MEDIA_SIZES: Record<BlockWidth, string> = {
+  medida: '(min-width: 768px) 704px, 100vw',
+  larga: '(min-width: 912px) 864px, 100vw',
+  'borda-a-borda': '(min-width: 1136px) 1088px, 100vw',
+};
+
+/**
+ * A imagem do corpo — o bloco que o produto trata como PROTAGONISTA.
+ *
+ * A largura vem pronta do dado (`block.largura`), decidida por
+ * `suggestedImageWidth` no core a partir de quantas imagens a matéria tem: uma
+ * só vira 'borda-a-borda', duas viram 'larga', três ou mais viram 'medida'. Este
+ * componente não recalcula nada disso — ele só traduz a palavra em classe
+ * (`widthClass`) e em `sizes` (`MEDIA_SIZES`), que são as duas metades da mesma
+ * decisão: uma para o layout, outra para a rede.
+ *
+ * O piso da escada é a largura da coluna de texto, então NÃO existe combinação
+ * que produza uma imagem mais estreita que o parágrafo vizinho — a garantia
+ * pedida pelo dono do produto está na forma da função do core, e aqui só é
+ * preservada.
+ */
 function ImageBlockView({
   block,
   categoryToken,
@@ -237,7 +280,7 @@ function ImageBlockView({
           height={675}
           // Sem `priority`: imagem do MEIO do corpo nunca é o LCP, e marcá-la
           // como prioritária competiria com a capa pela banda inicial.
-          sizes="(max-width: 1024px) 100vw, 860px"
+          sizes={MEDIA_SIZES[block.largura]}
         />
       </div>
 

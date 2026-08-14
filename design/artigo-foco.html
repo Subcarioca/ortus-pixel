@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Matéria em foco — protótipo do redesenho 2026-08 | Ortus Pixel</title>
+<meta name="description" content="Protótipo navegável do redesenho da página de matéria: coluna centrada, fundo em gradiente neutro, marca com o O pixelado e a escada de destaque das imagens.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!--
+  ⚠ ESTE PROTÓTIPO APONTA PARA A FOLHA DO PRODUTO, e não para assets/ortuspixel.css.
+
+  Motivo: as regras deste redesenho (a coluna centrada `.article-page`, a escada
+  de larguras de imagem, o wordmark `.logo--px`) vivem na seção 19 da folha do
+  produto — a parte que não é cópia do design system. Apontar para cá o arquivo
+  de design mostraria a página SEM as mudanças que o protótipo existe para
+  demonstrar. O gradiente de fundo, esse sim, está nos dois arquivos.
+
+  Abra este arquivo direto do disco: o caminho relativo já resolve.
+-->
+<link rel="stylesheet" href="../apps/web/src/app/ortuspixel.css">
+<link rel="icon" type="image/svg+xml" href="../apps/web/src/app/icon.svg">
+</head>
+<body>
+<a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+<!-- Rádios do tema: é assim que o design system troca claro/escuro sem JS. -->
+<fieldset class="theme-inputs theme-field">
+  <legend class="sr-only">Tema</legend>
+  <input type="radio" name="theme" id="th-light">
+  <input type="radio" name="theme" id="th-dark">
+</fieldset>
+
+<div class="protobar"><div class="container protobar__inner">
+  <span>Protótipo · redesenho da matéria (2026-08)</span>
+  <label for="th-light">Tema claro</label>
+  <label for="th-dark">Tema escuro</label>
+</div></div>
+
+<header class="header">
+  <div class="container header__bar">
+    <!-- (3) A MARCA NOVA: "O" em pixel art carmim + "Pixel" na cor do texto. -->
+    <a class="logo logo--px" href="artigo-foco.html" aria-label="Ortus Pixel — página inicial">
+      <svg class="logo__o" viewBox="0 0 8 8" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path d="M2 0H6V1H2ZM1 1H7V2H1ZM0 2H2V3H0ZM6 2H8V3H6ZM0 3H2V4H0ZM6 3H8V4H6ZM0 4H2V5H0ZM6 4H8V5H6ZM0 5H2V6H0ZM6 5H8V6H6ZM1 6H7V7H1ZM2 7H6V8H2Z"/></svg>
+      <span class="logo__word">.<b>Pixel</b></span>
+    </a>
+    <nav class="header__nav" aria-label="Editorias">
+      <a href="categoria.html">Games</a>
+      <a href="categoria.html">Cinema &amp; Séries</a>
+      <a href="categoria.html">Anime &amp; Mangá</a>
+      <a href="categoria.html">HQs</a>
+      <a href="categoria.html">Tech</a>
+      <a href="categoria.html">Eventos</a>
+    </nav>
+    <div class="header__actions">
+      <a class="btn-hot-nav" href="em-alta.html"><span class="live-dot"></span> Em alta</a>
+    </div>
+  </div>
+</header>
+
+<main id="conteudo">
+  <!-- (1) A PÁGINA: uma coluna centrada, sem nada ao lado do texto. -->
+  <div class="container article-page">
+    <article class="article">
+      <div class="article__kicker">
+        <span class="heat heat--hot heat--lg">Urgente</span>
+        <span class="heatbar heatbar--hot" data-on="4"><i></i><i></i><i></i><i></i></span>
+        <a class="cat cat--games" href="categoria.html">Games</a>
+        <a class="chip chip--hot" href="hub-franquia.html">GTA VI</a>
+      </div>
+
+      <h1 class="article__title">Rockstar confirma novo atraso de GTA VI para novembro</h1>
+      <p class="article__dek">A publicadora anunciou o adiamento oficial em comunicado a investidores; a ação da Take-Two caiu 7% no pré-mercado.</p>
+
+      <div class="byline">
+        <span class="byline__avatar"></span>
+        <div>
+          <div class="byline__name">Por <a href="#">Redação Ortus Pixel</a>, editor de games</div>
+          <div class="byline__meta">Publicado há 2 horas · 6 min de leitura</div>
+        </div>
+      </div>
+
+      <div class="share">
+        <a class="share__btn share__btn--wa" href="#"><span>WhatsApp</span></a>
+        <a class="share__btn share__btn--x" href="#"><span>X</span></a>
+        <span class="share__count">128</span>
+      </div>
+
+      <!-- (5) CAPA: topo da escada de destaque — 68rem, sombra e raio maiores. -->
+      <figure class="media media--full article__cover">
+        <div class="thumb" data-c="games"><span class="thumb__note">capa 16:9</span></div>
+        <figcaption>Arte oficial divulgada pela Rockstar <span class="figcredit">Imagem: Rockstar Games / Divulgação</span></figcaption>
+      </figure>
+
+      <section class="tldr" aria-labelledby="tldr-titulo">
+        <h2 class="tldr__label" id="tldr-titulo">Resumo em 15 segundos</h2>
+        <ul>
+          <li>O lançamento saiu de maio para 26 de novembro de 2026.</li>
+          <li>É o terceiro adiamento anunciado desde o primeiro trailer.</li>
+          <li>A Take-Two manteve a projeção de receita do ano fiscal.</li>
+        </ul>
+      </section>
+
+      <nav class="toc" aria-labelledby="toc-titulo">
+        <h2 class="toc__label" id="toc-titulo">Neste texto</h2>
+        <ol>
+          <li><a href="#o-comunicado">O comunicado</a></li>
+          <li><a href="#o-que-muda">O que muda para quem pré-comprou</a></li>
+        </ol>
+      </nav>
+
+      <div class="prose">
+        <p>A Rockstar Games confirmou nesta quinta-feira que <b>GTA VI</b> será lançado em 26 de novembro de 2026, seis meses depois da data anunciada no ano passado. O comunicado foi enviado a investidores antes da abertura do mercado.</p>
+        <h2 id="o-comunicado">O comunicado</h2>
+        <p>Segundo a publicadora, o adiamento dá à equipe "o tempo necessário para entregar o jogo no padrão que os jogadores esperam". A frase é praticamente idêntica à usada nos dois adiamentos anteriores — e, nas duas vezes, o jogo de fato saiu na nova data.</p>
+      </div>
+
+      <!-- Imagem no MEIO do corpo. Nesta matéria só há uma, então ela é
+           'borda-a-borda' — a mesma largura da capa. -->
+      <figure class="media media--full">
+        <div class="thumb" data-c="games"><span class="thumb__note">imagem única no corpo · borda-a-borda</span></div>
+        <figcaption>A nova janela de lançamento evita a temporada de novembro de 2025 <span class="figcredit">Imagem: Rockstar Games / Divulgação</span></figcaption>
+      </figure>
+
+      <div class="prose">
+        <h2 id="o-que-muda">O que muda para quem pré-comprou</h2>
+        <p>Nada muda para quem já reservou: as lojas mantêm as reservas com a nova data e o reembolso segue disponível pelos canais de sempre. Quem comprou a edição física recebe um novo prazo de envio por e-mail.</p>
+        <blockquote>
+          <p>"Preferimos atrasar seis meses a lançar um jogo que a gente mesmo não jogaria."</p>
+          <cite class="quote__source">Executivo da Rockstar, em comunicado</cite>
+        </blockquote>
+      </div>
+
+      <aside class="readmore">
+        <span class="readmore__label">Leia também</span>
+        <a href="artigo.html">Tudo o que já se sabe sobre o mapa de GTA VI</a>
+      </aside>
+    </article>
+
+    <!-- (1) O "DEPOIS DA LEITURA": aqui, sim, volta a segunda coluna. -->
+    <div class="article-extras">
+      <div class="article-extras__main">
+        <section class="section">
+          <div class="section-head">
+            <h2 class="section-title">Mais de GTA VI</h2>
+            <a class="link-more" href="hub-franquia.html">Ver hub completo</a>
+          </div>
+          <div class="stack-sm">
+            <a class="card card--row" href="artigo.html">
+              <span class="thumb" data-c="games"></span>
+              <span><span class="card__title">Take-Two mantém projeção de receita mesmo com o adiamento</span></span>
+            </a>
+            <a class="card card--row" href="artigo.html">
+              <span class="thumb" data-c="games"></span>
+              <span><span class="card__title">Os cinco jogos que se beneficiam da janela de novembro</span></span>
+            </a>
+          </div>
+        </section>
+      </div>
+
+      <aside class="sidebar">
+        <div class="side-box">
+          <h2>Quer saber primeiro?</h2>
+          <p class="note">Esta notícia está na faixa "Urgente". Avisamos quando algo assim acontecer. No máximo 2 por dia.</p>
+          <button class="btn btn--primary">Ativar avisos</button>
+        </div>
+        <div class="ad ad--rail">
+          <span class="ad__label">Publicidade</span>
+          <div class="ad__box">300×600</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- ======================================================================
+       ANEXO DE ESPECIFICAÇÃO — não faz parte da matéria.
+       Serve para ver os três níveis de destaque lado a lado, o que uma
+       matéria real nunca mostra (a largura depende de quantas imagens ela tem).
+       ====================================================================== -->
+  <div class="container article-page">
+    <article class="article">
+      <div class="divider divider--step"><h2>Anexo · a escada de destaque das imagens</h2></div>
+      <div class="prose">
+        <p>Os três níveis abaixo são escolhidos <b>automaticamente</b> pela quantidade de imagens no corpo da matéria: uma imagem vira <b>borda-a-borda</b>, duas viram <b>larga</b>, três ou mais viram <b>medida</b>. O piso é sempre a largura do texto — nenhuma imagem fica mais estreita que o parágrafo ao lado dela.</p>
+      </div>
+
+      <figure class="media">
+        <div class="thumb" data-c="tech"><span class="thumb__note">medida · 44rem (704px) · 3+ imagens</span></div>
+        <figcaption>Acompanha a coluna de texto e cria ritmo por repetição.</figcaption>
+      </figure>
+
+      <figure class="media media--wide">
+        <div class="thumb" data-c="cinema"><span class="thumb__note">larga · 54rem (864px) · 2 imagens</span></div>
+        <figcaption>Estoura a medida de leitura sem competir com a outra imagem da matéria.</figcaption>
+      </figure>
+
+      <figure class="media media--full">
+        <div class="thumb" data-c="anime"><span class="thumb__note">borda-a-borda · 68rem (1088px) · 1 imagem</span></div>
+        <figcaption>É o momento visual da matéria. No celular, sangra até as duas bordas da tela.</figcaption>
+      </figure>
+    </article>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="footer__grid">
+      <div>
+        <a class="logo logo--px" href="artigo-foco.html" aria-label="Ortus Pixel — página inicial">
+          <svg class="logo__o" viewBox="0 0 8 8" aria-hidden="true" focusable="false" shape-rendering="crispEdges"><path d="M2 0H6V1H2ZM1 1H7V2H1ZM0 2H2V3H0ZM6 2H8V3H6ZM0 3H2V4H0ZM6 3H8V4H6ZM0 4H2V5H0ZM6 4H8V5H6ZM0 5H2V6H0ZM6 5H8V6H6ZM1 6H7V7H1ZM2 7H6V8H2Z"/></svg>
+          <span class="logo__word">rtus <b>Pixel</b></span>
+        </a>
+        <p class="note"><strong>Sempre antenado.</strong> Cobertura em tempo real: o que está em alta, primeiro.</p>
+      </div>
+    </div>
+    <div class="footer__bottom">
+      <p class="footer__legal">Protótipo de design — não é o site publicado.</p>
+    </div>
+  </div>
+</footer>
+</body>
+</html>

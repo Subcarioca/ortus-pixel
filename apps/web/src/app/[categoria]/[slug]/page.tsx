@@ -282,28 +282,33 @@ export default async function ArticlePage({
       />
 
       {/*
-        `.layout-2col` (conteúdo + 320px), e NÃO `.article-layout`.
+        `.article-page` — UMA COLUNA CENTRADA, E O PORQUÊ DA MUDANÇA.
 
-        Este era um bug de layout de verdade, e vale entender o mecanismo porque
-        ele é fácil de reintroduzir. `.article-layout` é uma grade de TRÊS
-        colunas a partir de 1180px — `56px | 1fr | 320px` —, e a primeira é o
-        trilho vertical de compartilhamento (`.share-rail`) do protótipo. Como
-        `.share-rail` é `display:none` abaixo de 1180px, ele desaparece da grade
-        e tudo funciona; a partir de 1180px ele reaparece. Só que o produto
-        nunca renderizou esse trilho: com apenas dois filhos, era o `<article>`
-        que caía na coluna de 56px. Em telas grandes — as do desktop, as da
-        redação, as de quem revisa o site — o texto da matéria virava uma tira
-        de uma palavra por linha.
+        Até aqui esta página era `.container.layout-2col`: o corpo à esquerda
+        (numa coluna de ~864px, com o texto travado em 44rem = 704px encostado
+        na borda esquerda dela) e uma barra lateral de 320px à direita com
+        índice fixo, convite de push e anúncio grudado na rolagem. O resultado
+        era uma matéria DESCENTRALIZADA e três elementos disputando o olhar do
+        leitor durante a leitura — o oposto do que uma página de matéria precisa
+        entregar.
 
-        Por que não simplesmente adicionar o trilho: no protótipo ele é uma
-        pilha de botões CIRCULARES de 48px, e o CSS esconde o rótulo textual
-        (`.share-rail .share__btn span { display:none }`) porque cada botão
-        mostra o ícone da rede. O produto ainda não tem sistema de ícones, então
-        o trilho sairia como cinco círculos vazios. Enquanto os ícones não
-        existirem, a resposta certa é usar o componente de duas colunas que o
-        design também oferece — e não fingir uma terceira coluna.
+        Agora a página tem dois territórios, e a ordem entre eles é a hierarquia:
+
+          1. `.article`      — a LEITURA. Coluna única de 44rem centrada na
+                               página, sem nada ao lado. É o elemento dominante
+                               da tela, do topo até o fim do texto.
+          2. `.article-extras` — o DEPOIS DA LEITURA. Só começa quando o texto
+                               acabou. Aqui, sim, volta a grade de duas colunas
+                               (relacionadas/comunidade/comentários + trilho com
+                               push e anúncio), porque nada disso compete mais
+                               com a leitura: ela já terminou.
+
+        Nada foi eliminado — nem o inventário de anúncio (`rail`), nem o convite
+        de push, nem o índice (que virou uma cópia única acima do corpo, ver
+        adiante). O que mudou foi QUANDO cada coisa aparece.
+        Nielsen #8 (estético e minimalista) e §2 do design (hierarquia).
       */}
-      <div className="container layout-2col">
+      <div className="container article-page">
         <article className="article">
           {/* ---------- 1 a 3: badges e contexto ---------- */}
           <div className="article__kicker">
@@ -376,12 +381,20 @@ export default async function ArticlePage({
           {/* ---------- 7: compartilhar (topo, no mobile) ---------- */}
           <ShareBar url={articleUrl} title={article.title} />
 
-          {/* ---------- 8: mídia ---------- */}
+          {/* ---------- 8: mídia ----------
+              A CAPA SUBIU PARA O TOPO DA ESCADA DE DESTAQUE.
+
+              Ela era uma `<figure>` sem classe nenhuma: ocupava a largura da
+              coluna de texto e ficava do mesmo tamanho de um parágrafo largo.
+              Agora usa `media media--full` — as mesmas 68rem que um bloco de
+              imagem "borda-a-borda" —, porque a capa é literalmente o caso que
+              o dono descreveu: "se existir só uma imagem em cima, ela deve ter
+              um destaque bem maior".
+
+              A moldura 16:9 e o recorte continuam vindo do `.thumb`; a foto
+              real entra pela ponte `.thumb > img` da seção 17 do CSS. */}
           {article.coverImageUrl && (
-            // `<figure>` solta (sem classe) é o markup do protótipo. A moldura
-            // 16:9 e o recorte vêm do `.thumb`; a foto real entra pela ponte
-            // `.thumb > img` da seção 17 do CSS.
-            <figure>
+            <figure className="media media--full article__cover">
               <div className="thumb" data-c={catToken(categoria)}>
                 <Image
                   src={article.coverImageUrl}
@@ -390,7 +403,13 @@ export default async function ArticlePage({
                   height={675}
                   // Imagem de capa do artigo: é o elemento de LCP desta página.
                   priority
-                  sizes="(max-width: 1024px) 100vw, 720px"
+                  // O `sizes` acompanha a nova largura: abaixo de 1136px a foto
+                  // ocupa a janela inteira (sangria no celular, teto de
+                  // `100vw - 48px` no tablet); acima disso ela trava em 1088px,
+                  // que é o valor de `--media-max` do `.media--full`. Errar
+                  // este número é pedir ao navegador o arquivo errado — grande
+                  // demais custa banda, pequeno demais borra a capa.
+                  sizes="(min-width: 1136px) 1088px, 100vw"
                 />
               </div>
               {article.coverImageAlt && <figcaption>{article.coverImageAlt}</figcaption>}
@@ -475,14 +494,18 @@ export default async function ArticlePage({
           )}
 
           {/* ---------- 10.7: índice ----------
-              No MOBILE ele vem aqui, dentro do corpo, logo antes do texto —
-              é onde o leitor decide se vai ler tudo ou pular para uma seção.
-              No desktop ele vira a caixa fixa da sidebar (ver o `<aside>`), e
-              esta cópia some: duas listas iguais visíveis ao mesmo tempo seriam
-              lidas duas vezes por um leitor de tela. */}
-          <div className="only-mobile">
-            <ArticleToc entries={toc} />
-          </div>
+              UMA CÓPIA SÓ, para todos os tamanhos de tela, logo antes do texto
+              — que é onde o leitor decide se vai ler tudo ou pular para uma
+              seção.
+
+              Antes eram duas: esta (mobile) e uma caixa FIXA na barra lateral
+              do desktop, que acompanhava a rolagem ao lado do texto. A caixa
+              fixa saiu junto com a barra lateral: um índice grudado na tela
+              durante a leitura é exatamente o "elemento concorrendo por
+              atenção" que esta página passou a não ter. Como bônus, some o
+              risco de duas listas idênticas serem anunciadas duas vezes por um
+              leitor de tela. */}
+          <ArticleToc entries={toc} />
 
           {/* ---------- 11: corpo ---------- */}
           {(() => {
@@ -528,106 +551,110 @@ export default async function ArticlePage({
           />
 
           <ShareBar url={articleUrl} title={article.title} showCount />
-
-          {/* Discord CONTEXTUALIZADO pelo fandom do artigo — não um convite
-              genérico "entre no nosso servidor". */}
-          {primaryFranchise && (
-            /* `.community__top` é a linha logo + texto do design. O <h2> não
-               leva classe: a ponte `.community :is(h2, h3, h5)` da seção 17 dá
-               a ele o tamanho que o protótipo pedia no <h4>, sem que o nível do
-               heading precise mentir sobre a hierarquia da página. */
-            <section className="community">
-              <div className="community__top">
-                <span className="community__logo" aria-hidden="true" />
-                <div>
-                  <h2>Fala sobre {primaryFranchise.name} com a gente</h2>
-                  {/* O protótipo tem aqui um `.online` ("293 pessoas online"),
-                      que é um ponto VERDE de presença ao vivo. Não temos esse
-                      dado do Discord, e um indicador de estado que não reflete
-                      estado nenhum é pior que nenhum indicador: some. */}
-                </div>
-              </div>
-              <p>
-                A discussão sobre {primaryFranchise.name} continua no servidor — com
-                outros fãs e com a redação.
-              </p>
-              <a
-                href={DISCORD_INVITE_URL}
-                className="btn btn--discord"
-                rel="noopener noreferrer"
-                target="_blank"
-              >
-                Entrar no canal #{primaryFranchise.slug}
-              </a>
-            </section>
-          )}
-
-          {/* Relacionadas POR FRANQUIA: principal alavanca de páginas/sessão.
-              `.stack-sm` + `.card--row` (e não uma grade): dentro da coluna de
-              texto do artigo, a lista compacta cabe sem competir com o corpo. */}
-          {related.length > 0 && (
-            <section className="section" aria-labelledby="relacionadas">
-              <div className="section-head">
-                <h2 id="relacionadas" className="section-title">
-                  Mais de {primaryFranchise?.name ?? article.category.name}
-                </h2>
-                {primaryFranchise && (
-                  <Link href={routes.franchise(primaryFranchise.slug)} className="link-more">
-                    Ver hub completo
-                  </Link>
-                )}
-              </div>
-              <div className="stack-sm">
-                {related.map((item) => (
-                  <ArticleCard key={item.id} item={item} variant="row" />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Último slot do corpo: depois de TODO o conteúdo, inclusive das
-              relacionadas. É o único anúncio de um breaking news. */}
-          {endAdSlot && <AdSlot slot={endAdSlot} />}
-
-          {/* ---------- COMENTÁRIOS ---------- */}
-          <CommentSection
-            articleId={article.id}
-            comments={comments}
-            session={session ? { displayName: session.displayName, provider: session.provider } : null}
-            providers={availableProviders()}
-            returnTo={routes.article(categoria, slug)}
-          />
         </article>
 
-        <aside className="sidebar">
-          {/* Índice fixo do desktop: numa matéria longa, é o que segura a
-              rolagem. `only-desk` porque a mesma lista já aparece no corpo em
-              telas menores — e o `.toc--sticky` só faz sentido onde há coluna
-              lateral para ele acompanhar. */}
-          {toc.length > 0 && (
-            <div className="only-desk">
-              <ArticleToc entries={toc} sticky />
-            </div>
-          )}
+        {/*
+          ---------- DEPOIS DA LEITURA ----------
 
-          {/* Prompt de push DEPOIS do conteúdo, com justificativa explícita e
-              promessa de frequência. Pedir sem contexto é a razão nº 1 de
-              bloqueio permanente de notificação. */}
-          {/* A CONDIÇÃO continua usando o score (é regra de negócio no
-              servidor); o TEXTO não o revela mais — ver ADR 0009. */}
-          {article.currentScore >= 60 && (
-            <PushOptIn
-              headline="Quer saber primeiro?"
-              reason={`Esta notícia está na faixa "${HEAT_LABELS[heatForBand(article.currentBand)]}". Avisamos quando algo assim acontecer.`}
-              frequencyPromise="No máximo 2 por dia."
+          A partir daqui a página pode voltar a ser larga e a ter duas colunas:
+          o texto acabou, então nada aqui rouba atenção de nada. É também o
+          lugar onde a barra lateral antiga reaparece inteira — push e trilho de
+          anúncio —, só que abaixo do conteúdo em vez de ao lado dele.
+        */}
+        <div className="article-extras">
+          <div className="article-extras__main">
+            {/* Discord CONTEXTUALIZADO pelo fandom do artigo — não um convite
+                genérico "entre no nosso servidor". */}
+            {primaryFranchise && (
+              /* `.community__top` é a linha logo + texto do design. O <h2> não
+                 leva classe: a ponte `.community :is(h2, h3, h5)` da seção 17 dá
+                 a ele o tamanho que o protótipo pedia no <h4>, sem que o nível
+                 do heading precise mentir sobre a hierarquia da página. */
+              <section className="community">
+                <div className="community__top">
+                  <span className="community__logo" aria-hidden="true" />
+                  <div>
+                    <h2>Fala sobre {primaryFranchise.name} com a gente</h2>
+                    {/* O protótipo tem aqui um `.online` ("293 pessoas online"),
+                        que é um ponto VERDE de presença ao vivo. Não temos esse
+                        dado do Discord, e um indicador de estado que não reflete
+                        estado nenhum é pior que nenhum indicador: some. */}
+                  </div>
+                </div>
+                <p>
+                  A discussão sobre {primaryFranchise.name} continua no servidor — com
+                  outros fãs e com a redação.
+                </p>
+                <a
+                  href={DISCORD_INVITE_URL}
+                  className="btn btn--discord"
+                  rel="noopener noreferrer"
+                  target="_blank"
+                >
+                  Entrar no canal #{primaryFranchise.slug}
+                </a>
+              </section>
+            )}
+
+            {/* Relacionadas POR FRANQUIA: principal alavanca de páginas/sessão.
+                `.stack-sm` + `.card--row` (e não uma grade): a lista compacta
+                mantém o bloco legível mesmo agora que ele ficou mais largo que
+                a coluna de leitura. */}
+            {related.length > 0 && (
+              <section className="section" aria-labelledby="relacionadas">
+                <div className="section-head">
+                  <h2 id="relacionadas" className="section-title">
+                    Mais de {primaryFranchise?.name ?? article.category.name}
+                  </h2>
+                  {primaryFranchise && (
+                    <Link href={routes.franchise(primaryFranchise.slug)} className="link-more">
+                      Ver hub completo
+                    </Link>
+                  )}
+                </div>
+                <div className="stack-sm">
+                  {related.map((item) => (
+                    <ArticleCard key={item.id} item={item} variant="row" />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Último slot do corpo: depois de TODO o conteúdo, inclusive das
+                relacionadas. É o único anúncio de um breaking news. */}
+            {endAdSlot && <AdSlot slot={endAdSlot} />}
+
+            {/* ---------- COMENTÁRIOS ---------- */}
+            <CommentSection
+              articleId={article.id}
+              comments={comments}
+              session={session ? { displayName: session.displayName, provider: session.provider } : null}
+              providers={availableProviders()}
+              returnTo={routes.article(categoria, slug)}
             />
-          )}
+          </div>
 
-          {/* Trilho lateral: só existe a partir de 1024px e é o ÚLTIMO box da
-              sidebar. Nessa posição ele começa abaixo da dobra por construção,
-              o que mantém a regra "nada comercial acima da dobra". */}
-          {railAdSlot && <AdSlot slot={railAdSlot} sticky />}
-        </aside>
+          <aside className="sidebar">
+            {/* Prompt de push DEPOIS do conteúdo, com justificativa explícita e
+                promessa de frequência. Pedir sem contexto é a razão nº 1 de
+                bloqueio permanente de notificação. */}
+            {/* A CONDIÇÃO continua usando o score (é regra de negócio no
+                servidor); o TEXTO não o revela mais — ver ADR 0009. */}
+            {article.currentScore >= 60 && (
+              <PushOptIn
+                headline="Quer saber primeiro?"
+                reason={`Esta notícia está na faixa "${HEAT_LABELS[heatForBand(article.currentBand)]}". Avisamos quando algo assim acontecer.`}
+                frequencyPromise="No máximo 2 por dia."
+              />
+            )}
+
+            {/* Trilho lateral: continua existindo (o inventário não foi
+                perdido), só que agora ele vive na área DEPOIS da leitura. Ele
+                nasce abaixo da dobra por construção — a regra "nada comercial
+                acima da dobra" fica ainda mais folgada do que era. */}
+            {railAdSlot && <AdSlot slot={railAdSlot} sticky />}
+          </aside>
+        </div>
       </div>
     </>
   );

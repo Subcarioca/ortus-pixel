@@ -51,6 +51,29 @@
 
   /* --- Superfícies (preto/cinza) --- */
   --bg:            light-dark(#F5F5F7, #131317);
+
+  /* --- FUNDO EM GRADIENTE NEUTRO (v0.4) ---------------------------------
+     Pedido do dono do produto: "colocar um gradiente de cores neutras para
+     sair um pouco desse branco puro". Três tokens, um degradê, dois temas.
+
+     POR QUE NÃO MEXEMOS EM `--bg`: ele continua sendo a cor CHAPADA de fundo
+     e é o que pinta a tela antes de qualquer coisa (fallback de navegador sem
+     `light-dark()`, `background-color` do body, meta `theme-color` da barra do
+     navegador). O degradê é uma CAMADA por cima dele, e não um substituto —
+     assim nenhum contraste já calibrado neste arquivo muda de valor.
+
+     A escada é de cima para baixo: mais claro junto ao header (onde a manchete
+     precisa de fundo limpo) e um degrau mais fundo perto do rodapé. No tema
+     escuro, a mesma lógica invertida em luminância, para o fundo não achatar
+     contra o preto do rodapé. Nenhum tom quente e nenhum carmim: é fundo, não
+     é marca.                                                                */
+  --bg-grad-top:   light-dark(#F1F1F5, #17171D);
+  --bg-grad-bottom:light-dark(#E5E5EB, #0C0C10);
+  /* Brilho suave logo abaixo do header. Branco quase opaco no claro (é ele que
+     faz o topo parecer papel) mas a 55%: a 100% ele devolveria o #FFF que o
+     pedido manda evitar. No escuro, um véu de 4% — o suficiente para o topo
+     não parecer um buraco.                                                  */
+  --bg-grad-glow:  light-dark(rgba(255,255,255,.55), rgba(255,255,255,.04));
   --surface-1:     light-dark(#FFFFFF, #1A1A1F);
   --surface-2:     light-dark(#EFEFF2, #232329);
   --surface-3:     light-dark(#E3E3E8, #2D2D34);
@@ -210,7 +233,7 @@
 * { margin: 0; }
 html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
 body {
-  background: var(--bg);
+  background-color: var(--bg);
   color: var(--ink);
   font-family: var(--font-text);
   font-size: var(--fs-body);
@@ -219,6 +242,35 @@ body {
   padding-bottom: 64px; /* espaço da bottom-nav mobile */
 }
 @media (min-width: 768px) { body { padding-bottom: 0; } }
+
+/* A CAMADA DO GRADIENTE — um elemento fixo atrás de tudo, e não
+   `background-attachment: fixed` no próprio body.
+
+   Duas razões, as duas práticas:
+   a) `background-attachment: fixed` é historicamente quebrado no Safari do iOS
+      (o degradê passa a ser calculado sobre a altura do DOCUMENTO, então numa
+      matéria de 8.000px ele vira uma cor chapada) — e o celular é a maioria da
+      audiência de um portal de notícias;
+   b) uma camada `position: fixed` é composta pela GPU: ela não repinta a cada
+      quadro da rolagem, ao contrário de um fundo preso ao body.
+
+   `z-index: -1` a coloca atrás de todo o conteúdo sem precisar mexer no
+   empilhamento de nada (o body não cria contexto de empilhamento próprio) e
+   `pointer-events: none` garante que ela nunca intercepte um clique.
+
+   O `background-color: var(--bg)` do body continua embaixo: se o navegador não
+   entender `light-dark()` ou a camada falhar, o fundo é o de sempre.        */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(1100px 520px at 50% 0%, var(--bg-grad-glow), transparent 72%),
+    linear-gradient(180deg, var(--bg-grad-top), var(--bg-grad-bottom));
+}
+
 /* Anúncio ancorado no mobile: reserva o espaço dele também (sem CLS) */
 @media (max-width: 767px) { body:has(.ad-anchor) { padding-bottom: 152px; } }
 
@@ -1660,36 +1712,138 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
   letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3);
 }
 
-/* MÍDIA QUE FURA A MEDIDA DE LEITURA.
-   O `.article` tem 44rem, calibrados para o TEXTO. Imagem e vídeo podem passar
-   disso (decisão aprovada pelo dono): a foto ganha ar sem que a linha de texto
-   fique longa demais para o olho acompanhar.
+/* ==========================================================================
+   A IMAGEM COMO PROTAGONISTA — as três larguras traduzidas em CSS
+   ==========================================================================
+   Pedido do dono do produto, textual: "as imagens são pontos cruciais e
+   merecem bastante destaque. (…) Se existir só uma imagem em cima, ela deve
+   ter um destaque bem maior do que um texto com 3 imagens em cada parágrafo.
+   Mas em todos os casos, as imagens devem ter destaque grande e maior que os
+   textos para chamar atenção do leitor."
 
-   A largura própria é uma VARIÁVEL, e não um valor fixo, para que o mesmo
-   componente sirva às três larguras sem três blocos de regra. A margem negativa
-   simétrica mantém o bloco CENTRADO na coluna de texto: sem ela, a mídia larga
-   cresceria só para a direita e desalinharia a página inteira.
+   QUEM DECIDE O QUÊ (a divisão existe e importa):
+   `suggestedImageWidth`, em packages/core/src/blocks.ts, escolhe a LARGURA
+   SEMÂNTICA a partir de quantas imagens há no corpo — 1 imagem vira
+   'borda-a-borda', 2 viram 'larga', 3 ou mais viram 'medida'. Ela é a regra de
+   domínio e não sabe o que é um rem. Daqui para baixo é a outra metade: quanto
+   mede cada uma dessas três palavras.
 
-   O teto por `min()` com `100vw` é o que impede a barra de rolagem horizontal
-   no celular — onde a coluna já ocupa a tela toda e não há folga para furar. */
-.media { margin: var(--s-5) 0; }
+   A ESCADA, EM NÚMEROS (raiz de 16px):
+
+     medida         44rem = 704px   ← a MESMA largura da coluna de texto
+     larga          54rem = 864px   ← +160px (+23%), 80px sangrando de cada lado
+     borda-a-borda  68rem = 1088px  ← +384px (+55%), 192px de cada lado
+
+   POR QUE 54 E 68, E NÃO OUTROS DOIS NÚMEROS:
+   - 68rem é o teto útil. O `.container` do site tem 1280px com 24px de recuo,
+     ou seja 1232px internos; 1088 deixa 72px de folga de cada lado e nunca
+     encosta na borda da página, em nenhuma resolução de desktop.
+   - 54rem fica a meio caminho (+23% contra +55%): distante o bastante para o
+     leitor PERCEBER que são dois níveis diferentes de destaque quando as duas
+     aparecem na mesma matéria, e perto o bastante para não virar um terceiro
+     "borda-a-borda" mais estreito.
+   - o piso é 44rem porque essa é a largura do texto. Nenhuma imagem pode ser
+     mais estreita que o parágrafo ao lado dela — é a garantia pedida, e ela
+     vale sem exceção porque 'medida' NÃO tem regra de largura própria: ela
+     simplesmente ocupa a coluna inteira. Uma imagem 16:9 nessa largura tem
+     396px de altura contra ~28px de uma linha de texto; mesmo no menor dos três
+     níveis, a imagem pesa mais que o texto que a cerca.
+
+   O QUE FAZ CADA NÍVEL PARECER MAIOR ALÉM DA LARGURA — porque largura sozinha
+   não é destaque:
+     a) ESPAÇO. `medida` respira 32px acima e abaixo; `larga` e `borda-a-borda`,
+        48px. Espaço em volta é metade da percepção de importância.
+     b) ELEVAÇÃO. As duas maiores ganham sombra e raio maior no desktop: a foto
+        deixa de ser um bloco no fluxo e passa a flutuar sobre o fundo em
+        gradiente (seção 1) — o mesmo truque de hierarquia que o `.hero` da home
+        usa.
+     c) SANGRIA NO CELULAR. Ver o bloco de 767px abaixo.
+
+   A margem negativa simétrica (`(100% - largura)/2`) mantém a mídia CENTRADA
+   na coluna de texto. Sem ela, a imagem larga cresceria só para a direita e
+   desalinharia a página inteira. */
+.media { margin-block: var(--s-6); }
+.media--wide, .media--full { margin-block: var(--s-7); }
+
 .media--wide, .media--full {
-  --media-w: min(var(--media-max, 52rem), calc(100vw - 2 * var(--s-4)));
+  --media-max: 54rem;
+  /* O teto por `min()` com a largura da janela é o que impede a barra de
+     rolagem horizontal em telas entre 768px e 1136px, onde 68rem ainda não
+     cabe. */
+  --media-w: min(var(--media-max), calc(100vw - 2 * var(--s-5)));
   width: var(--media-w);
   margin-inline: calc((100% - var(--media-w)) / 2);
 }
-.media--full { --media-max: 64rem; }
-@media (min-width: 768px) {
-  .media--wide, .media--full { --media-w: min(var(--media-max, 52rem), calc(100vw - 2 * var(--s-5))); }
+.media--full { --media-max: 68rem; }
+
+/* SANGRIA ATÉ A BORDA DA TELA — só no celular, e por um motivo específico.
+   Num telefone, a coluna de texto JÁ ocupa a tela toda menos 16px de recuo:
+   não existe folga para uma imagem "furar a medida", e as três larguras
+   colapsariam no mesmo tamanho — a escada de destaque desapareceria justamente
+   onde está a maior parte da audiência. A saída é a outra direção: as duas
+   maiores passam a ignorar o recuo do contêiner e encostam nas duas bordas da
+   tela, sem raio e sem borda, como uma foto de revista. 'medida' continua
+   dentro do recuo — é ela que mantém os três níveis distinguíveis.
+
+   `margin-inline: calc(50% - 50vw)` é a forma segura de fazer isso: 50% da
+   coluna menos meia janela dá exatamente o recuo do contêiner, seja ele qual
+   for. Nada de `margin-left: -16px` chumbado, que quebraria se o recuo mudasse.
+   E fica restrito a telas < 768px, onde `100vw` não inclui barra de rolagem —
+   no desktop, `100vw` incluiria a barra e criaria rolagem horizontal. */
+@media (max-width: 767px) {
+  .media--wide, .media--full {
+    --media-w: 100vw;
+    margin-inline: calc(50% - 50vw);
+  }
+  .media--wide > .thumb, .media--full > .thumb,
+  .media--wide .embed__frame, .media--full .embed__frame {
+    border-radius: 0;
+    border-inline: 0;
+  }
+  /* A legenda NÃO sangra: ela é texto, e texto colado na borda da tela não se
+     lê. Ela volta para o alinhamento da coluna. */
+  .media--wide > figcaption, .media--full > figcaption { padding-inline: var(--s-4); }
 }
-.media figcaption { font-size: var(--fs-xs); color: var(--ink-3); margin-top: var(--s-2); }
+
+/* ELEVAÇÃO NO DESKTOP (item "b" acima). Fica fora do celular de propósito:
+   numa foto que sangra de borda a borda não há onde a sombra cair. */
+@media (min-width: 768px) {
+  .media--wide > .thumb, .media--full > .thumb {
+    border-radius: var(--r-lg);
+    box-shadow: var(--sh-2);
+  }
+}
+
+/* A LEGENDA TEM MEDIDA PRÓPRIA, e não a da imagem.
+   Numa foto de 1088px, uma legenda de 12px correndo a largura inteira dá ~180
+   caracteres por linha — o olho perde a linha de volta e desiste. Ela fica
+   presa à medida de leitura e alinhada à ESQUERDA da imagem, que é onde o olho
+   volta depois de varrer a foto. */
+.media figcaption {
+  font-size: var(--fs-xs); color: var(--ink-3);
+  margin-top: var(--s-2); max-width: 44rem;
+}
+
+/* A CAPA DA MATÉRIA usa o topo da escada, sempre.
+   Ela é, por definição, "a imagem que abre" — o caso que o dono descreveu como
+   "se existir só uma imagem em cima, ela deve ter um destaque bem maior". O
+   `.media--full` ao lado é que faz o trabalho de largura; esta classe só ajusta
+   a relação dela com o cabeçalho da matéria, que vem logo acima. */
+.article__cover { margin-top: var(--s-5); }
 
 /* EMBED (vídeo) — FACHADA, não iframe.
    Altura reservada pelo `aspect-ratio` do `.thumb`: o player nasce exatamente do
    tamanho da miniatura que ele substitui, então o clique não empurra o texto
    (CLS zero). `.embed__src` existe porque embed sem fonte declarada é conteúdo
    de terceiro passando por conteúdo nosso. */
-.embed { margin: var(--s-5) 0; }
+/* ⚠ `margin-block`, e NÃO `margin: var(--s-5) 0` — isto era um bug de verdade.
+   A forma abreviada também escrevia `margin-inline: 0`, e como esta regra vem
+   DEPOIS de `.media--wide/.media--full` (mesma especificidade, ganha a última),
+   ela apagava a margem negativa que centra a mídia larga na coluna. O efeito
+   era um vídeo "larga" ou "borda-a-borda" crescendo só para a direita, saindo
+   da coluna e desalinhando a página inteira. Com imagem nunca aconteceu porque
+   a `<figure>` de imagem não tem `.embed`. */
+.embed { margin-block: var(--s-5); }
 .embed__frame { position: relative; aspect-ratio: 16/9; border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); }
 .embed__frame > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
 .embed__src {
@@ -1856,3 +2010,119 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
 @media (max-width: 479px) {
   .just-out__list li { grid-template-columns: 1fr; gap: 2px; }
 }
+
+/* ==========================================================================
+   ==========================================================================
+   19. PÁGINA DE MATÉRIA EM FOCO  (redesign 2026-08)
+   ==========================================================================
+   ==========================================================================
+
+   Pedido do dono do produto, textual: "quando se abre uma matéria, a página da
+   matéria não tem uma formatação muito agradável. Centralize a matéria no meio
+   da página, ela deve ser o foco da página."
+
+   O DIAGNÓSTICO, antes da solução. A página usava `.layout-2col`
+   (`minmax(0,1fr) 320px`) e o `.article` de 44rem morava dentro da coluna
+   flexível de ~864px — ou seja, o texto ficava ENCOSTADO À ESQUERDA dessa
+   coluna, com 160px de vazio à direita dele e só depois a barra lateral. Havia
+   três problemas somados:
+
+     1. a matéria não estava centrada em coisa nenhuma (nem na página, nem na
+        própria coluna);
+     2. o vazio à direita do texto lia como "faltou alguma coisa aqui";
+     3. índice fixo + convite de push + anúncio grudado na rolagem ficavam ao
+        lado do texto DURANTE a leitura, competindo com ela.
+
+   A SOLUÇÃO tem duas partes, e a segunda é tão importante quanto a primeira:
+   centrar a coluna (`margin-inline: auto`) e ESVAZIAR os arredores dela. Uma
+   coluna centrada com três caixas piscando ao lado continuaria não sendo o foco
+   da página. Ver a nota de layout em app/[categoria]/[slug]/page.tsx.
+
+   Heurísticas de Nielsen: #8 (design estético e minimalista — cada elemento a
+   mais na tela compete com os que importam) e #6 (reconhecimento em vez de
+   memorização: o índice continua existindo, agora no ponto do fluxo em que ele
+   é útil, e não fixo na periferia).
+   -------------------------------------------------------------------------- */
+
+/* O contêiner da página de matéria. `padding-block` porque `.container` sozinho
+   não tem respiro vertical: a manchete nascia colada na borda inferior do
+   header, e "colado no topo" é a leitura visual de "isto é um cabeçalho", não
+   de "isto é o conteúdo principal". */
+.article-page { padding-block: var(--s-5) var(--s-7); }
+@media (min-width: 768px) { .article-page { padding-block: var(--s-6) var(--s-8); } }
+
+/* O centro da página. A largura continua vindo do design (`.article`, 44rem);
+   o que muda é a margem automática dos dois lados. `min-width: 0` protege a
+   coluna de filhos que não sabem encolher (tabela larga, bloco de código). */
+.article-page > .article { margin-inline: auto; min-width: 0; }
+
+/* Fecho de leitura: um filete curto e centrado marca o fim do texto antes de a
+   página abrir para o "depois da leitura". Sem ele, a área de relacionadas
+   começava sem aviso e o leitor não percebia que a matéria havia acabado
+   (Nielsen #1 — visibilidade do estado do sistema, aplicada à leitura). */
+.article-extras {
+  margin-top: var(--s-7);
+  padding-top: var(--s-6);
+  border-top: 1px solid var(--line-soft);
+  display: grid;
+  gap: var(--s-6);
+}
+.article-extras__main { display: grid; gap: var(--s-5); min-width: 0; }
+
+/* A grade de duas colunas volta SÓ AQUI, e só a partir de 1024px — a mesma
+   largura em que a barra lateral já existia antes. Abaixo disso tudo empilha,
+   na ordem em que está no HTML (conteúdo primeiro, push e anúncio depois), que
+   é também a ordem em que um leitor de tela percorre. */
+@media (min-width: 1024px) {
+  .article-extras {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: var(--s-7);
+    align-items: start;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   19.1 WORDMARK COM O "O" PIXELADO
+   --------------------------------------------------------------------------
+   Pedido do dono do produto: "o 'O' da ortus deve ser como um pixel e inverta
+   as cores do 'pixel'. O 'O' pixelado deve ser vermelho e o pixel preto."
+
+   O QUE INVERTEU, EXATAMENTE:
+     antes → "O" na cor do texto  +  "Pixel" em carmim (`.logo b`)
+     agora → "O" em pixel art CARMIM  +  "Pixel" na cor do texto (`--ink`)
+
+   POR QUE UM MODIFICADOR (`.logo--px`) E NÃO UMA MUDANÇA NA REGRA BASE:
+   `.logo` é componente do design system e é usado pelos dez protótipos de
+   `design/*.html`, que ainda trazem o ponto pulsante e o "Pixel" em carmim.
+   Redefinir `.logo b` na raiz mudaria todos eles em silêncio, inclusive os que
+   documentam a versão anterior da marca. O modificador deixa as duas marcas
+   coexistirem enquanto os protótipos não forem atualizados — e deixa o diff
+   desta mudança caber inteiro nesta seção.
+
+   O CARMIM VEM DE `--brand`, e não de `--heat-hot`: a regra dos dois vermelhos
+   (seção 1) reserva o vermelho vivo para urgência, e o próprio design system
+   lista "logotipo" como o primeiro uso legítimo de `--brand`. O "O" ficou,
+   portanto, o único acento de marca do cabeçalho — e é por isso que o ponto
+   pulsante saiu do markup: dois carmins no mesmo canto anulam um ao outro.  */
+
+/* `gap: 0` porque agora o "O" é uma LETRA, não um ícone ao lado do texto: entre
+   ele e o resto da palavra não pode haver espaço. O respiro entre "Ortus" e
+   "Pixel" (no rodapé) é um espaço de texto de verdade, dentro do `.logo__word`. */
+.logo--px { gap: 0; }
+.logo--px b { color: var(--ink); }
+
+/* Tamanho em `em`: o desenho acompanha a tipografia do wordmark em vez de ter
+   um px fixo que desalinha quando o header muda de escala.
+
+   0,82em NÃO é um número escolhido no olho: `.logo` é caixa-alta, e a altura de
+   maiúscula da Archivo é ~0,72em. Como a caixa do SVG é quadrada e o "O"
+   pixelado tem os cantos recuados, ele precisa de um pouco mais que 0,72 para
+   ler com o MESMO peso das letras ao lado — é o mesmo overshoot que qualquer
+   tipógrafo dá a um "O" redondo em relação a um "H" reto. Abaixo de 0,78 ele
+   vira uma letra menor que as outras; acima de 0,9, um ícone colado no texto. */
+.logo__o { width: .82em; height: .82em; flex: none; fill: var(--brand); }
+
+/* O texto do wordmark é um item de flex único — ver o comentário no header.
+   `nowrap` impede que "Ortus Pixel" quebre em duas linhas dentro do rodapé de
+   4 colunas, onde a coluna pode ficar estreita. */
+.logo__word { white-space: nowrap; }

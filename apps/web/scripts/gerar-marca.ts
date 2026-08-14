@@ -1,0 +1,188 @@
+/**
+ * =============================================================================
+ * GERADOR DOS ÍCONES DA MARCA — favicon e apple-icon
+ * =============================================================================
+ *
+ *   npx tsx apps/web/scripts/gerar-marca.ts
+ *
+ * Lê a grade 8×8 de `src/lib/brand-mark.ts` (a MESMA que o wordmark do header
+ * usa) e escreve três arquivos dentro de `src/app/`, que é onde o App Router do
+ * Next procura por ícones — sem nenhuma configuração, só pela convenção de
+ * nome:
+ *
+ *   icon.svg        → <link rel="icon" type="image/svg+xml">  (navegador moderno)
+ *   favicon.ico     → /favicon.ico                            (legado e Windows)
+ *   apple-icon.png  → <link rel="apple-touch-icon">           (tela de início iOS)
+ *
+ * -----------------------------------------------------------------------------
+ * POR QUE UM SCRIPT, E NÃO `app/icon.tsx` COM ImageResponse
+ * -----------------------------------------------------------------------------
+ * O Next sabe gerar ícone em tempo de execução com `ImageResponse`. Para ESTE
+ * site seria a escolha errada por dois motivos:
+ *
+ *   1. custo: `ImageResponse` carrega um renderizador (satori + resvg em wasm)
+ *      no servidor para desenhar 40 quadrados que nunca mudam;
+ *   2. risco de build: a saída é `output: standalone` rodando atrás de PM2 na
+ *      Hostinger, e o wasm do resvg é a dependência que mais costuma faltar
+ *      nesse tipo de empacotamento. Um favicon não vale um build quebrado.
+ *
+ * Arquivo estático tem custo zero em produção e é cacheável para sempre. O
+ * preço é este script — que roda de novo em dois segundos se a marca mudar.
+ *
+ * -----------------------------------------------------------------------------
+ * NÃO É PARTE DO BUILD, DE PROPÓSITO
+ * -----------------------------------------------------------------------------
+ * Os arquivos gerados são versionados no Git. Se este script rodasse no build,
+ * `sharp` viraria dependência obrigatória do deploy para produzir um resultado
+ * idêntico ao que já está commitado.
+ */
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import sharp from 'sharp';
+
+import {
+  BRAND_ICON_BG,
+  BRAND_RED_DARK,
+  BRAND_RED_LIGHT,
+  PIXEL_O_SIZE,
+  pixelOPath,
+} from '../src/lib/brand-mark';
+
+const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/app');
+const PATH_D = pixelOPath();
+
+/**
+ * O SVG DA ABA — e o detalhe que faz diferença: ele troca de cor com o tema.
+ *
+ * Chrome e Firefox aplicam `prefers-color-scheme` DENTRO do SVG do favicon. O
+ * carmim escuro (#A81729) some contra a barra de abas escura; o tom claro
+ * (#CA414F) some contra a barra clara. Com a media query, o "O" fica visível
+ * nos dois — é o mesmo par de valores do token `--brand` do design system.
+ *
+ * SEM MARGEM (`pad = 0`), e essa é a decisão que faz o ícone ser legível:
+ * a área do favicon tem 16 CSS pixels. Com a grade de 8 ocupando os 16, cada
+ * célula cai em exatamente 2×2 pixels de tela. Com uma margem de uma célula, a
+ * grade viraria 10 unidades em 16px = 1,6px por célula, e a metade das células
+ * sairia com 1px e a outra com 2px — o "O" fica visivelmente torto, com um lado
+ * mais grosso que o outro. Margem é o tipo de refinamento que só funciona onde
+ * há resolução para gastar.
+ */
+function svgIcon(): string {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${PIXEL_O_SIZE} ${PIXEL_O_SIZE}" shape-rendering="crispEdges">
+  <style>
+    .o { fill: ${BRAND_RED_LIGHT}; }
+    @media (prefers-color-scheme: dark) { .o { fill: ${BRAND_RED_DARK}; } }
+  </style>
+  <path class="o" d="${PATH_D}"/>
+</svg>
+`;
+}
+
+/**
+ * SVG de cor fixa, para os formatos que não entendem CSS (.ico e .png).
+ *
+ * `pad` é medido em CÉLULAS da grade, não em pixels — é o que mantém a conta
+ * "célula = número inteiro de pixels" válida em qualquer tamanho de saída.
+ */
+function svgFlat(fill: string, background: string | null, pad = 0): string {
+  const box = PIXEL_O_SIZE + pad * 2;
+  const bg = background
+    ? `<rect width="${box}" height="${box}" rx="${box / 5}" fill="${background}"/>`
+    : '';
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box} ${box}" shape-rendering="crispEdges">
+  ${bg}<g transform="translate(${pad} ${pad})"><path fill="${fill}" d="${PATH_D}"/></g>
+</svg>
+`;
+}
+
+/**
+ * Empacota PNGs num contêiner .ico.
+ *
+ * O formato é de 1985 e cabe em vinte linhas: um cabeçalho de 6 bytes, uma
+ * entrada de 16 bytes por tamanho e os dados no fim. O truque moderno é que a
+ * carga pode ser um PNG inteiro em vez do bitmap DIB original — todo navegador
+ * em uso hoje aceita, e é o que evita ter que escrever um codificador de BMP
+ * com máscara de transparência invertida (a parte do formato que costuma sair
+ * errada).
+ *
+ * `width`/`height` são UM byte: 256 não cabe e é escrito como 0. Por isso os
+ * tamanhos param em 48 — que é o maior que o Windows usa na barra de tarefas.
+ */
+function buildIco(images: { size: number; data: Buffer }[]): Buffer {
+  const header = Buffer.alloc(6);
+  header.writeUInt16LE(0, 0); // reservado
+  header.writeUInt16LE(1, 2); // 1 = ícone
+  header.writeUInt16LE(images.length, 4);
+
+  const entries: Buffer[] = [];
+  let offset = 6 + images.length * 16;
+
+  for (const image of images) {
+    const entry = Buffer.alloc(16);
+    entry.writeUInt8(image.size >= 256 ? 0 : image.size, 0);
+    entry.writeUInt8(image.size >= 256 ? 0 : image.size, 1);
+    entry.writeUInt8(0, 2); // paleta: nenhuma
+    entry.writeUInt8(0, 3); // reservado
+    entry.writeUInt16LE(1, 4); // planos
+    entry.writeUInt16LE(32, 6); // bits por pixel
+    entry.writeUInt32LE(image.data.length, 8);
+    entry.writeUInt32LE(offset, 12);
+    entries.push(entry);
+    offset += image.data.length;
+  }
+
+  return Buffer.concat([header, ...entries, ...images.map((i) => i.data)]);
+}
+
+async function main() {
+  // 1. SVG da aba — o único que acompanha o tema do sistema.
+  fs.writeFileSync(path.join(APP_DIR, 'icon.svg'), svgIcon(), 'utf8');
+
+  /**
+   * 2. favicon.ico com 16, 32 e 48.
+   *
+   * O vermelho aqui é o do tema CLARO: um .ico não tem como responder ao tema,
+   * e ele só é servido a navegadores que não sabem ler o SVG acima. Renderizar
+   * cada tamanho a partir do vetor (em vez de reduzir o de 48) é o que mantém
+   * a aresta de cada célula exata — reduzir bitmap borra a pixel art.
+   */
+  const flat = Buffer.from(svgFlat(BRAND_RED_LIGHT, null), 'utf8');
+  const sizes = [16, 32, 48];
+  const pngs = await Promise.all(
+    sizes.map(async (size) => ({
+      size,
+      data: await sharp(flat, { density: 384 }).resize(size, size).png().toBuffer(),
+    })),
+  );
+  fs.writeFileSync(path.join(APP_DIR, 'favicon.ico'), buildIco(pngs));
+
+  /**
+   * 3. apple-icon.png (180×180), COM fundo.
+   *
+   * O iOS ignora transparência em ícone de tela de início e compõe sobre preto.
+   * Um "O" vermelho transparente viraria um símbolo escuro num quadrado escuro,
+   * então o fundo é declarado aqui — preto de marca, "O" carmim claro (o mesmo
+   * do tema escuro, porque é sobre fundo escuro que ele vai aparecer).
+   *
+   * Aqui, sim, cabe margem de uma célula: são 180px para uma grade de 10, ou
+   * seja 18px por célula (inteiro), e o "O" precisa respirar dentro do quadrado
+   * de fundo — sem isso ele encostaria no canto arredondado do ícone.
+   */
+  const apple = Buffer.from(svgFlat(BRAND_RED_DARK, BRAND_ICON_BG, 1), 'utf8');
+  await sharp(apple, { density: 1440 })
+    .resize(180, 180)
+    .png()
+    .toFile(path.join(APP_DIR, 'apple-icon.png'));
+
+  console.log('marca gerada em', APP_DIR);
+  console.log('  icon.svg · favicon.ico (16/32/48) · apple-icon.png (180)');
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

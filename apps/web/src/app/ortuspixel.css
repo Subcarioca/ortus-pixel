@@ -1712,29 +1712,124 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
   letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3);
 }
 
-/* MÍDIA QUE FURA A MEDIDA DE LEITURA.
-   O `.article` tem 44rem, calibrados para o TEXTO. Imagem e vídeo podem passar
-   disso (decisão aprovada pelo dono): a foto ganha ar sem que a linha de texto
-   fique longa demais para o olho acompanhar.
+/* ==========================================================================
+   A IMAGEM COMO PROTAGONISTA — as três larguras traduzidas em CSS
+   ==========================================================================
+   Pedido do dono do produto, textual: "as imagens são pontos cruciais e
+   merecem bastante destaque. (…) Se existir só uma imagem em cima, ela deve
+   ter um destaque bem maior do que um texto com 3 imagens em cada parágrafo.
+   Mas em todos os casos, as imagens devem ter destaque grande e maior que os
+   textos para chamar atenção do leitor."
 
-   A largura própria é uma VARIÁVEL, e não um valor fixo, para que o mesmo
-   componente sirva às três larguras sem três blocos de regra. A margem negativa
-   simétrica mantém o bloco CENTRADO na coluna de texto: sem ela, a mídia larga
-   cresceria só para a direita e desalinharia a página inteira.
+   QUEM DECIDE O QUÊ (a divisão existe e importa):
+   `suggestedImageWidth`, em packages/core/src/blocks.ts, escolhe a LARGURA
+   SEMÂNTICA a partir de quantas imagens há no corpo — 1 imagem vira
+   'borda-a-borda', 2 viram 'larga', 3 ou mais viram 'medida'. Ela é a regra de
+   domínio e não sabe o que é um rem. Daqui para baixo é a outra metade: quanto
+   mede cada uma dessas três palavras.
 
-   O teto por `min()` com `100vw` é o que impede a barra de rolagem horizontal
-   no celular — onde a coluna já ocupa a tela toda e não há folga para furar. */
-.media { margin: var(--s-5) 0; }
+   A ESCADA, EM NÚMEROS (raiz de 16px):
+
+     medida         44rem = 704px   ← a MESMA largura da coluna de texto
+     larga          54rem = 864px   ← +160px (+23%), 80px sangrando de cada lado
+     borda-a-borda  68rem = 1088px  ← +384px (+55%), 192px de cada lado
+
+   POR QUE 54 E 68, E NÃO OUTROS DOIS NÚMEROS:
+   - 68rem é o teto útil. O `.container` do site tem 1280px com 24px de recuo,
+     ou seja 1232px internos; 1088 deixa 72px de folga de cada lado e nunca
+     encosta na borda da página, em nenhuma resolução de desktop.
+   - 54rem fica a meio caminho (+23% contra +55%): distante o bastante para o
+     leitor PERCEBER que são dois níveis diferentes de destaque quando as duas
+     aparecem na mesma matéria, e perto o bastante para não virar um terceiro
+     "borda-a-borda" mais estreito.
+   - o piso é 44rem porque essa é a largura do texto. Nenhuma imagem pode ser
+     mais estreita que o parágrafo ao lado dela — é a garantia pedida, e ela
+     vale sem exceção porque 'medida' NÃO tem regra de largura própria: ela
+     simplesmente ocupa a coluna inteira. Uma imagem 16:9 nessa largura tem
+     396px de altura contra ~28px de uma linha de texto; mesmo no menor dos três
+     níveis, a imagem pesa mais que o texto que a cerca.
+
+   O QUE FAZ CADA NÍVEL PARECER MAIOR ALÉM DA LARGURA — porque largura sozinha
+   não é destaque:
+     a) ESPAÇO. `medida` respira 32px acima e abaixo; `larga` e `borda-a-borda`,
+        48px. Espaço em volta é metade da percepção de importância.
+     b) ELEVAÇÃO. As duas maiores ganham sombra e raio maior no desktop: a foto
+        deixa de ser um bloco no fluxo e passa a flutuar sobre o fundo em
+        gradiente (seção 1) — o mesmo truque de hierarquia que o `.hero` da home
+        usa.
+     c) SANGRIA NO CELULAR. Ver o bloco de 767px abaixo.
+
+   A margem negativa simétrica (`(100% - largura)/2`) mantém a mídia CENTRADA
+   na coluna de texto. Sem ela, a imagem larga cresceria só para a direita e
+   desalinharia a página inteira. */
+.media { margin-block: var(--s-6); }
+.media--wide, .media--full { margin-block: var(--s-7); }
+
 .media--wide, .media--full {
-  --media-w: min(var(--media-max, 52rem), calc(100vw - 2 * var(--s-4)));
+  --media-max: 54rem;
+  /* O teto por `min()` com a largura da janela é o que impede a barra de
+     rolagem horizontal em telas entre 768px e 1136px, onde 68rem ainda não
+     cabe. */
+  --media-w: min(var(--media-max), calc(100vw - 2 * var(--s-5)));
   width: var(--media-w);
   margin-inline: calc((100% - var(--media-w)) / 2);
 }
-.media--full { --media-max: 64rem; }
-@media (min-width: 768px) {
-  .media--wide, .media--full { --media-w: min(var(--media-max, 52rem), calc(100vw - 2 * var(--s-5))); }
+.media--full { --media-max: 68rem; }
+
+/* SANGRIA ATÉ A BORDA DA TELA — só no celular, e por um motivo específico.
+   Num telefone, a coluna de texto JÁ ocupa a tela toda menos 16px de recuo:
+   não existe folga para uma imagem "furar a medida", e as três larguras
+   colapsariam no mesmo tamanho — a escada de destaque desapareceria justamente
+   onde está a maior parte da audiência. A saída é a outra direção: as duas
+   maiores passam a ignorar o recuo do contêiner e encostam nas duas bordas da
+   tela, sem raio e sem borda, como uma foto de revista. 'medida' continua
+   dentro do recuo — é ela que mantém os três níveis distinguíveis.
+
+   `margin-inline: calc(50% - 50vw)` é a forma segura de fazer isso: 50% da
+   coluna menos meia janela dá exatamente o recuo do contêiner, seja ele qual
+   for. Nada de `margin-left: -16px` chumbado, que quebraria se o recuo mudasse.
+   E fica restrito a telas < 768px, onde `100vw` não inclui barra de rolagem —
+   no desktop, `100vw` incluiria a barra e criaria rolagem horizontal. */
+@media (max-width: 767px) {
+  .media--wide, .media--full {
+    --media-w: 100vw;
+    margin-inline: calc(50% - 50vw);
+  }
+  .media--wide > .thumb, .media--full > .thumb,
+  .media--wide .embed__frame, .media--full .embed__frame {
+    border-radius: 0;
+    border-inline: 0;
+  }
+  /* A legenda NÃO sangra: ela é texto, e texto colado na borda da tela não se
+     lê. Ela volta para o alinhamento da coluna. */
+  .media--wide > figcaption, .media--full > figcaption { padding-inline: var(--s-4); }
 }
-.media figcaption { font-size: var(--fs-xs); color: var(--ink-3); margin-top: var(--s-2); }
+
+/* ELEVAÇÃO NO DESKTOP (item "b" acima). Fica fora do celular de propósito:
+   numa foto que sangra de borda a borda não há onde a sombra cair. */
+@media (min-width: 768px) {
+  .media--wide > .thumb, .media--full > .thumb {
+    border-radius: var(--r-lg);
+    box-shadow: var(--sh-2);
+  }
+}
+
+/* A LEGENDA TEM MEDIDA PRÓPRIA, e não a da imagem.
+   Numa foto de 1088px, uma legenda de 12px correndo a largura inteira dá ~180
+   caracteres por linha — o olho perde a linha de volta e desiste. Ela fica
+   presa à medida de leitura e alinhada à ESQUERDA da imagem, que é onde o olho
+   volta depois de varrer a foto. */
+.media figcaption {
+  font-size: var(--fs-xs); color: var(--ink-3);
+  margin-top: var(--s-2); max-width: 44rem;
+}
+
+/* A CAPA DA MATÉRIA usa o topo da escada, sempre.
+   Ela é, por definição, "a imagem que abre" — o caso que o dono descreveu como
+   "se existir só uma imagem em cima, ela deve ter um destaque bem maior". O
+   `.media--full` ao lado é que faz o trabalho de largura; esta classe só ajusta
+   a relação dela com o cabeçalho da matéria, que vem logo acima. */
+.article__cover { margin-top: var(--s-5); }
 
 /* EMBED (vídeo) — FACHADA, não iframe.
    Altura reservada pelo `aspect-ratio` do `.thumb`: o player nasce exatamente do

@@ -381,12 +381,20 @@ export default async function ArticlePage({
           {/* ---------- 7: compartilhar (topo, no mobile) ---------- */}
           <ShareBar url={articleUrl} title={article.title} />
 
-          {/* ---------- 8: mídia ---------- */}
+          {/* ---------- 8: mídia ----------
+              A CAPA SUBIU PARA O TOPO DA ESCADA DE DESTAQUE.
+
+              Ela era uma `<figure>` sem classe nenhuma: ocupava a largura da
+              coluna de texto e ficava do mesmo tamanho de um parágrafo largo.
+              Agora usa `media media--full` — as mesmas 68rem que um bloco de
+              imagem "borda-a-borda" —, porque a capa é literalmente o caso que
+              o dono descreveu: "se existir só uma imagem em cima, ela deve ter
+              um destaque bem maior".
+
+              A moldura 16:9 e o recorte continuam vindo do `.thumb`; a foto
+              real entra pela ponte `.thumb > img` da seção 17 do CSS. */}
           {article.coverImageUrl && (
-            // `<figure>` solta (sem classe) é o markup do protótipo. A moldura
-            // 16:9 e o recorte vêm do `.thumb`; a foto real entra pela ponte
-            // `.thumb > img` da seção 17 do CSS.
-            <figure>
+            <figure className="media media--full article__cover">
               <div className="thumb" data-c={catToken(categoria)}>
                 <Image
                   src={article.coverImageUrl}
@@ -395,7 +403,13 @@ export default async function ArticlePage({
                   height={675}
                   // Imagem de capa do artigo: é o elemento de LCP desta página.
                   priority
-                  sizes="(max-width: 1024px) 100vw, 720px"
+                  // O `sizes` acompanha a nova largura: abaixo de 1136px a foto
+                  // ocupa a janela inteira (sangria no celular, teto de
+                  // `100vw - 48px` no tablet); acima disso ela trava em 1088px,
+                  // que é o valor de `--media-max` do `.media--full`. Errar
+                  // este número é pedir ao navegador o arquivo errado — grande
+                  // demais custa banda, pequeno demais borra a capa.
+                  sizes="(min-width: 1136px) 1088px, 100vw"
                 />
               </div>
               {article.coverImageAlt && <figcaption>{article.coverImageAlt}</figcaption>}

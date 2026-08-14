@@ -1836,7 +1836,14 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
    tamanho da miniatura que ele substitui, então o clique não empurra o texto
    (CLS zero). `.embed__src` existe porque embed sem fonte declarada é conteúdo
    de terceiro passando por conteúdo nosso. */
-.embed { margin: var(--s-5) 0; }
+/* ⚠ `margin-block`, e NÃO `margin: var(--s-5) 0` — isto era um bug de verdade.
+   A forma abreviada também escrevia `margin-inline: 0`, e como esta regra vem
+   DEPOIS de `.media--wide/.media--full` (mesma especificidade, ganha a última),
+   ela apagava a margem negativa que centra a mídia larga na coluna. O efeito
+   era um vídeo "larga" ou "borda-a-borda" crescendo só para a direita, saindo
+   da coluna e desalinhando a página inteira. Com imagem nunca aconteceu porque
+   a `<figure>` de imagem não tem `.embed`. */
+.embed { margin-block: var(--s-5); }
 .embed__frame { position: relative; aspect-ratio: 16/9; border-radius: var(--r-md); overflow: hidden; border: 1px solid var(--line); }
 .embed__frame > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
 .embed__src {

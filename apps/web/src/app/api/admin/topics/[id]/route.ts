@@ -18,6 +18,7 @@ import { prisma, toJsonColumn } from '@subcarioca/db';
 import { blocksReadingMinutes, estimateReadingMinutes, hasBlocks, slugify } from '@subcarioca/core';
 
 import { parseArticleInput } from '@/server/article-input';
+import { syncArticleTaxonomy } from '@/server/article-taxonomy';
 import { requireStaffApi } from '@/server/staff-auth';
 import { getClientIp, hashPersonalData } from '@/server/security';
 import { CACHE_TAGS } from '@/server/queries';
@@ -245,6 +246,7 @@ export async function POST(
                 blocks: hasBlocks(input.blocks) ? toJsonColumn(input.blocks) : undefined,
                 status: publish ? 'published' : 'draft',
                 categoryId: category.id,
+                subcategoryId: input.subcategoryId,
                 authorId: input.authorId,
                 topicId: id,
                 format: input.format,
@@ -253,6 +255,11 @@ export async function POST(
                 coverImageAlt: input.coverImageAlt,
                 isBreaking: input.isBreaking,
                 hasSpoiler: input.hasSpoiler,
+                // Na CRIAÇÃO não há valor anterior, então não há o que
+                // "reduzir": qualquer nível é aceito de qualquer conta. A trava
+                // de permissão (`canLowerSensitivity`) só existe na edição, que
+                // é onde a redução acontece. Ver core/staff.ts.
+                contentSensitivity: input.contentSensitivity,
                 // Com blocos, o tempo de leitura conta imagem e vídeo além das
                 // palavras (ver `blocksReadingMinutes`). Sem blocos, continua a
                 // estimativa de sempre sobre o Markdown.
@@ -263,6 +270,14 @@ export async function POST(
                 scoreAtPublish: publish ? topic.currentScore : null,
                 publishedAt: publish ? now : null,
               },
+            });
+
+            // Franquias e tags entram na MESMA transação da matéria: uma
+            // matéria publicada com metade das etiquetas não daria erro nenhum
+            // e sumiria dos hubs de fandom sem ninguém notar.
+            await syncArticleTaxonomy(tx, created.id, {
+              franchiseIds: input.franchiseIds,
+              tags: input.tags,
             });
 
             await tx.auditLog.create({

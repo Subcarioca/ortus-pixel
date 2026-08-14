@@ -61,6 +61,12 @@
     "staff:create": "npm run staff:create --workspace=@subcarioca/db --",
     "db:studio": "npm run studio --workspace=@subcarioca/db",
     "curator:once": "npm run once --workspace=@subcarioca/curator",
+    "//curator:build": [
+      "Empacota o curator num artefato que roda só com `node`, sem tsx e sem",
+      "workspace — é o que o cron da Hostinger executa. Saída em",
+      "services/curator/dist/. Ver services/curator/scripts/build.mjs."
+    ],
+    "curator:build": "npm run build --workspace=@subcarioca/curator --",
     "setup": "npm install && npm run db:generate"
   },
   "devDependencies": {

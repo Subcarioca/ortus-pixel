@@ -25,9 +25,18 @@ import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 
 import { JSON_COLUMN_NULL, prisma, toJsonColumn } from '@subcarioca/db';
-import { blocksReadingMinutes, canEditArticleOf, estimateReadingMinutes, hasBlocks } from '@subcarioca/core';
+import {
+  blocksReadingMinutes,
+  canEditArticleOf,
+  canLowerSensitivity,
+  estimateReadingMinutes,
+  hasBlocks,
+  sensitivityRank,
+  toContentSensitivity,
+} from '@subcarioca/core';
 
 import { parseArticleInput } from '@/server/article-input';
+import { syncArticleTaxonomy } from '@/server/article-taxonomy';
 import { forbiddenArticleResponse, requireStaffApi } from '@/server/staff-auth';
 import { getClientIp, hashPersonalData } from '@/server/security';
 import { CACHE_TAGS } from '@/server/queries';
@@ -69,6 +78,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       currentScore: true,
       scoreAtPublish: true,
       authorId: true,
+      // Necessário para a trava de redução de sensibilidade, logo abaixo: a
+      // regra depende do valor ANTERIOR, e não só do papel de quem edita.
+      contentSensitivity: true,
       category: { select: { id: true, slug: true } },
     },
   });
@@ -97,6 +109,37 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const input = parsed.data;
   const { publish, category } = input;
 
+  /**
+   * A ESCADA DE SENSIBILIDADE SÓ DESCE COM ADMINISTRADOR.
+   *
+   * Aplicada AQUI, e não no validador de formulário, por um motivo simples: o
+   * validador não conhece a linha, e a regra não é sobre o valor novo — é sobre
+   * a DIREÇÃO da mudança. Marcar como adulto é livre; desmarcar não.
+   *
+   * A tela do redator já vem sem a opção de baixar (ele vê o campo travado no
+   * nível atual ou acima), mas isso é conforto, não proteção: um `<select>` é do
+   * navegador dele. Quem recusa é esta comparação.
+   */
+  const previousSensitivity = toContentSensitivity(existing.contentSensitivity);
+  if (
+    !canLowerSensitivity(
+      guard.user,
+      sensitivityRank(previousSensitivity),
+      sensitivityRank(input.contentSensitivity),
+    )
+  ) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message:
+          'Só um administrador pode reduzir a classificação de conteúdo desta matéria. ' +
+          'Marcar como mais restrito é liberado para toda a redação; afrouxar, não — ' +
+          'é o que protege a conta de anúncios do site.',
+      },
+      { status: 403 },
+    );
+  }
+
   const wasPublished = existing.status === 'published';
   const now = new Date();
 
@@ -115,6 +158,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           blocks: hasBlocks(input.blocks) ? toJsonColumn(input.blocks) : JSON_COLUMN_NULL,
           status: publish ? 'published' : 'draft',
           categoryId: category.id,
+          subcategoryId: input.subcategoryId,
           authorId: input.authorId,
           format: input.format,
           tldr: input.tldr,
@@ -122,6 +166,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           coverImageAlt: input.coverImageAlt,
           isBreaking: input.isBreaking,
           hasSpoiler: input.hasSpoiler,
+          contentSensitivity: input.contentSensitivity,
           readingMinutes: hasBlocks(input.blocks)
             ? blocksReadingMinutes(input.blocks)
             : estimateReadingMinutes(input.content),
@@ -139,6 +184,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         },
       });
 
+      // SUBSTITUI a etiquetagem inteira pela que veio do formulário. Ver o
+      // cabeçalho de `article-taxonomy.ts` para o motivo de ser substituição, e
+      // não diferença incremental.
+      await syncArticleTaxonomy(tx, id, {
+        franchiseIds: input.franchiseIds,
+        tags: input.tags,
+      });
+
       await tx.auditLog.create({
         data: {
           action: publish ? 'article.updated_published' : 'article.updated_draft',
@@ -149,11 +202,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
             title: existing.title,
             status: existing.status,
             categorySlug: existing.category.slug,
+            // A classificação de conteúdo entra na trilha porque é a única
+            // decisão editorial deste formulário com consequência FORA do site
+            // (a política do AdSense). "Quem tirou a marca de adulto daquela
+            // matéria, e quando?" precisa ter resposta.
+            contentSensitivity: previousSensitivity,
           },
           after: {
             title: input.title,
             status: publish ? 'published' : 'draft',
             categorySlug: category.slug,
+            contentSensitivity: input.contentSensitivity,
           },
           ipHash: hashPersonalData(getClientIp(request.headers)),
         },

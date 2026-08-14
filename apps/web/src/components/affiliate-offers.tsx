@@ -32,6 +32,7 @@ import Image from 'next/image';
 
 import {
   AFFILIATE_PROGRAM_LABELS,
+  ANALYTICS_ATTR,
   PRICE_FRESHNESS_HOURS,
   canDisplayPrice,
   formatPrice,
@@ -162,6 +163,11 @@ export function AffiliateOffers({
                       className="btn btn--buy btn--sm"
                       rel={AFFILIATE_REL}
                       target="_blank"
+                      // Marca lida pelo rastreador de audiência. É SÓ um
+                      // atributo: este componente continua sendo Server
+                      // Component com zero JavaScript, e quem escuta o clique é
+                      // um ouvinte único da página (ver analytics-tracker.tsx).
+                      {...{ [ANALYTICS_ATTR.offerId]: offer.id }}
                     >
                       Ver
                       <span className="sr-only">
@@ -248,6 +254,7 @@ export function AffiliateOffers({
                   // motivo de `noreferrer` NÃO entrar em link de afiliado.
                   rel={AFFILIATE_REL}
                   target="_blank"
+                  {...{ [ANALYTICS_ATTR.offerId]: offer.id }}
                 >
                   Ver na loja
                   <span className="sr-only"> {offer.retailerName} (link de afiliado)</span>

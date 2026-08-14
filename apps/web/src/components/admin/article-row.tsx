@@ -22,6 +22,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { readAdminResponse } from './admin-response';
+import type { FranchiseOption } from './article-classification-fields';
 import { ArticleEditForm, type EditableArticle } from './article-edit-form';
 
 export interface AdminArticleRowData extends EditableArticle {
@@ -39,9 +40,24 @@ interface ArticleRowProps {
   article: AdminArticleRowData;
   categories: { slug: string; name: string }[];
   authors: { id: string; name: string }[];
+  /** Franquias cadastradas, para o campo de etiquetagem do formulário. */
+  franchises: FranchiseOption[];
+  /**
+   * A conta logada pode AFROUXAR a classificação de conteúdo?
+   *
+   * Cortesia de interface, não segurança: quem recusa é a rota PATCH, via
+   * `canLowerSensitivity` (core/staff.ts).
+   */
+  canLowerSensitivity: boolean;
 }
 
-export function ArticleRow({ article, categories, authors }: ArticleRowProps) {
+export function ArticleRow({
+  article,
+  categories,
+  authors,
+  franchises,
+  canLowerSensitivity,
+}: ArticleRowProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -186,6 +202,8 @@ export function ArticleRow({ article, categories, authors }: ArticleRowProps) {
             article={article}
             categories={categories}
             authors={authors}
+            franchises={franchises}
+            canLowerSensitivity={canLowerSensitivity}
             onDone={() => setEditing(false)}
           />
         </div>

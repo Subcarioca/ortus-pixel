@@ -36,6 +36,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { ANALYTICS_ATTR } from '@subcarioca/core';
+
 import { AD_LABEL, ADSENSE_CLIENT_ID, ADS_ENABLED, type AdSlotSpec } from '@/lib/ads';
 
 declare global {
@@ -109,6 +111,11 @@ export function AdSlot({ slot, sticky = false }: AdSlotProps) {
       // tela que aquilo não é o conteúdo da página.
       role="complementary"
       aria-label={AD_LABEL}
+      // Marca lida pelo rastreador de audiência. O clique DENTRO do iframe é
+      // invisível para nós (mesma origem), então o que se mede é o que chega a
+      // este contêiner — número comparativo entre posições, nunca de receita.
+      // Ver o cabeçalho de analytics-tracker.tsx.
+      {...{ [ANALYTICS_ATTR.adSlot]: slot.id }}
     >
       <span className="ad__label">{AD_LABEL}</span>
       <div className="ad__box">

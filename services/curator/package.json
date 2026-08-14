@@ -5,10 +5,23 @@
   "type": "module",
   "description": "Serviço de curadoria automática: coleta sinais, calcula scores e aciona a redação.",
   "main": "./src/index.ts",
+  "//build": [
+    "Gera o artefato que roda no cron da Hostinger: um único curator.cjs que",
+    "não precisa de tsx nem de resolução de workspace. Ver o cabeçalho de",
+    "scripts/build.mjs para o porquê de cada decisão.",
+    "",
+    "  npm run build         artefato de PRODUÇÃO (engine debian-openssl-1.1.x)",
+    "  npm run build:local   idem + o engine desta máquina, para poder testar",
+    "                        o bundle localmente com `node curator.cjs --once`",
+    "",
+    "O `dist/` inteiro (bundle + node_modules/) é o que vai para o servidor."
+  ],
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "once": "tsx src/main.ts --once",
     "start": "tsx src/main.ts",
+    "build": "node scripts/build.mjs",
+    "build:local": "node scripts/build.mjs --with-host-engine",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test src/**/*.test.ts"
   },
@@ -17,7 +30,14 @@
     "@subcarioca/db": "*",
     "@subcarioca/scoring": "*"
   },
+  "//esbuild": [
+    "O esbuild já vinha na árvore por ser o motor do tsx. Está declarado aqui",
+    "EXPLICITAMENTE de propósito: depender de dependência transitiva significa",
+    "que o dia em que o tsx mudar a faixa de versão do esbuild, o build de",
+    "PRODUÇÃO quebra sem ninguém ter tocado neste pacote."
+  ],
   "devDependencies": {
+    "esbuild": "^0.28.1",
     "tsx": "^4.19.2"
   }
 }

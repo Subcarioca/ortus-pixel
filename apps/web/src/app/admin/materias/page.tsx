@@ -19,7 +19,7 @@
  * e trabalho inacabado que some da vista é trabalho esquecido.
  */
 
-import { CATEGORIES, can, routes } from '@subcarioca/core';
+import { CATEGORIES, can, routes, toContentSensitivity } from '@subcarioca/core';
 import { prisma, toStringArray } from '@subcarioca/db';
 
 import { AdminLogin } from '@/components/admin/admin-login';
@@ -36,7 +36,7 @@ export default async function AdminArticlesPage() {
   const { user } = guard;
   const vePorTodaARedacao = can(user.accessLevel, 'atribuirOutroAutor');
 
-  const [articles, authors] = await Promise.all([
+  const [articles, authors, franchises] = await Promise.all([
     prisma.article.findMany({
       // 'suggested'/'archived' ficam de fora: esta tela é sobre o que a redação
       // escreveu e mantém no ar. Incluir tudo transformaria a lista num despejo
@@ -69,12 +69,20 @@ export default async function AdminArticlesPage() {
         coverImageAlt: true,
         isBreaking: true,
         hasSpoiler: true,
+        contentSensitivity: true,
         blocks: true,
         publishedAt: true,
         updatedAt: true,
         authorId: true,
         author: { select: { name: true } },
         category: { select: { slug: true, name: true } },
+        subcategory: { select: { slug: true } },
+        // As etiquetas atuais precisam voltar para o formulário: a gravação é
+        // por SUBSTITUIÇÃO (ver server/article-taxonomy.ts), então um formulário
+        // que reabre vazio APAGARIA silenciosamente as franquias e tags da
+        // matéria no primeiro salvamento.
+        franchises: { select: { franchiseId: true } },
+        tags: { select: { tag: { select: { name: true } } } },
         // A contagem entra aqui, e não numa consulta por linha: é o que o aviso
         // de exclusão precisa dizer ("isso apaga também os N comentários"), e
         // um `count` por matéria seria N+1 na abertura da tela.
@@ -90,9 +98,15 @@ export default async function AdminArticlesPage() {
           select: { id: true, name: true },
         })
       : Promise.resolve([{ id: user.id, name: user.name }]),
+    prisma.franchise.findMany({
+      orderBy: { name: 'asc' },
+      take: 200,
+      select: { id: true, name: true },
+    }),
   ]);
 
   const categoryOptions = CATEGORIES.map((c) => ({ slug: c.slug, name: c.name }));
+  const podeAfrouxarConteudo = can(user.accessLevel, 'reduzirRestricaoDeConteudo');
 
   const rows: AdminArticleRowData[] = articles.map((article) => ({
     id: article.id,
@@ -116,6 +130,13 @@ export default async function AdminArticlesPage() {
     coverImageAlt: article.coverImageAlt,
     isBreaking: article.isBreaking,
     hasSpoiler: article.hasSpoiler,
+    // Normalizado no SERVIDOR, como `tldr`: o formulário espera um dos três
+    // níveis, e uma string estranha no banco viraria um `<select>` sem valor
+    // selecionado — que salva 'none' sem ninguém ter escolhido isso.
+    contentSensitivity: toContentSensitivity(article.contentSensitivity),
+    subcategorySlug: article.subcategory?.slug ?? null,
+    franchiseIds: article.franchises.map((f) => f.franchiseId),
+    tagNames: article.tags.map((t) => t.tag.name),
     // O `blocks` é `Json` no Prisma, ou seja, `unknown` aqui. Ele atravessa a
     // fronteira servidor→cliente como veio e é NORMALIZADO no editor
     // (`toEditorBlocks`), que trata Json malformado como "sem blocos". Validar
@@ -162,6 +183,8 @@ export default async function AdminArticlesPage() {
                 article={row}
                 categories={categoryOptions}
                 authors={authors}
+                franchises={franchises}
+                canLowerSensitivity={podeAfrouxarConteudo}
               />
             ))}
           </ul>
@@ -186,6 +209,8 @@ export default async function AdminArticlesPage() {
                 article={row}
                 categories={categoryOptions}
                 authors={authors}
+                franchises={franchises}
+                canLowerSensitivity={podeAfrouxarConteudo}
               />
             ))}
           </ul>

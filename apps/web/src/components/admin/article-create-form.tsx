@@ -21,16 +21,33 @@ import { useRouter } from 'next/navigation';
 import type { ArticleBlock } from '@subcarioca/core';
 
 import { readAdminResponse } from './admin-response';
+import {
+  ArticleClassificationFields,
+  type ArticleClassification,
+  type FranchiseOption,
+} from './article-classification-fields';
 import { FORMAT_OPTIONS, formatRequiresTldr } from './article-format-options';
 import { BlockEditor } from './block-editor';
+import { ImageUrlField } from './image-url-field';
 
 interface ArticleCreateFormProps {
   topicId: string;
   defaultTitle: string;
   defaultExcerpt: string;
   defaultCategorySlug: string | null;
+  /**
+   * Franquias JÁ vinculadas ao tópico, herdadas como sugestão.
+   *
+   * Não é economia de cliques: é o que impede a matéria de sair menos
+   * classificada do que a pauta que a originou. O pipeline já sabia que aquele
+   * assunto era de Zelda; obrigar o redator a redizer isso é o tipo de trabalho
+   * repetido que, em dia de correria, simplesmente não é feito.
+   */
+  defaultFranchiseIds?: string[];
   categories: { slug: string; name: string }[];
   authors: { id: string; name: string }[];
+  franchises: FranchiseOption[];
+  canLowerSensitivity: boolean;
   onDone: () => void;
 }
 
@@ -39,8 +56,11 @@ export function ArticleCreateForm({
   defaultTitle,
   defaultExcerpt,
   defaultCategorySlug,
+  defaultFranchiseIds = [],
   categories,
   authors,
+  franchises,
+  canLowerSensitivity,
   onDone,
 }: ArticleCreateFormProps) {
   const router = useRouter();
@@ -49,6 +69,24 @@ export function ArticleCreateForm({
   const [format, setFormat] = useState('breaking');
   const [tldr, setTldr] = useState<string[]>(['', '', '']);
   const [blocks, setBlocks] = useState<ArticleBlock[]>([]);
+  const [coverImageUrl, setCoverImageUrl] = useState('');
+
+  /**
+   * A editoria vira ESTADO (e não `defaultValue`) porque agora ela comanda
+   * outro campo: as sub-editorias oferecidas dependem dela. Sem estado, trocar
+   * de Tech para Games deixaria "Hardware" selecionado — e o servidor recusaria
+   * o par, com razão.
+   */
+  const [categorySlug, setCategorySlug] = useState(
+    defaultCategorySlug ?? categories[0]?.slug ?? '',
+  );
+
+  const [classification, setClassification] = useState<ArticleClassification>({
+    subcategorySlug: '',
+    franchiseIds: defaultFranchiseIds,
+    tags: '',
+    contentSensitivity: 'none',
+  });
   // O texto vive num `useState` (e não só no `defaultValue`) porque o editor de
   // blocos precisa dele para o botão "converter o texto atual em blocos": numa
   // matéria nova, o redator pode começar escrevendo corrido e converter depois.
@@ -87,14 +125,19 @@ export function ArticleCreateForm({
           excerpt: form.get('excerpt'),
           content,
           blocks,
-          categorySlug: form.get('categorySlug'),
+          categorySlug,
           authorId: form.get('authorId'),
           format,
           tldr: tldr.filter((t) => t.trim().length > 0),
-          coverImageUrl: form.get('coverImageUrl') || null,
+          coverImageUrl: coverImageUrl || null,
           coverImageAlt: form.get('coverImageAlt') || null,
           isBreaking: form.get('isBreaking') === 'on',
           hasSpoiler: form.get('hasSpoiler') === 'on',
+          // --- Classificação (ver `article-classification-fields.tsx`) ---
+          subcategorySlug: classification.subcategorySlug || null,
+          franchiseIds: classification.franchiseIds,
+          tags: classification.tags,
+          contentSensitivity: classification.contentSensitivity,
           publish,
         }),
       });
@@ -134,7 +177,7 @@ export function ArticleCreateForm({
 
       <label>
         Categoria
-        <select name="categorySlug" defaultValue={defaultCategorySlug ?? categories[0]?.slug}>
+        <select value={categorySlug} onChange={(event) => setCategorySlug(event.target.value)}>
           {categories.map((c) => (
             <option key={c.slug} value={c.slug}>
               {c.name}
@@ -165,10 +208,20 @@ export function ArticleCreateForm({
         </select>
       </label>
 
-      <label>
-        Imagem de capa (URL)
-        <input name="coverImageUrl" type="url" placeholder="https://..." />
-      </label>
+      <ArticleClassificationFields
+        categorySlug={categorySlug}
+        value={classification}
+        onChange={setClassification}
+        franchises={franchises}
+        canLowerSensitivity={canLowerSensitivity}
+      />
+
+      <ImageUrlField
+        label="Imagem de capa"
+        value={coverImageUrl}
+        onChange={setCoverImageUrl}
+        className="admin-form__full"
+      />
 
       <label className="admin-form__full">
         Texto alternativo da imagem

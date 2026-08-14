@@ -27,11 +27,17 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import type { ArticleBlock } from '@subcarioca/core';
+import { toContentSensitivity, type ArticleBlock, type ContentSensitivity } from '@subcarioca/core';
 
 import { readAdminResponse } from './admin-response';
+import {
+  ArticleClassificationFields,
+  type ArticleClassification,
+  type FranchiseOption,
+} from './article-classification-fields';
 import { FORMAT_OPTIONS, formatRequiresTldr } from './article-format-options';
 import { BlockEditor, toEditorBlocks } from './block-editor';
+import { ImageUrlField } from './image-url-field';
 
 export interface EditableArticle {
   id: string;
@@ -49,20 +55,48 @@ export interface EditableArticle {
   isBreaking: boolean;
   hasSpoiler: boolean;
   status: string;
+  /** Classificação de conteúdo salva hoje. Ver core/content-sensitivity.ts. */
+  contentSensitivity: ContentSensitivity;
+  subcategorySlug: string | null;
+  franchiseIds: string[];
+  /** Nomes das tags já vinculadas, para reabrir o campo com o que está salvo. */
+  tagNames: string[];
 }
 
 interface ArticleEditFormProps {
   article: EditableArticle;
   categories: { slug: string; name: string }[];
   authors: { id: string; name: string }[];
+  franchises: FranchiseOption[];
+  canLowerSensitivity: boolean;
   onDone: () => void;
 }
 
-export function ArticleEditForm({ article, categories, authors, onDone }: ArticleEditFormProps) {
+export function ArticleEditForm({
+  article,
+  categories,
+  authors,
+  franchises,
+  canLowerSensitivity,
+  onDone,
+}: ArticleEditFormProps) {
   const router = useRouter();
   const [busy, setBusy] = useState<'draft' | 'publish' | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [format, setFormat] = useState(article.format);
+  const [categorySlug, setCategorySlug] = useState(article.categorySlug);
+  const [coverImageUrl, setCoverImageUrl] = useState(article.coverImageUrl ?? '');
+
+  const [classification, setClassification] = useState<ArticleClassification>({
+    subcategorySlug: article.subcategorySlug ?? '',
+    franchiseIds: article.franchiseIds,
+    // As tags voltam para o campo como texto — a mesma forma em que foram
+    // digitadas. Reabrir o formulário e ver o campo vazio faria o editor achar
+    // que a matéria não tem tag e, ao salvar, ele APAGARIA as que existiam (a
+    // gravação é por substituição, ver server/article-taxonomy.ts).
+    tags: article.tagNames.join(', '),
+    contentSensitivity: toContentSensitivity(article.contentSensitivity),
+  });
 
   // Começa com o que já está salvo; se a matéria não tiver TL;DR, abre com três
   // linhas vazias — o mesmo ponto de partida do formulário de criação.
@@ -101,14 +135,18 @@ export function ArticleEditForm({ article, categories, authors, onDone }: Articl
           // enquanto ninguém converte a matéria, e é ele que o botão de
           // conversão usa como origem.
           blocks,
-          categorySlug: form.get('categorySlug'),
+          categorySlug,
           authorId: form.get('authorId'),
           format,
           tldr: tldr.filter((t) => t.trim().length > 0),
-          coverImageUrl: form.get('coverImageUrl') || null,
+          coverImageUrl: coverImageUrl || null,
           coverImageAlt: form.get('coverImageAlt') || null,
           isBreaking: form.get('isBreaking') === 'on',
           hasSpoiler: form.get('hasSpoiler') === 'on',
+          subcategorySlug: classification.subcategorySlug || null,
+          franchiseIds: classification.franchiseIds,
+          tags: classification.tags,
+          contentSensitivity: classification.contentSensitivity,
           publish,
         }),
       });
@@ -155,7 +193,7 @@ export function ArticleEditForm({ article, categories, authors, onDone }: Articl
 
       <label>
         Categoria
-        <select name="categorySlug" defaultValue={article.categorySlug}>
+        <select value={categorySlug} onChange={(event) => setCategorySlug(event.target.value)}>
           {categories.map((c) => (
             <option key={c.slug} value={c.slug}>
               {c.name}
@@ -186,15 +224,21 @@ export function ArticleEditForm({ article, categories, authors, onDone }: Articl
         </select>
       </label>
 
-      <label>
-        Imagem de capa (URL)
-        <input
-          name="coverImageUrl"
-          type="url"
-          placeholder="https://..."
-          defaultValue={article.coverImageUrl ?? ''}
-        />
-      </label>
+      <ArticleClassificationFields
+        categorySlug={categorySlug}
+        value={classification}
+        onChange={setClassification}
+        franchises={franchises}
+        savedSensitivity={toContentSensitivity(article.contentSensitivity)}
+        canLowerSensitivity={canLowerSensitivity}
+      />
+
+      <ImageUrlField
+        label="Imagem de capa"
+        value={coverImageUrl}
+        onChange={setCoverImageUrl}
+        className="admin-form__full"
+      />
 
       <label className="admin-form__full">
         Texto alternativo da imagem

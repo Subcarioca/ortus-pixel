@@ -36,12 +36,16 @@ import {
   BLOCK_LABELS,
   BLOCK_TYPES,
   BLOCK_WIDTHS,
+  countImageBlocks,
   emptyBlock,
   markdownToBlocks,
+  withSuggestedImageWidths,
   type ArticleBlock,
   type BlockType,
   type BlockWidth,
 } from '@subcarioca/core';
+
+import { ImageUrlField } from './image-url-field';
 
 /** Rótulos de largura de mídia, para o `<select>`. */
 const WIDTH_LABELS: Record<BlockWidth, string> = {
@@ -100,13 +104,40 @@ export function BlockEditor({ blocks, onChange, legacyMarkdown }: BlockEditorPro
     );
   }
 
+  /**
+   * DESTAQUE PROPORCIONAL DA IMAGEM — aplicado ao INSERIR e ao REMOVER.
+   *
+   * A regra ("uma imagem sozinha merece destaque bem maior do que três, uma por
+   * parágrafo") é do dono do produto e está implementada, com o racional
+   * completo e testes, em `core/blocks.ts` — `withSuggestedImageWidths`.
+   *
+   * POR QUE NOS DOIS EVENTOS, e não só na inserção: a quantidade muda nas duas
+   * pontas. Uma matéria com três imagens em que o redator apaga duas ficaria
+   * com a última em `'medida'` — discreta justamente quando ela virou a única
+   * pausa visual do texto, que é o caso em que a regra manda destacar mais.
+   *
+   * E POR QUE NÃO A CADA DIGITAÇÃO: `update()` roda a cada tecla nos campos do
+   * bloco. Reescrever o array inteiro ali para recalcular algo que só muda com a
+   * QUANTIDADE de imagens seria trabalho por caractere digitado, e ainda
+   * atropelaria a escolha manual de largura no meio da edição.
+   *
+   * A largura continua editável no `<select>` de cada imagem: isto é sugestão
+   * automática, não trava. Ver o comentário de `withSuggestedImageWidths`.
+   */
+  function applyImageRhythm(next: ArticleBlock[]): ArticleBlock[] {
+    return countImageBlocks(next) > 0 ? withSuggestedImageWidths(next) : next;
+  }
+
   function add(type: BlockType) {
-    onChange([...blocks, emptyBlock(type, newId())]);
+    const next = [...blocks, emptyBlock(type, newId())];
+    onChange(type === 'imagem' ? applyImageRhythm(next) : next);
     setAdding(false);
   }
 
   function remove(index: number) {
-    onChange(blocks.filter((_, i) => i !== index));
+    const removido = blocks[index];
+    const next = blocks.filter((_, i) => i !== index);
+    onChange(removido?.type === 'imagem' ? applyImageRhythm(next) : next);
   }
 
   function move(index: number, direction: -1 | 1) {
@@ -310,15 +341,12 @@ function BlockFields({
     case 'imagem':
       return (
         <div className="admin-form admin-form--cols">
-          <label className="admin-form__full">
-            URL da imagem
-            <input
-              type="url"
-              value={block.url}
-              onChange={(event) => onChange({ url: event.target.value } as Partial<ArticleBlock>)}
-              placeholder="https://..."
-            />
-          </label>
+          <ImageUrlField
+            label="Imagem"
+            className="admin-form__full"
+            value={block.url}
+            onChange={(url) => onChange({ url } as Partial<ArticleBlock>)}
+          />
 
           <label className="form-inline admin-form__full">
             <input
@@ -380,6 +408,11 @@ function BlockFields({
                 </option>
               ))}
             </select>
+            <span className="form-hint">
+              A largura é sugerida automaticamente pela quantidade de imagens do corpo: uma
+              imagem sozinha nasce borda a borda, três nascem na largura do texto. Você pode
+              mudar aqui — nenhuma opção deixa a imagem mais estreita que o texto.
+            </span>
           </label>
         </div>
       );

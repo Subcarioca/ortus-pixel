@@ -9,7 +9,20 @@
     "build": "next build",
     "postbuild": "[ -d .next/standalone/node_modules ] && cp -rn .next/standalone/node_modules/. node_modules/ 2>/dev/null; cp -rLn ../../node_modules/. node_modules/ 2>/dev/null; true",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "//test": [
+      "Só os módulos de SERVIDOR que são testáveis fora do Next — hoje as regras",
+      "de upload (onde o arquivo é gravado e que caminho pode ser lido).",
+      "",
+      "O runner é o do Node, igual ao de `core`, `scoring` e `curator`: sem",
+      "framework de teste novo no projeto por causa de um arquivo.",
+      "",
+      "O alcance é limitado de propósito: módulos com `import 'server-only'` NÃO",
+      "carregam aqui (esse especificador é resolvido pelo bundler do Next e não",
+      "existe como módulo comum), e componentes React precisariam de DOM. Testar",
+      "esses exigiria outra ferramenta — decisão que ainda não se paga."
+    ],
+    "test": "node --import tsx --test src/server/*.test.ts"
   },
   "dependencies": {
     "@subcarioca/core": "^0.1.0",

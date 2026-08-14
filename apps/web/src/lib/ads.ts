@@ -35,7 +35,13 @@
  * vídeo está decidindo uma compra — ali o bloco comercial é serviço, não ruído.
  */
 
-import type { ContentFormat, Heat } from '@subcarioca/core';
+import {
+  allowsAffiliateLinks,
+  allowsAutomaticAds,
+  type ContentFormat,
+  type ContentSensitivity,
+  type Heat,
+} from '@subcarioca/core';
 
 /**
  * Formatos de slot. Os nomes são os das classes CSS do design (`.ad--*`), e não
@@ -149,7 +155,37 @@ export const ADS_ENABLED = ADSENSE_CLIENT_ID.length > 0;
  * TEMPERATURA só sabe REDUZIR. Nenhuma combinação aumenta a densidade em
  * relação à linha da tabela — o pior caso possível é o que está documentado.
  */
-export function commercePolicy(heat: Heat, format: ContentFormat): CommercePolicy {
+export function commercePolicy(
+  heat: Heat,
+  format: ContentFormat,
+  /**
+   * Classificação de sensibilidade da matéria.
+   *
+   * TEM VALOR PADRÃO de propósito: as outras superfícies que chamam esta função
+   * (home, categoria) não têm uma matéria única em mãos, e obrigá-las a passar
+   * 'none' explicitamente só espalharia ruído. O padrão é o comportamento que
+   * elas já tinham — nada muda para quem não passa o argumento.
+   */
+  sensitivity: ContentSensitivity = 'none',
+): CommercePolicy {
+  /**
+   * A TRAVA DE CONTEÚDO ADULTO VEM ANTES DE TUDO, E NÃO SE MISTURA COM O RESTO.
+   *
+   * Ela é uma porta, não um peso. As demais regras deste arquivo são de DOSE
+   * ("quanto de anúncio cabe aqui?"); esta é de EXISTÊNCIA, e existe por um
+   * motivo que não é editorial: veicular AdSense em página de conteúdo adulto
+   * viola a política do programa, e a punição não recai sobre a página — recai
+   * sobre a CONTA inteira, com todo o histórico de receita junto.
+   *
+   * Por isso ela é a PRIMEIRA linha da função, com retorno próprio: não existe
+   * combinação de formato, temperatura ou regra futura capaz de acrescentar um
+   * slot depois deste ponto. A garantia está na estrutura, e não em lembrar de
+   * checar o campo em cada um dos cinco caminhos abaixo.
+   */
+  if (!allowsAutomaticAds(sensitivity)) {
+    return { adSlots: [], affiliateAllowed: false, anchorAllowed: false };
+  }
+
   const isUrgent = heat === 'hot';
 
   // Conteúdo urgente: um slot só, sem afiliado, sem ancorado. Vale para
@@ -165,11 +201,26 @@ export function commercePolicy(heat: Heat, format: ContentFormat): CommercePolic
     };
   }
 
-  const bodySlots = SLOTS_BY_FORMAT[format] ?? [];
+  /**
+   * TEMA SENSÍVEL: o anúncio continua permitido, mas SAI DO MEIO DO TEXTO.
+   *
+   * A diferença para o nível 'adult' é a natureza do risco. Aqui não há regra de
+   * programa nenhuma sendo violada — há um problema de CONTEXTO: um retângulo
+   * colorido no meio do relato de uma tragédia é a coisa mais constrangedora que
+   * o site pode fazer, e o leitor não culpa o anunciante, culpa o veículo.
+   *
+   * A resposta proporcional é tirar o slot do fluxo da leitura (o 'mid') e
+   * manter os de borda, além de desligar o bloco de ofertas — recomendar uma
+   * compra dentro de uma matéria assim é pior do que exibir um banner ao lado
+   * dela (ver `allowsAffiliateLinks` em core/content-sensitivity.ts).
+   */
+  const bodySlots = (SLOTS_BY_FORMAT[format] ?? []).filter(
+    (slot) => sensitivity === 'none' || slot.placement !== 'mid',
+  );
 
   return {
     adSlots: ADS_ENABLED ? [...bodySlots, RAIL_SLOT] : [],
-    affiliateAllowed: AFFILIATE_FORMATS.includes(format),
+    affiliateAllowed: AFFILIATE_FORMATS.includes(format) && allowsAffiliateLinks(sensitivity),
     anchorAllowed: ADS_ENABLED,
   };
 }

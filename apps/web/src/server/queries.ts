@@ -40,6 +40,7 @@ import {
   isCategorySlug,
   MAX_HOT_ITEMS_ON_HOME,
   rankRecommendations,
+  toContentSensitivity,
   TREND_UP_DELTA,
   trendForDelta,
   type ContentCardData,
@@ -958,6 +959,15 @@ const articleLoader = async (slug: string) => {
       format: article.format as ContentFormat,
       isLive: article.isLive,
       hasSpoiler: article.hasSpoiler,
+      /**
+       * Classificação de sensibilidade, normalizada AQUI.
+       *
+       * Viaja fora de `mapArticle` de propósito, junto de `format`, `isLive` e
+       * `hasSpoiler`: são todos "contrato de APRESENTAÇÃO" — dizem como a página
+       * se comporta, não o que a matéria É. O tipo `Article` do domínio continua
+       * descrevendo conteúdo, e quem decide sobre anúncio e aviso é a página.
+       */
+      contentSensitivity: toContentSensitivity(article.contentSensitivity),
       // Coluna `Json` desde a migração para o MySQL: normalizamos AQUI, no
       // servidor, para que a página do artigo continue recebendo `string[]` e
       // possa fazer `.length` e `.map` sem checagem defensiva na view.

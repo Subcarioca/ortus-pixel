@@ -116,6 +116,8 @@ export const routes = {
   admin: () => '/admin',
   adminTopic: (id: string) => `/admin/topicos/${id}`,
   adminArticles: () => '/admin/materias',
+  /** Audiência: visualizações e cliques. O RECORTE por autoria é da tela. */
+  adminAnalytics: () => '/admin/analytics',
   adminAccuracy: () => '/admin/precisao',
   adminAffiliates: () => '/admin/afiliados',
   adminComments: () => '/admin/comentarios',

@@ -49,11 +49,14 @@ import {
   isCategorySlug,
   routes,
   schemaVideoFromBlocks,
+  sensitivityNotice,
   trendForDelta,
 } from '@subcarioca/core';
 
 import { AdSlot } from '@/components/ad-slot';
+import { AdsPaused } from '@/components/ads-paused';
 import { AffiliateDisclosure } from '@/components/affiliate-disclosure';
+import { AnalyticsTracker } from '@/components/analytics-tracker';
 import { AffiliateOffers } from '@/components/affiliate-offers';
 import { CommentSection } from '@/components/comments/comment-section';
 import { ArticleBody, markdownToc } from '@/components/article-body';
@@ -145,7 +148,8 @@ export default async function ArticlePage({
   const data = await getArticleBySlug(slug);
   if (!data) notFound();
 
-  const { article, liveUpdates, isLive, hasSpoiler, tldr, scoreDelta1h, format } = data;
+  const { article, liveUpdates, isLive, hasSpoiler, tldr, scoreDelta1h, format, contentSensitivity } =
+    data;
 
   /**
    * O slug da URL precisa bater com a categoria REAL do artigo.
@@ -183,7 +187,21 @@ export default async function ArticlePage({
    *
    * Ver apps/web/src/lib/ads.ts e design/README.md §7.1.
    */
-  const policy = commercePolicy(heat, format);
+  const policy = commercePolicy(heat, format, contentSensitivity);
+
+  /**
+   * AVISO DE CONTEÚDO — o texto vem do domínio, não da página.
+   *
+   * `null` em matéria comum, que é o caso da esmagadora maioria. Ver
+   * `sensitivityNotice` em core/content-sensitivity.ts.
+   *
+   * ⚠ O TRATAMENTO VISUAL DISTO É DECISÃO DE DESIGN e está deliberadamente
+   * simples aqui: uma nota antes do corpo, com a classe de aviso que o design
+   * system já tem. Se o produto quiser um interstitial de verdade (cobrir o
+   * conteúdo e exigir confirmação, como o bloco de spoiler já faz), isso é
+   * trabalho de design — e a informação de que ele precisa já chega até aqui.
+   */
+  const contentNotice = sensitivityNotice(contentSensitivity);
 
   /**
    * O SELO DE DISCLOSURE E O BLOCO DE OFERTAS SAEM DA MESMA VARIÁVEL.
@@ -232,6 +250,29 @@ export default async function ArticlePage({
           reviewData={data.reviewData}
         />
       )}
+      {/*
+        MEDIÇÃO DE AUDIÊNCIA — um único componente de cliente para a página
+        inteira, sem interface.
+
+        Ele instala UM ouvinte de clique e mede quatro coisas (visualização,
+        clique para outra matéria, clique em anúncio, clique em afiliado). O
+        motivo de ser um só, em vez de `onClick` nos componentes, está no
+        cabeçalho de analytics-tracker.tsx: colocar o rastreamento dentro do
+        bloco de ofertas transformaria um Server Component de JavaScript ZERO em
+        componente de cliente hidratado, em toda matéria, para medir um clique
+        que a maioria dos leitores não dá.
+      */}
+      <AnalyticsTracker articleId={article.id} />
+
+      {/*
+        SEGUNDA CAMADA da trava de conteúdo adulto. A primeira (nenhuma unidade
+        de anúncio renderizada) já aconteceu no servidor, em `commercePolicy`.
+        Esta impede que o "Auto ads" do AdSense — que é ligado NA CONTA, não no
+        nosso código — injete anúncio por conta própria numa página onde o script
+        do site está presente. Ver o cabeçalho de ads-paused.tsx.
+      */}
+      {contentSensitivity === 'adult' && <AdsPaused />}
+
       <BreadcrumbJsonLd
         items={[
           { name: 'Home', url: routes.home() },
@@ -354,6 +395,24 @@ export default async function ArticlePage({
               </div>
               {article.coverImageAlt && <figcaption>{article.coverImageAlt}</figcaption>}
             </figure>
+          )}
+
+          {/* ---------- 8.5: AVISO DE CONTEÚDO SENSÍVEL ---------- */}
+          {/*
+            ANTES do TL;DR e do corpo, que é o único lugar em que um aviso presta
+            serviço: depois do texto, ele vira desculpa. `role="note"` (e não
+            `alert`) porque não é uma emergência que interrompe o leitor de tela
+            — é uma informação sobre o que vem a seguir.
+
+            ⚠ TRATAMENTO VISUAL PENDENTE DE DESIGN: hoje é uma faixa de texto.
+            Se o produto quiser o conteúdo COBERTO até a confirmação (o padrão
+            de interstitial), o componente `SpoilerBlock` já resolve mecânica
+            parecida e a informação necessária já chega até esta página.
+          */}
+          {contentNotice && (
+            <p className="form-hint" role="note">
+              {contentNotice}
+            </p>
           )}
 
           {/* ---------- 9: TL;DR ---------- */}

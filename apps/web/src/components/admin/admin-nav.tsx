@@ -28,13 +28,17 @@ import { AdminLogoutButton } from './admin-logout-button';
 interface AdminNavProps {
   user: StaffUser;
   /** Rota atual, para marcar o item ativo com `aria-current`. */
-  current: 'fila' | 'materias' | 'comentarios' | 'afiliados' | 'precisao' | 'contas';
+  current: 'fila' | 'materias' | 'analytics' | 'comentarios' | 'afiliados' | 'precisao' | 'contas';
 }
 
 export function AdminNav({ user, current }: AdminNavProps) {
   const links: { key: AdminNavProps['current']; href: string; label: string; visible: boolean }[] = [
     { key: 'fila', href: routes.admin(), label: 'Fila de pautas', visible: can(user.accessLevel, 'verFilaDePautas') },
     { key: 'materias', href: routes.adminArticles(), label: 'Matérias', visible: can(user.accessLevel, 'verMaterias') },
+    // Visível para redator TAMBÉM: o que muda para ele é o RECORTE (só as
+    // matérias que assina), aplicado na consulta — nunca a existência da aba.
+    // Esconder a aba dele seria negar a alguém o resultado do próprio trabalho.
+    { key: 'analytics', href: routes.adminAnalytics(), label: 'Audiência', visible: can(user.accessLevel, 'verAnalytics') },
     { key: 'comentarios', href: routes.adminComments(), label: 'Comentários', visible: can(user.accessLevel, 'moderarComentarios') },
     { key: 'afiliados', href: routes.adminAffiliates(), label: 'Afiliados', visible: can(user.accessLevel, 'gerenciarComercial') },
     { key: 'precisao', href: routes.adminAccuracy(), label: 'Precisão do score', visible: can(user.accessLevel, 'verRelatorios') },

@@ -27,11 +27,12 @@
 
 import Link from 'next/link';
 
-import { CATEGORIES, SCORE_BANDS, bandForScore, can, routes } from '@subcarioca/core';
+import { CATEGORIES, SCORE_BANDS, bandForScore, can, routes, toTopicOrigin } from '@subcarioca/core';
 import { prisma, toStringArray } from '@subcarioca/db';
 
 import { AdminLogin } from '@/components/admin/admin-login';
 import { AdminNav } from '@/components/admin/admin-nav';
+import { TopicCreateForm } from '@/components/admin/topic-create-form';
 import { TopicRow } from '@/components/admin/topic-row';
 import { getHotPublishRateSafe } from '@/server/admin-metrics';
 import { requireStaffPage } from '@/server/staff-auth';
@@ -46,14 +47,14 @@ export default async function AdminPage() {
   const { user } = guard;
   const podeCurar = can(user.accessLevel, 'curarFilaDePautas');
 
-  const [topics, publishRate, lastRun, authors] = await Promise.all([
+  const [topics, publishRate, lastRun, authors, franchises] = await Promise.all([
     prisma.topic.findMany({
       where: { status: { in: ['new', 'assigned'] } },
       orderBy: { currentScore: 'desc' },
       take: 50,
       include: {
         category: { select: { slug: true, name: true } },
-        franchises: { include: { franchise: { select: { slug: true, name: true } } } },
+        franchises: { include: { franchise: { select: { id: true, slug: true, name: true } } } },
         scoreSnapshots: {
           orderBy: { calculatedAt: 'desc' },
           take: 1,
@@ -77,9 +78,21 @@ export default async function AdminPage() {
           select: { id: true, name: true },
         })
       : Promise.resolve([{ id: guard.user.id, name: guard.user.name }]),
+    // Franquias para os dois formulários desta tela (criar pauta e criar
+    // matéria). `take` explícito pelo mesmo motivo do `take` das matérias: uma
+    // lista sem teto degrada em silêncio conforme o cadastro cresce. Quando
+    // passar de 200 franquias, o `<select multiple>` deixa de ser a interface
+    // certa — e o teto é o que faz esse dia aparecer como "a lista está
+    // cortada", em vez de "o painel ficou lento".
+    prisma.franchise.findMany({
+      orderBy: { name: 'asc' },
+      take: 200,
+      select: { id: true, name: true },
+    }),
   ]);
 
   const categoryOptions = CATEGORIES.map((c) => ({ slug: c.slug, name: c.name }));
+  const podeAfrouxarConteudo = can(user.accessLevel, 'reduzirRestricaoDeConteudo');
 
   const hotTopics = topics.filter((t) => t.currentBand === 'HOT');
 
@@ -163,6 +176,14 @@ export default async function AdminPage() {
           Fila de pautas ({topics.length})
         </h2>
 
+        {/* Criar pauta é trabalho de redação: redator TAMBÉM pode (ver
+            `criarPauta` em core/staff.ts). A checagem existe porque a tabela de
+            capacidades é a fonte da verdade — não porque exista hoje um nível
+            que não possa. */}
+        {can(user.accessLevel, 'criarPauta') && (
+          <TopicCreateForm categories={categoryOptions} franchises={franchises} />
+        )}
+
         {topics.length === 0 ? (
           <p className="empty-state">
             Nenhum tópico na fila. O pipeline ainda não rodou ou nada foi descoberto.
@@ -175,8 +196,11 @@ export default async function AdminPage() {
                 key={topic.id}
                 categories={categoryOptions}
                 authors={authors}
+                franchises={franchises}
                 canCurate={podeCurar}
+                canLowerSensitivity={podeAfrouxarConteudo}
                 topic={{
+                  origin: toTopicOrigin(topic.origin),
                   id: topic.id,
                   title: topic.title,
                   summary: topic.summary,
@@ -201,6 +225,10 @@ export default async function AdminPage() {
                   categoryName: topic.category?.name ?? null,
                   categorySlug: topic.category?.slug ?? null,
                   franchises: topic.franchises.map((f) => f.franchise.name),
+                  // Os IDS vão junto dos nomes: os nomes são para a tela, os
+                  // ids são para pré-selecionar as franquias no formulário de
+                  // matéria (ver `defaultFranchiseIds` em article-create-form).
+                  franchiseIds: topic.franchises.map((f) => f.franchise.id),
                   becameHotAt: topic.becameHotAt,
                   claimedAt: topic.claimedAt,
                   status: topic.status,

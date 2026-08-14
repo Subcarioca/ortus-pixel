@@ -119,12 +119,57 @@ export function safeAffiliateUrl(raw: unknown): SafeUrlResult {
  * no painel troca um site fora do ar por uma mensagem de erro no formulário.
  */
 export function safeImageUrl(raw: unknown): SafeUrlResult {
+  // ---------------------------------------------------------------------------
+  // CAMINHO INTERNO DE UPLOAD — a imagem que a própria redação enviou
+  // ---------------------------------------------------------------------------
+  //
+  // Uma imagem enviada pelo painel não tem host: ela é `/uploads/2026/08/ab…jpg`,
+  // servida pelo nosso próprio domínio (ver `app/uploads/[...caminho]/route.ts`).
+  // Passá-la pelo `new URL()` abaixo a reprovaria como "URL inválida" — e o
+  // upload inteiro ficaria inútil, com uma mensagem pedindo `https://`.
+  //
+  // ESTA É A ÚNICA EXCEÇÃO À REGRA DE URL ABSOLUTA, e ela é deliberadamente
+  // ESTREITA. Não aceitamos "qualquer caminho interno": aceitamos exatamente o
+  // formato que o nosso gravador produz. O motivo é o de sempre com caminho
+  // relativo — `//evil.com` é uma URL ABSOLUTA de protocolo relativo, e um teste
+  // ingênuo de "começa com barra" a deixaria passar, transformando a capa da
+  // matéria num carregamento de host estranho com cara de arquivo local.
+  //
+  // A regex resolve os dois casos de uma vez: exige `/uploads/`, exige segmentos
+  // sem ponto (o que elimina `..`) e exige uma das extensões que o gravador
+  // produz. `//evil.com/x.jpg` não casa, porque o segundo caractere teria de ser
+  // `u`. E o `next/image` aceita caminho local nativamente, sem `remotePatterns`
+  // — que é o motivo de isto funcionar na renderização.
+  if (typeof raw === 'string') {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith(UPLOAD_URL_PREFIX) && UPLOAD_PATH_PATTERN.test(trimmed)) {
+      return { href: trimmed };
+    }
+  }
+
   const result = parseWithProtocols(raw, IMAGE_PROTOCOLS);
   if (!result.href) return result;
 
   const { hostname } = new URL(result.href);
   return isAllowedImageHost(hostname) ? result : { href: null, reason: 'host' };
 }
+
+/**
+ * Prefixo e formato do caminho de upload.
+ *
+ * Duplicados aqui em vez de importados de `server/uploads.ts` por uma razão de
+ * FRONTEIRA, não de preguiça: este módulo é importado por componentes que
+ * rodam no NAVEGADOR (`article-body.tsx` renderiza links), e `server/uploads.ts`
+ * tem `import 'server-only'` no topo — importá-lo aqui quebraria o build do
+ * cliente com um erro que não explica nada.
+ *
+ * O risco de duas cópias divergirem é real e está mitigado do lado que importa:
+ * se o formato do gravador mudar sem que esta regex mude, a imagem enviada é
+ * RECUSADA no painel (falha ruidosa, na hora, para quem está publicando) — e
+ * não silenciosamente aceita. A direção da falha é a segura.
+ */
+const UPLOAD_URL_PREFIX = '/uploads/';
+const UPLOAD_PATH_PATTERN = /^\/uploads\/(?:[a-z0-9][a-z0-9_-]*\/){0,3}[a-z0-9][a-z0-9_-]*\.(?:jpg|png|gif|webp|avif)$/i;
 
 /**
  * Atributo `rel` de um link comercial.

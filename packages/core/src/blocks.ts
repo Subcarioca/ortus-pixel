@@ -348,6 +348,81 @@ export function blocksReadingMinutes(blocks: ArticleBlock[]): number {
   return Math.max(1, Math.round(seconds / 60));
 }
 
+// =============================================================================
+// DESTAQUE PROPORCIONAL DA IMAGEM — quanto menos imagem, maior cada uma
+// =============================================================================
+
+/**
+ * Largura SUGERIDA para uma imagem, dado quantas existem no corpo.
+ *
+ * -----------------------------------------------------------------------------
+ * O PEDIDO, NAS PALAVRAS DE QUEM PEDIU: "se só tem uma imagem, ela deve ter
+ * destaque bem maior do que quando tem 3 imagens, uma por parágrafo".
+ * -----------------------------------------------------------------------------
+ *
+ * É uma regra de RITMO, e ela é mais interessante do que parece. Uma imagem
+ * sozinha no meio de uma matéria é a ÚNICA pausa visual do texto: ela carrega
+ * todo o peso de "respirar" e merece furar a medida de leitura. Três imagens,
+ * uma por parágrafo, já criam esse ritmo POR REPETIÇÃO — e, se cada uma delas
+ * também estourar a medida, o resultado não é uma matéria mais bonita, é uma
+ * matéria em que o texto vira legenda de galeria.
+ *
+ * A escada, portanto, é decrescente:
+ *
+ *   1 imagem   → 'borda-a-borda' (é o momento visual da matéria)
+ *   2 imagens  → 'larga'         (respiram, sem competir entre si)
+ *   3 ou mais  → 'medida'        (acompanham o texto, criam ritmo repetido)
+ *
+ * -----------------------------------------------------------------------------
+ * O PISO É 'medida', E ISSO É UMA GARANTIA, NÃO UM DETALHE
+ * -----------------------------------------------------------------------------
+ * Foi pedido explicitamente que a imagem NUNCA fique menor ou menos chamativa
+ * que o texto ao redor. `'medida'` é exatamente a largura da coluna de texto —
+ * ou seja, o menor valor que esta função pode devolver JÁ É "do tamanho do
+ * texto". Não existe combinação de argumentos que produza uma imagem mais
+ * estreita que o parágrafo vizinho: a garantia está na FORMA da função, e não na
+ * disciplina de quem a chama. (O mesmo princípio de `homeAdSlots`, em lib/ads.)
+ *
+ * ⚠ O QUE ESTA FUNÇÃO NÃO FAZ: ela escolhe a LARGURA, que é um valor semântico
+ * do domínio. O tratamento visual de cada largura — quantos rem, que margem, que
+ * comportamento no celular, se 'borda-a-borda' sangra até a borda da viewport ou
+ * até a do contêiner — é CSS, é decisão de design e não está aqui.
+ */
+export function suggestedImageWidth(imageCount: number): BlockWidth {
+  if (imageCount <= 1) return 'borda-a-borda';
+  if (imageCount === 2) return 'larga';
+  return 'medida';
+}
+
+/** Quantas imagens há no corpo. */
+export function countImageBlocks(blocks: ArticleBlock[]): number {
+  return blocks.filter((block) => block.type === 'imagem').length;
+}
+
+/**
+ * Devolve os blocos com a largura das IMAGENS ajustada à regra acima.
+ *
+ * PURA E SEM EFEITO COLATERAL: devolve um array novo e não toca no recebido.
+ * Isso é o que permite o editor chamá-la dentro de um `setState` do React sem
+ * criar o clássico bug de mutação de estado (a tela não redesenha porque a
+ * referência do array não mudou).
+ *
+ * POR QUE ELA É CHAMADA PELO EDITOR E NÃO PELO SERVIDOR, embora o servidor
+ * também pudesse: porque isto é uma SUGESTÃO, e sugestão que o servidor aplica
+ * na gravação vira imposição silenciosa. O redator que escolheu 'medida' de
+ * propósito para uma imagem específica (um print de tela vertical, por exemplo)
+ * salvaria e descobriria depois, na página publicada, que o sistema desfez a
+ * escolha dele sem avisar. No editor, ele vê o valor mudar na hora e pode
+ * reverter no `<select>` que continua ali.
+ */
+export function withSuggestedImageWidths(blocks: ArticleBlock[]): ArticleBlock[] {
+  const largura = suggestedImageWidth(countImageBlocks(blocks));
+
+  return blocks.map((block) =>
+    block.type === 'imagem' ? { ...block, largura } : block,
+  );
+}
+
 /** Há blocos de verdade? Trata `null`, `[]` e Json malformado como "não". */
 export function hasBlocks(blocks: unknown): blocks is ArticleBlock[] {
   return Array.isArray(blocks) && blocks.length > 0;

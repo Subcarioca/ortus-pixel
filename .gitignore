@@ -32,6 +32,17 @@ packages/db/prisma/*.db
 packages/db/prisma/*.db-journal
 packages/db/prisma/migrations/dev.db*
 
+# Imagens enviadas pelo painel EM DESENVOLVIMENTO (ver server/uploads.ts).
+#
+# Este é o caminho padrão só de dev. Em produção, `UPLOADS_DIR` aponta para um
+# diretório ABSOLUTO fora do repositório — obrigatoriamente, porque a árvore do
+# app é recriada a cada deploy e qualquer pasta interna levaria as imagens junto.
+#
+# Duas razões para a linha existir mesmo assim: não versionar binário de teste, e
+# manter o `git status` limpo — o `scripts/deploy.sh` (caminho VPS) aborta quando
+# há qualquer alteração local não commitada, e um arquivo ignorado não aparece lá.
+apps/web/var/uploads/
+
 # Logs e cache
 # `logs/` é criado pelo deploy.sh e é onde o PM2 escreve (ver ecosystem.config.js).
 logs/

@@ -19,18 +19,25 @@ import { useState, useTransition } from 'react';
 
 import {
   EMOTIONAL_TRIGGER_LABELS,
+  TOPIC_ORIGIN_LABELS,
   heatForBand,
   type EmotionalTrigger,
   type ScoreBand,
+  type TopicOrigin,
 } from '@subcarioca/core';
 
 import { HeatBadge } from '../heat-badge';
 import { ScoreValue } from './score-value';
+import type { FranchiseOption } from './article-classification-fields';
 import { ArticleCreateForm } from './article-create-form';
 
 interface TopicRowProps {
   categories: { slug: string; name: string }[];
   authors: { id: string; name: string }[];
+  /** Franquias cadastradas, para o campo de etiquetagem da matéria. */
+  franchises: FranchiseOption[];
+  /** Cortesia de interface: a rota PATCH é quem recusa de fato. */
+  canLowerSensitivity: boolean;
   /**
    * A conta logada pode CURAR a fila (sobrepor score, descartar tópico)?
    *
@@ -60,6 +67,14 @@ interface TopicRowProps {
     categoryName: string | null;
     categorySlug: string | null;
     franchises: string[];
+    /**
+     * Ids das franquias do tópico. Viram a seleção inicial da matéria — é o que
+     * impede a matéria de nascer menos classificada do que a pauta que a
+     * originou.
+     */
+    franchiseIds: string[];
+    /** 'curator' | 'manual'. Ver core/topic-origin.ts. */
+    origin: TopicOrigin;
     becameHotAt: Date | null;
     claimedAt: Date | null;
     status: string;
@@ -67,7 +82,14 @@ interface TopicRowProps {
   };
 }
 
-export function TopicRow({ topic, categories, authors, canCurate }: TopicRowProps) {
+export function TopicRow({
+  topic,
+  categories,
+  authors,
+  franchises,
+  canCurate,
+  canLowerSensitivity,
+}: TopicRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [creatingArticle, setCreatingArticle] = useState(false);
   const [overrideValue, setOverrideValue] = useState('');
@@ -146,6 +168,17 @@ export function TopicRow({ topic, categories, authors, canCurate }: TopicRowProp
           <p className="form-hint">{topic.summary}</p>
 
           <div className="admin-row__meta">
+            {/*
+              ORIGEM DA PAUTA. Só aparece quando é MANUAL, e isso é deliberado:
+              o normal desta fila é o tópico do pipeline, e marcar o normal com
+              uma etiqueta faz a etiqueta desaparecer de tanto se repetir. O que
+              precisa saltar é a exceção — inclusive porque ela explica por que
+              aquela linha está com score zero (pauta da redação não passou por
+              nenhum conector; ver core/topic-origin.ts).
+            */}
+            {topic.origin === 'manual' && (
+              <span className="chip chip--sm">{TOPIC_ORIGIN_LABELS.manual}</span>
+            )}
             {topic.categoryName && <span className="chip chip--sm">{topic.categoryName}</span>}
             {topic.franchises.map((name) => (
               <span key={name} className="chip chip--sm">
@@ -260,8 +293,11 @@ export function TopicRow({ topic, categories, authors, canCurate }: TopicRowProp
             defaultTitle={topic.title}
             defaultExcerpt={topic.summary}
             defaultCategorySlug={topic.categorySlug}
+            defaultFranchiseIds={topic.franchiseIds}
             categories={categories}
             authors={authors}
+            franchises={franchises}
+            canLowerSensitivity={canLowerSensitivity}
             onDone={() => setCreatingArticle(false)}
           />
         </div>

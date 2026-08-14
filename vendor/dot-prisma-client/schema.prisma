@@ -2,14 +2,71 @@
 // MODELO DE DADOS DO CANALNERD
 // =============================================================================
 //
-// Banco escolhido: PostgreSQL. As razões (detalhadas no ADR 0002 do README):
+// Banco escolhido: MySQL/MariaDB. O motivo de ser RELACIONAL não mudou desde o
+// ADR 0002 — mudou só o fornecedor:
 //   - O domínio é fortemente relacional: artigo N:N franquia, artigo N:N tag,
 //     score 1:N histórico. Em documento, "todos os artigos da franquia X
 //     ordenados por score" vira agregação cara ou duplicação de dados.
 //   - Precisamos de séries temporais de score com consultas por janela
 //     (últimas 24h). Índices B-tree compostos resolvem isso muito bem.
-//   - `jsonb` cobre a parte genuinamente sem esquema (payload bruto de sinal),
-//     então não pagamos o preço de um segundo banco só por isso.
+//   - `Json` cobre a parte genuinamente sem esquema (payload bruto de sinal),
+//     então não pagamos o preço de um segundo banco só por isso. No MariaDB
+//     `Json` é um `LONGTEXT` com validação; o Prisma Client serializa e
+//     desserializa exatamente como fazia com o `jsonb`.
+//
+// POR QUE SAÍMOS DO POSTGRES (Neon) — ver design/plano-migracao-mysql-2026-08.md:
+//   - O site roda em HOSPEDAGEM COMPARTILHADA da Hostinger, e o MySQL da mesma
+//     conta é, para efeitos práticos, local. Toda consulta deixa de atravessar a
+//     internet pública para chegar ao banco.
+//   - O free tier da Neon SUSPENDE o compute após 5 min ociosos, e o autosuspend
+//     não é desativável no plano gratuito. Num portal recém-lançado — ocioso a
+//     maior parte do dia — isso significava 300 ms a 1 s de tela BRANCA em boa
+//     parte das primeiras visitas, porque as páginas são renderizadas no
+//     servidor. Era a maior degradação visível para o leitor, e some aqui.
+//   - Custo: o MySQL já está incluso e pago no plano de hospedagem.
+//
+// O QUE ESSA TROCA CUSTOU, registrado sem maquiagem (§9.1 do plano):
+//   - A BUSCA PIORA. Perdemos o `tsvector` com dicionário de português, ou seja,
+//     a radicalização que ligava "jogos" a "jogo" sozinha. O substituto é
+//     `FULLTEXT` em modo booleano com prefixo (`jogo*`), que cobre o caso
+//     dominante mas não é equivalente. Ver o comentário do model `Article`.
+//   - Termos de 2 letras ("IA", "PS", "3D") não entram no índice do InnoDB
+//     (`innodb_ft_min_token_size` = 3, imutável em hospedagem compartilhada).
+//     Existe um fallback `LIKE` em `searchContent` justamente para eles.
+//   - Em compensação, ACENTO deixa de importar: "lancamento" passa a achar
+//     "lançamento" — uma limitação que o Postgres tinha e que era documentada
+//     como conhecida e aceita.
+//     A collation REAL do servidor é `utf8mb4_unicode_ci` (conferida coluna a
+//     coluna em `information_schema.COLUMNS`, não presumida — o plano supunha
+//     `utf8mb4_uca1400_ai_ci`, que NÃO é a que está lá). O que importa é o
+//     comportamento, e ele foi medido: `'lancamento' = 'lançamento'` e
+//     `'Zelda' = 'zelda'` devolvem verdadeiro. Ou seja, insensível a caixa E a
+//     acento, que é exatamente a propriedade da qual dependemos — tanto na
+//     busca quanto na remoção do `mode: 'insensitive'`.
+//     ⚠ Se algum dia a collation for alterada para uma `_as_` (accent
+//     sensitive), a busca por "lancamento" para de achar "lançamento" e os
+//     `contains` de franquia e editoria voltam a ser sensíveis a acento, sem
+//     que nenhuma linha de código mude.
+//   - Ficamos PRESOS no Prisma 6: o Prisma 7 gera SQL específico do MySQL 8 que
+//     o MariaDB rejeita (prisma/prisma#29023). As versões estão FIXADAS em
+//     packages/db/package.json de propósito — leia o comentário de lá antes de
+//     subir qualquer uma das duas.
+//
+// CONSEQUÊNCIAS DE SINTAXE QUE VALE SABER ANTES DE EDITAR ESTE ARQUIVO:
+//   - `String` no conector MySQL vira `VARCHAR(191)` POR PADRÃO, e o MySQL com
+//     `sql_mode` estrito NÃO trunca em silêncio: dá erro 1406 e a escrita FALHA.
+//     Por isso este schema agora tem anotações `@db.Text` e `@db.VarChar(N)`
+//     explícitas em todo campo de texto livre, URL ou user-agent. Ao acrescentar
+//     um campo novo, pergunte "um humano digita isto livremente? é uma URL?" —
+//     se sim, ele precisa de anotação. Sem ela, o bug aparece em produção, na
+//     forma de um editor clicando em Publicar e recebendo erro 500.
+//   - `String[]` NÃO EXISTE em MySQL. Os campos que eram array viraram `Json`
+//     com `@default("[]")`; o Prisma Client continua devolvendo array JS, mas os
+//     filtros `has`/`isEmpty`/`hasSome` do conector Postgres deixaram de existir.
+//   - `@@index(campo(sort: Desc))` é ACEITO E IGNORADO pelo MariaDB
+//     (MDEV-13756). Os índices continuam servindo; o InnoDB apenas varre ao
+//     contrário. Custo pequeno nesta escala, mas não presuma que o índice é
+//     descendente de verdade só porque o schema diz que é.
 //
 // CONVENÇÕES ADOTADAS:
 //   - `cuid()` como chave primária em vez de autoincremento: IDs sequenciais
@@ -30,8 +87,27 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // "mysql" cobre também o MariaDB — o Prisma não tem conector separado para
+  // ele. O servidor real é um MariaDB 11.8 da Hostinger, e essa distinção
+  // importa em três pontos concretos, todos já sentidos neste schema:
+  //   1. índice descendente é aceito e ignorado (MDEV-13756);
+  //   2. o Prisma 7 quebra com MariaDB (#29023) — versões fixadas no package.json;
+  //   3. `@@fulltext` do Prisma existe, mas atrás de um preview feature que não
+  //      queremos ligar; os quatro índices FULLTEXT da busca são criados por SQL
+  //      à mão, em prisma/migrations-manual/. Ver o comentário do model Article.
+  provider = "mysql"
+
+  // A URL inteira vem do ambiente, jamais do repositório.
+  //
+  // ⚠ ESTE ARQUIVO É PUBLICADO como pacote (`publishConfig` em package.json).
+  // Por isso ele NÃO nomeia servidor, conta de hospedagem nem banco: um hostname
+  // e um identificador de conta não são segredo por si sós, mas publicá-los
+  // entrega de graça metade do trabalho de reconhecimento de quem for tentar
+  // força bruta contra o MySQL — e não custa nada mantê-los fora daqui.
+  // O procedimento completo de montar a `DATABASE_URL`, com os cuidados que já
+  // custaram tempo (host que não resolve, TLS, limite de pool), está em
+  // `.env.example`, que fica no repositório e não é publicado.
+  url = env("DATABASE_URL")
 }
 
 // =============================================================================
@@ -46,7 +122,9 @@ model Category {
   slug        String @unique
   name        String
   shortName   String
-  description String
+  // `@db.Text`: texto livre editorial. Cabe hoje em 191, mas o dia em que
+  // couber é o dia em que a tela de editorias devolve erro 500 ao salvar.
+  description String @db.Text
   accentColor String @default("#7C3AED")
 
   // Prioridade de monitoramento (1 = máxima). O pipeline usa para alocar o
@@ -57,8 +135,10 @@ model Category {
 
   // Campos de SEO sobrescrevíveis. Quando nulos, o front gera a partir de
   // name/description — ter o override permite ao editor otimizar sem deploy.
-  seoTitle       String?
-  seoDescription String?
+  // `VarChar(255)` no título (é a `<title>`, tem limite prático) e `Text` na
+  // descrição, que o editor escreve à vontade.
+  seoTitle       String? @db.VarChar(255)
+  seoDescription String? @db.Text
 
   articles      Article[]
   topics        Topic[]
@@ -88,7 +168,7 @@ model Subcategory {
   /// "hardware" em Tech e "hardware" em Games sem colisão de identidade.
   slug        String
   name        String
-  description String @default("")
+  description String @default("") @db.Text
 
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -111,15 +191,49 @@ model Franchise {
   id          String @id @default(cuid())
   slug        String @unique
   name        String
-  description String @default("")
+  description String @default("") @db.Text
 
-  // Nomes alternativos usados pelos conectores para casar menções.
-  // Array nativo do Postgres: evita uma tabela de junção para um dado que é
-  // sempre lido junto do pai e nunca consultado isoladamente.
-  aliases String[] @default([])
+  /// Nomes alternativos usados pelos conectores para casar menções.
+  ///
+  /// `Json` (era `String[]` no Postgres, que tem array nativo; MySQL não tem).
+  /// A troca é de TIPO, não de comportamento: o Prisma Client continua entregando
+  /// um array de strings ao TypeScript, e o curator continua fazendo
+  /// `[franchise.name, ...franchise.aliases]` sem saber da diferença.
+  ///
+  /// O que se PERDE: os filtros de array do conector Postgres (`has`, `hasSome`,
+  /// `isEmpty`) deixam de existir. Aqui não custa nada — este campo é sempre
+  /// lido junto do pai, como bloco, e nunca filtrado dentro do banco. Se um dia
+  /// precisar ser, a resposta é uma tabela de junção, não `JSON_CONTAINS` (que
+  /// não usa índice e varre a tabela inteira).
+  ///
+  /// O `@default("[]")` é declarado aqui e o Prisma Client o aplica, mas ATENÇÃO:
+  /// por um bug conhecido (prisma#23250) ele NÃO chega ao banco no conector
+  /// MySQL. Consequência prática: todo `INSERT` feito por SQL cru precisa passar
+  /// o valor explicitamente, senão viola o NOT NULL.
+  aliases Json @default("[]")
 
-  heroImageUrl String?
-  logoUrl      String?
+  // -----------------------------------------------------------------------------
+  // `VarChar(2048)` É O NÚMERO DE TODAS AS COLUNAS DE URL DESTE SCHEMA.
+  //
+  // Não é escolha estética: 2048 é EXATAMENTE o teto que o validador aplica
+  // (`apps/web/src/lib/safe-url.ts`, "URL gigante é sintoma de payload, não de
+  // link"). Validador e coluna precisam concordar, e a razão é o modo de falha
+  // quando discordam: o servidor NÃO está em `sql_mode` estrito, então uma URL
+  // aceita pela validação e maior que a coluna não dá erro — ela é TRUNCADA em
+  // silêncio. O resultado é um link quebrado que ninguém reporta porque ninguém
+  // vê nada de errado acontecer.
+  //
+  // (A primeira versão desta migração usou 1024, que era metade do validador.
+  // O erro só apareceu numa auditoria cruzando validador com coluna, campo a
+  // campo — motivo pelo qual o número está escrito aqui, e não deduzido.)
+  //
+  // Não é `Text` porque URL tem limite prático conhecido, e `Text` não é
+  // indexável sem prefixo. Não estoura o limite de linha do InnoDB: no row
+  // format DYNAMIC, um VARCHAR longo é guardado fora da página, deixando só um
+  // ponteiro de 20 bytes na linha.
+  // -----------------------------------------------------------------------------
+  heroImageUrl String? @db.VarChar(2048)
+  logoUrl      String? @db.VarChar(2048)
 
   primaryCategoryId String
   primaryCategory   Category @relation(fields: [primaryCategoryId], references: [id])
@@ -178,9 +292,17 @@ model Author {
   /// minúsculas (normalizado na escrita) — senão "Marina@..." e "marina@..."
   /// viram duas contas, e o índice único não impede porque são strings
   /// diferentes.
-  email     String  @unique
-  bio       String  @default("")
-  avatarUrl String?
+  ///
+  /// `VarChar(255)` para casar com o validador: `server/security.ts` aceita
+  /// e-mail de até 254 caracteres (o limite da RFC 5321), e a coluna no padrão
+  /// do Prisma teria 191. Sem isto, um endereço longo e perfeitamente válido
+  /// passaria pela validação e seria TRUNCADO em silêncio no banco (o servidor
+  /// não está em `sql_mode` estrito) — criando uma conta cujo e-mail de login
+  /// não é o que a pessoa digitou. 255 × 4 bytes = 1.020, bem abaixo do teto de
+  /// 3.072 do InnoDB, então o índice `@unique` continua cabendo.
+  email     String  @unique @db.VarChar(255)
+  bio       String  @default("") @db.Text
+  avatarUrl String? @db.VarChar(2048)
   /// TÍTULO EDITORIAL, texto livre ("Editora-chefe", "Repórter de Games").
   /// É apresentação: sai na assinatura da matéria e no `jobTitle` do
   /// schema.org/Person. NÃO tem relação com permissão — quem manda no acesso é
@@ -190,8 +312,21 @@ model Author {
   /// Links sociais e credenciais viram schema.org/Person com `sameAs`.
   /// É assim que o Google conecta o autor a uma identidade verificável — peça
   /// central de E-E-A-T em nicho de notícias.
-  socialLinks    Json     @default("[]")
-  expertiseAreas String[] @default([])
+  ///
+  /// ⚠ O `@default("[]")` NÃO chega ao banco no conector MySQL (prisma#23250):
+  /// a coluna nasce `NOT NULL` e sem default. Pela aplicação isso é invisível (o
+  /// Prisma Client conhece o default e o envia), mas qualquer `INSERT` por SQL
+  /// cru — inclusive o script de migração de dados — precisa passar `[]`
+  /// explicitamente, senão a linha é rejeitada.
+  socialLinks Json @default("[]")
+
+  /// Editorias em que este autor tem expertise declarada (E-E-A-T).
+  /// Era `String[]`; virou `Json` pelo mesmo motivo e com as mesmas
+  /// consequências descritas em `Franchise.aliases`. Continua sendo lido como
+  /// array em `db/src/mappers.ts`, que filtra por `isCategorySlug` — e essa
+  /// validação na borda passa a valer DOBRADO: `Json` aceita qualquer forma, e
+  /// quem garante que só entra slug de categoria é o mapper, não mais o banco.
+  expertiseAreas Json @default("[]")
 
   /// NÍVEL DE ACESSO ao painel. Vocabulário fechado: 'admin' | 'redator'.
   ///
@@ -215,7 +350,16 @@ model Author {
   /// como autor sem lhe dar uma conta — e é o estado em que ficam os autores que
   /// existiam antes deste sistema. Sem senha, a rota de login recusa SEMPRE,
   /// mesmo que o e-mail exista.
-  passwordHash String?
+  ///
+  /// `VarChar(255)` é margem de segurança barata, não necessidade de hoje: o
+  /// formato atual cabe folgado em 191. Mas o comprimento depende dos parâmetros
+  /// do scrypt (N, r, p) e do tamanho do sal — subir o custo do KDF, que é uma
+  /// mudança de UMA LINHA em password.ts e a coisa certa a fazer com o tempo,
+  /// alongaria o hash. E o modo de falha aqui é dos piores: sem `sql_mode`
+  /// estrito, o servidor TRUNCA em silêncio (ver o cabeçalho do arquivo). Um
+  /// hash truncado não dá erro nenhum — ele simplesmente nunca mais confere, e o
+  /// sintoma é "trocaram minha senha" para toda a redação de uma vez.
+  passwordHash String? @db.VarChar(255)
 
   /// Desligar > apagar. Apagar um autor exigiria decidir o que fazer com as
   /// matérias assinadas por ele (a FK é obrigatória em `Article.authorId`), e
@@ -262,7 +406,10 @@ model StaffSession {
   author   Author @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   expiresAt DateTime
-  userAgent String?
+  // `VarChar(512)`: User-Agent moderno de Chrome/Edge passa de 191 com folga.
+  // Truncar aqui não quebraria login, mas estragaria a auditoria de acesso —
+  // que é a única razão de o campo existir.
+  userAgent String?  @db.VarChar(512)
   ipHash    String?
 
   createdAt DateTime @default(now())
@@ -280,19 +427,33 @@ model StaffSession {
 /// Um ARTIGO é o nosso conteúdo sobre ele. Ver comentário em core/domain.ts
 /// para o motivo de serem tabelas separadas.
 model Topic {
-  id      String   @id @default(cuid())
+  id    String @id @default(cuid())
   /// Termo canônico usado nas consultas aos conectores.
-  query   String
-  aliases String[] @default([])
-  title   String
-  summary String   @default("")
+  ///
+  /// ⚠ `VarChar(255)` NÃO É ENFEITE — é o campo mais perigoso desta migração.
+  /// `services/curator/src/pipeline/curate.ts` grava `item.title.slice(0, 200)`,
+  /// ou seja, um valor que pode ter 200 caracteres: 9 a mais que o `VARCHAR(191)`
+  /// que o Prisma usaria por padrão. Com o padrão, TODA manchete longa derrubaria
+  /// a transação inteira do ciclo de curadoria com erro 1406 — dentro de um
+  /// processo de fundo, onde ninguém veria o erro até o score parar de atualizar.
+  query String @db.VarChar(255)
+
+  /// Sinônimos do termo. Era `String[]`; ver `Franchise.aliases` para o racional
+  /// completo da troca por `Json`.
+  aliases Json @default("[]")
+
+  // Manchete: passa de 191 com frequência em notícia de tecnologia.
+  title   String @db.VarChar(255)
+  // Resumo redigido: texto livre, sem limite prático.
+  summary String @default("") @db.Text
 
   categoryId String?
   category   Category?        @relation(fields: [categoryId], references: [id])
   franchises TopicFranchise[]
 
   // ---- Proveniência ----
-  sourceUrl  String?
+  // URL de feed/notícia com parâmetros de rastreio passa de 191 rotineiramente.
+  sourceUrl  String? @db.VarChar(2048)
   sourceName String?
   /// Tier de autoridade da fonte: 'official' | 'tier1Press' | ... | 'unverified'
   sourceTier String  @default("unverified")
@@ -308,21 +469,27 @@ model Topic {
   // consciente: a home e o /trending ordenam por score a cada requisição, e
   // fazer isso com subquery no histórico seria caro justamente no pico de
   // tráfego. Gravamos os dois — histórico para análise, atual para leitura.
-  currentScore        Float    @default(0)
-  currentBand         String   @default("EVERGREEN")
+  currentScore        Float   @default(0)
+  currentBand         String  @default("EVERGREEN")
   /// Variação do score na última hora (ver comentário equivalente em Article).
-  scoreDelta1h        Float    @default(0)
-  seoOpportunity      Float    @default(0)
-  confidence          Float    @default(0)
-  termType            String   @default("mid")
-  emotionalTriggers   String[] @default([])
-  requiresHumanReview Boolean  @default(false)
-  scoreSummary        String   @default("")
-  weightsVersion      String   @default("")
+  scoreDelta1h        Float   @default(0)
+  seoOpportunity      Float   @default(0)
+  confidence          Float   @default(0)
+  termType            String  @default("mid")
+  /// Gatilhos emocionais detectados pelo motor de score ('leak', 'hype'...).
+  /// Era `String[]`; ver `Franchise.aliases`. Lido só para exibição no painel
+  /// (`admin/page.tsx` → `topic-row.tsx`), nunca filtrado no banco.
+  emotionalTriggers   Json    @default("[]")
+  requiresHumanReview Boolean @default(false)
+  // Frase gerada explicando o score. Texto livre.
+  scoreSummary        String  @default("") @db.Text
+  weightsVersion      String  @default("")
 
   // ---- Override humano (o humano sempre vence o algoritmo) ----
   manualScoreOverride  Float?
-  manualOverrideReason String?
+  // Justificativa escrita por um editor: é exatamente o tipo de campo em que
+  // alguém escreve um parágrafo. `Text`.
+  manualOverrideReason String?   @db.Text
   manualOverrideById   String?
   manualOverrideAt     DateTime?
 
@@ -417,9 +584,11 @@ model SignalReading {
   connectorId String
   dimension   String
   value       Float
-  rawValue    String?
+  // Ambos vêm de fora (resposta de API) ou de geração automática: não há
+  // ninguém garantindo tamanho na origem. `Text` para não perder medição.
+  rawValue    String? @db.Text
   confidence  Float
-  explanation String?
+  explanation String? @db.Text
 
   /// Payload original da API, para auditoria e reprocessamento.
   rawPayload Json?
@@ -446,7 +615,10 @@ model ConnectorHealth {
 
   lastSuccessAt    DateTime?
   lastFailureAt    DateTime?
-  lastError        String?
+  // Mensagem de erro / stack trace. `Text`: um erro truncado em 191 é um erro
+  // que não ajuda ninguém a depurar — e, pior, o truncamento em si viraria um
+  // segundo erro (1406) escondendo o primeiro.
+  lastError        String?   @db.Text
   /// Quando o circuito aberto deve ser testado novamente.
   circuitOpenUntil DateTime?
 
@@ -464,20 +636,31 @@ model ConnectorHealth {
 model Article {
   id      String @id @default(cuid())
   slug    String @unique
-  title   String
-  excerpt String @default("")
+  // Manchete. `VarChar(255)`: passa de 191 com frequência, e é uma das três
+  // colunas do índice FULLTEXT da busca (ver o fim deste model).
+  title   String @db.VarChar(255)
+  excerpt String @default("") @db.Text
   /// Corpo em Markdown (ver ADR 0005).
   ///
   /// PAPEL NOVO DEPOIS DO EDITOR DE BLOCOS: quando `blocks` existe, esta coluna
   /// deixa de ser o que o leitor vê e passa a ser uma PROJEÇÃO EM TEXTO PURO dos
   /// blocos, gravada pelo servidor a cada salvamento. Ela continua existindo por
   /// dois motivos concretos, e nenhum deles é nostalgia:
-  ///   1. `searchVector` é coluna GERADA a partir de title/excerpt/content — se
-  ///      o corpo saísse daqui, toda matéria escrita em blocos ficaria invisível
-  ///      na busca do site, sem nenhum erro aparecer em lugar nenhum;
+  ///   1. é UMA DAS COLUNAS DO ÍNDICE FULLTEXT da busca — se o corpo saísse
+  ///      daqui, toda matéria escrita em blocos ficaria invisível na busca do
+  ///      site, sem nenhum erro aparecer em lugar nenhum;
   ///   2. é a rede de segurança de renderização: `blocks` nulo (as matérias
   ///      antigas) continua caindo no renderizador de Markdown de sempre.
-  content String @default("")
+  ///
+  /// ⚠ POR QUE `MediumText` E NÃO `Text`, que seria o padrão para texto livre:
+  /// `TEXT` no MySQL guarda 65.535 BYTES — não caracteres. O validador de
+  /// entrada (`server/article-input.ts`) aceita até 20.000 CARACTERES neste
+  /// campo. Em português puro isso dá uns 21 KB e caberia; mas `utf8mb4` gasta
+  /// até 4 bytes por caractere, então 20.000 caracteres de emoji dão 80 KB e
+  /// ESTOURAM o `TEXT`. O modo de falha seria o pior possível: erro 1406 na hora
+  /// de publicar, numa matéria específica que ninguém consegue reproduzir.
+  /// `MEDIUMTEXT` (16 MB) custa 1 byte a mais por linha e encerra a dúvida.
+  content String @default("") @db.MediumText
 
   /// CORPO EM BLOCOS — array ORDENADO e tipado (ver packages/core/src/blocks.ts).
   ///
@@ -521,19 +704,22 @@ model Article {
   topicId String?
   topic   Topic?  @relation(fields: [topicId], references: [id])
 
-  coverImageUrl String?
-  coverImageAlt String?
+  // URLs de CDN com parâmetros de transformação passam de 191 rotineiramente.
+  coverImageUrl String? @db.VarChar(2048)
+  // Texto alternativo: hoje o validador corta em 200, mas `VarChar(512)` dá
+  // folga para o dia em que alguém afrouxar esse corte sem lembrar do banco.
+  coverImageAlt String? @db.VarChar(512)
 
   /// Vídeo associado (trailer) — vira schema.org/VideoObject.
-  videoUrl             String?
-  videoThumbnailUrl    String?
+  videoUrl             String? @db.VarChar(2048)
+  videoThumbnailUrl    String? @db.VarChar(2048)
   videoDurationSeconds Int?
 
   // ---- SEO ----
-  seoTitle       String?
-  seoDescription String?
+  seoTitle       String? @db.VarChar(255)
+  seoDescription String? @db.Text
   /// Canonical externo, para republicações licenciadas.
-  canonicalUrl   String?
+  canonicalUrl   String? @db.VarChar(2048)
   noIndex        Boolean @default(false)
 
   isBreaking     Boolean @default(false)
@@ -555,7 +741,14 @@ model Article {
 
   /// Resumo em 3 a 5 bullets. OBRIGATÓRIO em 'breaking' e 'review' — a
   /// validação vive em core/presentation.ts e é aplicada no painel editorial.
-  tldr String[] @default([])
+  ///
+  /// Era `String[]`; virou `Json` (ver `Franchise.aliases`). É o array com mais
+  /// pontos de leitura do projeto — `queries.ts`, a página do artigo e os dois
+  /// formulários do admin —, e todos continuam tratando o valor como
+  /// `string[]`. O que muda é DE ONDE vem essa garantia: antes era o tipo da
+  /// coluna, agora é o `CardRow`/`toCardData` na borda de leitura. Por isso a
+  /// leitura passa por um normalizador em vez de confiar no que vier do banco.
+  tldr Json @default("[]")
 
   /// Dados de análise, quando format = 'review'. Json porque a estrutura
   /// (nota, prós, contras) só existe para um formato entre oito — colunas
@@ -609,31 +802,44 @@ model Article {
   pushNotifications PushNotification[]
   comments          Comment[]
 
-  /// Vetor de busca (full-text do Postgres), mantido pelo BANCO.
-  ///
-  /// É uma COLUNA GERADA (`GENERATED ALWAYS AS ... STORED`), definida no SQL da
-  /// migração porque o Prisma não modela coluna gerada. Consequências, todas
-  /// desejadas:
-  ///   - impossível ficar dessincronizada: não existe caminho de escrita que
-  ///     esqueça de atualizá-la (o erro clássico de manter índice de busca à
-  ///     mão é publicar por outra rota e o artigo sumir da busca);
-  ///   - `STORED` em vez de recalcular na consulta: o ranking não paga
-  ///     `to_tsvector` do corpo inteiro a cada busca.
-  ///
-  /// `Unsupported` porque o Prisma Client não tem tipo para `tsvector`. Isso é
-  /// uma VANTAGEM aqui: a coluna não aparece em nenhum `select`, então não há
-  /// risco de despejar o vetor no JSON de uma listagem. A busca a lê por
-  /// `$queryRaw` parametrizado — ver apps/web/src/server/search.ts.
-  ///
-  /// Os pesos (A=título, B=resumo, C=corpo) são o que faz um artigo cujo TÍTULO
-  /// casa vencer outro que só menciona o termo de passagem no meio do texto.
-  /// `@default(dbgenerated())` não é enfeite: sem ele, o Prisma enxerga a
-  /// expressão da coluna gerada como um "default" que falta no schema e passa a
-  /// emitir `ALTER COLUMN "searchVector" DROP DEFAULT` em toda migração futura —
-  /// comando que o Postgres REJEITA em coluna gerada. Ou seja: sem esta linha, a
-  /// próxima migração de qualquer outra tabela quebraria, por um motivo sem
-  /// nenhuma relação aparente com o que estivesse sendo alterado.
-  searchVector Unsupported("tsvector")? @default(dbgenerated())
+  // ---------------------------------------------------------------------------
+  // BUSCA — onde ficou o antigo `searchVector`
+  // ---------------------------------------------------------------------------
+  //
+  // Não existe mais coluna de busca neste model, e isso é intencional.
+  //
+  // NO POSTGRES havia `searchVector Unsupported("tsvector")`, uma COLUNA GERADA
+  // (`GENERATED ALWAYS AS ... STORED`) alimentada por `setweight` sobre
+  // title/excerpt/content, com um índice GIN em cima. Três coisas morreram junto
+  // com ela, e vale saber o que cada uma custou:
+  //
+  //   1. A GARANTIA DE SINCRONIA. A coluna gerada era impossível de
+  //      dessincronizar: nenhum caminho de escrita conseguia esquecer de
+  //      atualizá-la. O `FULLTEXT` do InnoDB tem a MESMA propriedade — ele é
+  //      mantido pelo próprio banco a partir das colunas reais —, então esta
+  //      garantia foi PRESERVADA, não perdida. É a razão de indexar
+  //      title/excerpt/content diretamente em vez de manter uma coluna
+  //      "searchText" atualizada pela aplicação.
+  //
+  //   2. O PESO POR CAMPO (`setweight` A/B/C). Não existe equivalente nativo.
+  //      É EMULADO na consulta, somando três `MATCH` separados na proporção
+  //      5 : 2 : 1 — que não é chute: são os pesos padrão do `ts_rank`
+  //      (1.0 : 0.4 : 0.2) normalizados. Ver `searchContent` em
+  //      apps/web/src/server/queries.ts.
+  //
+  //   3. A ARMADILHA DO `@default(dbgenerated())`. Ela existia só para impedir
+  //      que o Prisma emitisse `ALTER COLUMN "searchVector" DROP DEFAULT` em
+  //      toda migração futura. Sem coluna gerada, a armadilha some — este é o
+  //      único efeito colateral francamente POSITIVO da migração de banco.
+  //
+  // OS QUATRO ÍNDICES `FULLTEXT` NÃO ESTÃO DECLARADOS AQUI de propósito: o
+  // `@@fulltext` do Prisma exige ligar o preview feature `fullTextIndex`, e
+  // preview feature em produção é dívida com data marcada. Eles são criados por
+  // SQL à mão em prisma/migrations-manual/ — o mesmo padrão que a migração
+  // antiga já usava para a coluna gerada. ⚠ Consequência que precisa ser
+  // lembrada: `prisma db push` NÃO os cria e NÃO os remove. Depois de todo
+  // `db push` em banco novo, rode `npm run db:fulltext`. Sem eles, a busca não
+  // fica lenta: ela ERRA (`MATCH` sem índice é erro de SQL, não varredura).
 
   // Índice da home e das páginas de categoria: publicados, mais recentes.
   @@index([status, publishedAt(sort: Desc)])
@@ -644,10 +850,6 @@ model Article {
   @@index([subcategoryId, status, publishedAt(sort: Desc)])
   @@index([topicId])
   @@index([authorId])
-  // GIN é o tipo de índice para `tsvector`: o tempo de busca acompanha a
-  // quantidade de linhas que CASAM, não o tamanho da tabela. Sem ele, cada
-  // busca vira varredura completa com `to_tsvector` por linha.
-  @@index([searchVector], type: Gin)
 }
 
 model ArticleFranchise {
@@ -684,7 +886,7 @@ model LiveUpdate {
   articleId String
   article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
 
-  content     String
+  content     String  @db.Text
   isHighlight Boolean @default(false)
   authorName  String?
 
@@ -724,7 +926,7 @@ model LiveUpdate {
 model AffiliateOffer {
   id String @id @default(cuid())
 
-  productName  String
+  productName  String  @db.VarChar(512)
   /// Loja/varejista. Texto livre por decisão consciente (ver bloco acima).
   retailerName String
   brand        String?
@@ -739,7 +941,13 @@ model AffiliateOffer {
 
   /// URL final de afiliado (já com o código de rastreio do programa).
   /// Sanitizada na renderização — ver apps/web/src/lib/safe-url.ts.
-  offerUrl String
+  ///
+  /// `VarChar(2048)` (o padrão de URL deste schema — ver `Franchise.heroImageUrl`):
+  /// link de afiliado é, por natureza, das URLs mais longas que existem — leva ID
+  /// de programa, de campanha e de sub-id encadeados. Cortar não daria erro de
+  /// negócio visível: daria um link QUEBRADO, que é pior, porque a comissão
+  /// simplesmente não é atribuída e ninguém percebe.
+  offerUrl String @db.VarChar(2048)
 
   /// Categoria do PROGRAMA (hardware, console, jogo...). Ver core/monetization.
   programCategory String @default("outro")
@@ -749,7 +957,7 @@ model AffiliateOffer {
   /// Identificador do produto NA REDE (ASIN, SKU, offer id). Fase 2.
   externalId String?
 
-  imageUrl     String?
+  imageUrl     String? @db.VarChar(2048)
   /// 'in-stock' | 'out-of-stock' | 'unknown'
   availability String  @default("unknown")
 
@@ -827,7 +1035,8 @@ model ArticleAffiliateOffer {
 /// vale mais. Também vira conteúdo próprio ("o que estreia em setembro").
 model ReleaseEvent {
   id    String @id @default(cuid())
-  title String
+  // Título de estreia ("Temporada 3 de ... — episódio especial de fim de ano").
+  title String @db.VarChar(255)
   slug  String @unique
 
   franchiseId String?
@@ -864,7 +1073,11 @@ model ReleaseEvent {
 /// bounces disparam e todo o domínio vai para spam.
 model Subscriber {
   id    String @id @default(cuid())
-  email String @unique
+  // `VarChar(255)` pelo mesmo motivo de `Author.email`: o validador aceita os
+  // 254 caracteres da RFC 5321, e 191 truncaria em silêncio um endereço válido.
+  // Aqui o estrago seria ainda mais discreto — o assinante nunca receberia o
+  // e-mail de confirmação e o cadastro ficaria eternamente 'pending'.
+  email String @unique @db.VarChar(255)
 
   /// 'pending' | 'confirmed' | 'unsubscribed' | 'bounced'
   status String @default("pending")
@@ -881,13 +1094,17 @@ model Subscriber {
   unsubscribedAt       DateTime?
 
   /// Preferências de conteúdo — franquias e categorias seguidas.
-  preferredCategories String[] @default([])
+  /// Era `String[]`; ver `Franchise.aliases`. Hoje não existe caminho de escrita
+  /// ativo para este campo, o que torna a troca de tipo inteiramente inócua aqui.
+  preferredCategories Json @default("[]")
 
   // ---- Auditoria de consentimento (LGPD) ----
   /// IP e user-agent do momento do opt-in. Guardados por serem a prova do
   /// consentimento. IP é dado pessoal: incluído na política de retenção.
   signupIpHash    String?
-  signupUserAgent String?
+  // `VarChar(512)`: um User-Agent truncado enfraquece justamente a PROVA do
+  // consentimento, que é a única finalidade deste campo.
+  signupUserAgent String? @db.VarChar(512)
   signupSource    String  @default("site")
 
   // ---- Métricas de engajamento ----
@@ -908,18 +1125,37 @@ model PushSubscription {
   id String @id @default(cuid())
 
   /// Endpoint único fornecido pelo navegador.
-  endpoint String @unique
+  ///
+  /// ⚠ O CAMPO MAIS DELICADO DE DIMENSIONAR DESTE SCHEMA, porque é `@unique` —
+  /// ou seja, precisa CABER NUM ÍNDICE. Endpoints de FCM e do Mozilla passam de
+  /// 191 com folga, então o padrão do Prisma quebraria toda inscrição de push.
+  /// E `Text` não resolve: o InnoDB não indexa `TEXT` sem prefixo declarado.
+  /// A conta que fecha o número: 512 caracteres × 4 bytes (utf8mb4) = 2.048
+  /// bytes, abaixo do teto de 3.072 do InnoDB com row format DYNAMIC. Sobra
+  /// margem, e a coluna continua indexável.
+  endpoint String @unique @db.VarChar(512)
   /// Chaves de criptografia da Push API. São específicas do par
   /// navegador+site e inúteis fora dele, mas ainda assim tratadas como segredo.
   p256dh   String
   auth     String
 
-  userAgent           String?
+  userAgent String? @db.VarChar(512)
+
   /// Segmentação: só quero push de Games? Só de uma franquia?
-  preferredCategories String[] @default([])
-  preferredFranchises String[] @default([])
+  ///
+  /// Eram `String[]`, e este é o ÚNICO array do projeto que era filtrado DENTRO
+  /// do banco — `push-sender.ts` usava `{ isEmpty: true }` / `{ has: slug }`,
+  /// filtros que só existem no conector Postgres. Com `Json` eles deixam de
+  /// compilar, e a segmentação passou a ser feita EM MEMÓRIA (ver o comentário
+  /// longo em apps/web/src/server/push-sender.ts, que explica a escolha).
+  ///
+  /// A régua para reabrir essa decisão está escrita lá: quando a base de push
+  /// passar da casa das dezenas de milhares, o caminho é uma tabela de junção
+  /// `PushSubscriptionCategory` — indexável de verdade —, não `JSON_CONTAINS`.
+  preferredCategories Json @default("[]")
+  preferredFranchises Json @default("[]")
   /// Só recebe push de score >= este valor. Padrão 80 = apenas QUENTE.
-  minScoreThreshold   Int      @default(80)
+  minScoreThreshold   Int  @default(80)
 
   isActive      Boolean   @default(true)
   /// Endpoints expiram; após 410/404 do serviço de push, desativamos.
@@ -943,10 +1179,12 @@ model PushNotification {
   articleId String
   article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
 
-  title   String
-  body    String
-  iconUrl String?
-  url     String
+  // Título e corpo da notificação: derivam da manchete e do resumo da matéria,
+  // então herdam o mesmo risco de tamanho deles.
+  title   String  @db.VarChar(255)
+  body    String  @db.VarChar(512)
+  iconUrl String? @db.VarChar(2048)
+  url     String  @db.VarChar(2048)
 
   /// 'automatic' = disparado pelo score | 'manual' = editor apertou o botão
   trigger        String  @default("manual")
@@ -980,7 +1218,8 @@ model PushDelivery {
   /// 'sent' | 'failed' | 'expired'
   status    String
   clickedAt DateTime?
-  error     String?
+  // Erro devolvido pelo serviço de push: vem de fora, sem limite garantido.
+  error     String?   @db.Text
   createdAt DateTime  @default(now())
 
   @@unique([notificationId, subscriptionId])
@@ -1005,8 +1244,12 @@ model PushDelivery {
 /// e a migração de anônimo para logado (no login) viraria mover linha entre
 /// tabelas em vez de um UPDATE de coluna.
 ///
-/// AS DUAS CHAVES ÚNICAS FUNCIONAM PORQUE, NO POSTGRES, NULL É DISTINTO DE NULL
-/// dentro de um índice único. Consequência prática, que é exatamente o que
+/// AS DUAS CHAVES ÚNICAS FUNCIONAM PORQUE NULL É DISTINTO DE NULL dentro de um
+/// índice único. Isso valia no Postgres e CONTINUA VALENDO no MySQL/MariaDB —
+/// os dois se comportam igual neste ponto, então a migração de banco não mexeu
+/// em nada aqui. Vale registrar justamente porque a versão anterior deste
+/// comentário atribuía a propriedade ao Postgres, e alguém poderia "consertar"
+/// o que não está quebrado. Consequência prática, que é exatamente o que
 /// queremos e o que evitou índice parcial + CHECK escritos à mão:
 ///   - `[franchiseId, visitorId]`       impede o mesmo cookie seguir duas vezes;
 ///   - `[franchiseId, commentAuthorId]` impede a mesma CONTA seguir duas vezes,
@@ -1077,7 +1320,7 @@ model CommentAuthor {
   /// URL do avatar no CDN do provedor. Nunca baixamos nem re-hospedamos a
   /// imagem: isso criaria uma cópia de dado pessoal que teríamos de apagar
   /// depois, por nada.
-  avatarUrl   String?
+  avatarUrl   String? @db.VarChar(2048)
   /// HASH do e-mail. Usado só para reconhecer reincidente banido que volta pelo
   /// outro provedor. Nunca para enviar e-mail — para isso existe o Subscriber,
   /// com consentimento próprio e double opt-in.
@@ -1086,7 +1329,9 @@ model CommentAuthor {
   /// Bloqueio pela moderação. Bloqueado não posta e não vê botão de login.
   isBlocked   Boolean   @default(false)
   blockedAt   DateTime?
-  blockReason String?
+  // Motivo do bloqueio, escrito pela moderação. Texto livre — e é a prova
+  // documental de uma decisão contestável. Truncar seria perder o argumento.
+  blockReason String?   @db.Text
 
   /// Contadores de reputação — a base da "escada de confiança": o primeiro
   /// comentário de uma conta nova entra em moderação prévia; depois de
@@ -1128,7 +1373,7 @@ model CommentSession {
   author   CommentAuthor @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   expiresAt DateTime
-  userAgent String?
+  userAgent String?  @db.VarChar(512)
   ipHash    String?
 
   createdAt DateTime @default(now())
@@ -1158,7 +1403,12 @@ model Comment {
   authorName      String
   authorEmailHash String?
   /// Conteúdo em texto puro. NUNCA renderizar como HTML — ver ADR 0005 (XSS).
-  content         String
+  ///
+  /// `Text` e não `VarChar`: o validador já corta em 1.500 caracteres
+  /// (`COMMENT_MAX_LENGTH`), o que caberia num `VARCHAR(1500)`. Mas o limite é
+  /// uma regra de PRODUTO, que muda numa linha de código, e o banco não pode ser
+  /// o lugar onde essa mudança explode em erro 1406 na cara do leitor.
+  content         String  @db.Text
 
   /// 'pending' | 'approved' | 'rejected' | 'spam'
   status String @default("pending")
@@ -1168,7 +1418,7 @@ model Comment {
   /// não tem resposta, e uma remoção contestada vira palavra contra palavra.
   moderatedAt    DateTime?
   moderatedBy    String?
-  moderationNote String?
+  moderationNote String?   @db.Text
 
   parentId String?
   parent   Comment?  @relation("CommentThread", fields: [parentId], references: [id], onDelete: Cascade)
@@ -1209,6 +1459,10 @@ model PipelineEvent {
   actorId     String?
 
   /// Payload específico do evento (score anterior/novo, duração, erro...).
+  ///
+  /// ⚠ Mesmo aviso de `Author.socialLinks`: o `@default("{}")` NÃO chega ao
+  /// banco no conector MySQL (prisma#23250). Pela aplicação é invisível; por SQL
+  /// cru, é uma violação de NOT NULL esperando acontecer.
   payload Json @default("{}")
 
   /// Duração em ms, quando o evento representa um intervalo
@@ -1246,7 +1500,8 @@ model PipelineRun {
   startedAt  DateTime  @default(now())
   finishedAt DateTime?
   durationMs Int?
-  error      String?
+  // Stack trace do ciclo que falhou. `Text` — ver `ConnectorHealth.lastError`.
+  error      String?   @db.Text
 
   @@index([stage, startedAt(sort: Desc)])
 }
@@ -1265,7 +1520,9 @@ model AuditLog {
 
   before Json?
   after  Json?
-  reason String?
+  // Justificativa digitada por um humano. É a razão de ser desta tabela:
+  // truncá-la esvaziaria a própria trilha de auditoria.
+  reason String? @db.Text
 
   ipHash    String?
   createdAt DateTime @default(now())

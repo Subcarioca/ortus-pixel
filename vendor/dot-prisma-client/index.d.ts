@@ -215,8 +215,12 @@ export type PushDelivery = $Result.DefaultSelection<Prisma.$PushDeliveryPayload>
  * e a migração de anônimo para logado (no login) viraria mover linha entre
  * tabelas em vez de um UPDATE de coluna.
  * 
- * AS DUAS CHAVES ÚNICAS FUNCIONAM PORQUE, NO POSTGRES, NULL É DISTINTO DE NULL
- * dentro de um índice único. Consequência prática, que é exatamente o que
+ * AS DUAS CHAVES ÚNICAS FUNCIONAM PORQUE NULL É DISTINTO DE NULL dentro de um
+ * índice único. Isso valia no Postgres e CONTINUA VALENDO no MySQL/MariaDB —
+ * os dois se comportam igual neste ponto, então a migração de banco não mexeu
+ * em nada aqui. Vale registrar justamente porque a versão anterior deste
+ * comentário atribuía a propriedade ao Postgres, e alguém poderia "consertar"
+ * o que não está quebrado. Consequência prática, que é exatamente o que
  * queremos e o que evitou índice parcial + CHECK escritos à mão:
  * - `[franchiseId, visitorId]`       impede o mesmo cookie seguir duas vezes;
  * - `[franchiseId, commentAuthorId]` impede a mesma CONTA seguir duas vezes,
@@ -1201,10 +1205,6 @@ export namespace Prisma {
             args: Prisma.CategoryCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.CategoryCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$CategoryPayload>[]
-          }
           delete: {
             args: Prisma.CategoryDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$CategoryPayload>
@@ -1220,10 +1220,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.CategoryUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.CategoryUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$CategoryPayload>[]
           }
           upsert: {
             args: Prisma.CategoryUpsertArgs<ExtArgs>
@@ -1275,10 +1271,6 @@ export namespace Prisma {
             args: Prisma.SubcategoryCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.SubcategoryCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$SubcategoryPayload>[]
-          }
           delete: {
             args: Prisma.SubcategoryDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$SubcategoryPayload>
@@ -1294,10 +1286,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.SubcategoryUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.SubcategoryUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$SubcategoryPayload>[]
           }
           upsert: {
             args: Prisma.SubcategoryUpsertArgs<ExtArgs>
@@ -1349,10 +1337,6 @@ export namespace Prisma {
             args: Prisma.FranchiseCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.FranchiseCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$FranchisePayload>[]
-          }
           delete: {
             args: Prisma.FranchiseDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$FranchisePayload>
@@ -1368,10 +1352,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.FranchiseUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.FranchiseUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$FranchisePayload>[]
           }
           upsert: {
             args: Prisma.FranchiseUpsertArgs<ExtArgs>
@@ -1423,10 +1403,6 @@ export namespace Prisma {
             args: Prisma.TagCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.TagCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TagPayload>[]
-          }
           delete: {
             args: Prisma.TagDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$TagPayload>
@@ -1442,10 +1418,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.TagUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.TagUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TagPayload>[]
           }
           upsert: {
             args: Prisma.TagUpsertArgs<ExtArgs>
@@ -1497,10 +1469,6 @@ export namespace Prisma {
             args: Prisma.AuthorCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.AuthorCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$AuthorPayload>[]
-          }
           delete: {
             args: Prisma.AuthorDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$AuthorPayload>
@@ -1516,10 +1484,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.AuthorUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.AuthorUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$AuthorPayload>[]
           }
           upsert: {
             args: Prisma.AuthorUpsertArgs<ExtArgs>
@@ -1571,10 +1535,6 @@ export namespace Prisma {
             args: Prisma.StaffSessionCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.StaffSessionCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$StaffSessionPayload>[]
-          }
           delete: {
             args: Prisma.StaffSessionDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$StaffSessionPayload>
@@ -1590,10 +1550,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.StaffSessionUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.StaffSessionUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$StaffSessionPayload>[]
           }
           upsert: {
             args: Prisma.StaffSessionUpsertArgs<ExtArgs>
@@ -1645,10 +1601,6 @@ export namespace Prisma {
             args: Prisma.TopicCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.TopicCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TopicPayload>[]
-          }
           delete: {
             args: Prisma.TopicDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$TopicPayload>
@@ -1664,10 +1616,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.TopicUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.TopicUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TopicPayload>[]
           }
           upsert: {
             args: Prisma.TopicUpsertArgs<ExtArgs>
@@ -1719,10 +1667,6 @@ export namespace Prisma {
             args: Prisma.TopicFranchiseCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.TopicFranchiseCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TopicFranchisePayload>[]
-          }
           delete: {
             args: Prisma.TopicFranchiseDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$TopicFranchisePayload>
@@ -1738,10 +1682,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.TopicFranchiseUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.TopicFranchiseUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$TopicFranchisePayload>[]
           }
           upsert: {
             args: Prisma.TopicFranchiseUpsertArgs<ExtArgs>
@@ -1793,10 +1733,6 @@ export namespace Prisma {
             args: Prisma.ScoreSnapshotCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.ScoreSnapshotCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ScoreSnapshotPayload>[]
-          }
           delete: {
             args: Prisma.ScoreSnapshotDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$ScoreSnapshotPayload>
@@ -1812,10 +1748,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.ScoreSnapshotUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.ScoreSnapshotUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ScoreSnapshotPayload>[]
           }
           upsert: {
             args: Prisma.ScoreSnapshotUpsertArgs<ExtArgs>
@@ -1867,10 +1799,6 @@ export namespace Prisma {
             args: Prisma.SignalReadingCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.SignalReadingCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$SignalReadingPayload>[]
-          }
           delete: {
             args: Prisma.SignalReadingDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$SignalReadingPayload>
@@ -1886,10 +1814,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.SignalReadingUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.SignalReadingUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$SignalReadingPayload>[]
           }
           upsert: {
             args: Prisma.SignalReadingUpsertArgs<ExtArgs>
@@ -1941,10 +1865,6 @@ export namespace Prisma {
             args: Prisma.ConnectorHealthCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.ConnectorHealthCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ConnectorHealthPayload>[]
-          }
           delete: {
             args: Prisma.ConnectorHealthDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$ConnectorHealthPayload>
@@ -1960,10 +1880,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.ConnectorHealthUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.ConnectorHealthUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ConnectorHealthPayload>[]
           }
           upsert: {
             args: Prisma.ConnectorHealthUpsertArgs<ExtArgs>
@@ -2015,10 +1931,6 @@ export namespace Prisma {
             args: Prisma.ArticleCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.ArticleCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ArticlePayload>[]
-          }
           delete: {
             args: Prisma.ArticleDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$ArticlePayload>
@@ -2034,10 +1946,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.ArticleUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.ArticleUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ArticlePayload>[]
           }
           upsert: {
             args: Prisma.ArticleUpsertArgs<ExtArgs>
@@ -2089,10 +1997,6 @@ export namespace Prisma {
             args: Prisma.ArticleFranchiseCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.ArticleFranchiseCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ArticleFranchisePayload>[]
-          }
           delete: {
             args: Prisma.ArticleFranchiseDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$ArticleFranchisePayload>
@@ -2108,10 +2012,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.ArticleFranchiseUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.ArticleFranchiseUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ArticleFranchisePayload>[]
           }
           upsert: {
             args: Prisma.ArticleFranchiseUpsertArgs<ExtArgs>
@@ -2163,10 +2063,6 @@ export namespace Prisma {
             args: Prisma.ArticleTagCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.ArticleTagCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ArticleTagPayload>[]
-          }
           delete: {
             args: Prisma.ArticleTagDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$ArticleTagPayload>
@@ -2182,10 +2078,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.ArticleTagUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.ArticleTagUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ArticleTagPayload>[]
           }
           upsert: {
             args: Prisma.ArticleTagUpsertArgs<ExtArgs>
@@ -2237,10 +2129,6 @@ export namespace Prisma {
             args: Prisma.LiveUpdateCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.LiveUpdateCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$LiveUpdatePayload>[]
-          }
           delete: {
             args: Prisma.LiveUpdateDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$LiveUpdatePayload>
@@ -2256,10 +2144,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.LiveUpdateUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.LiveUpdateUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$LiveUpdatePayload>[]
           }
           upsert: {
             args: Prisma.LiveUpdateUpsertArgs<ExtArgs>
@@ -2311,10 +2195,6 @@ export namespace Prisma {
             args: Prisma.AffiliateOfferCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.AffiliateOfferCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$AffiliateOfferPayload>[]
-          }
           delete: {
             args: Prisma.AffiliateOfferDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$AffiliateOfferPayload>
@@ -2330,10 +2210,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.AffiliateOfferUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.AffiliateOfferUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$AffiliateOfferPayload>[]
           }
           upsert: {
             args: Prisma.AffiliateOfferUpsertArgs<ExtArgs>
@@ -2385,10 +2261,6 @@ export namespace Prisma {
             args: Prisma.ArticleAffiliateOfferCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.ArticleAffiliateOfferCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ArticleAffiliateOfferPayload>[]
-          }
           delete: {
             args: Prisma.ArticleAffiliateOfferDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$ArticleAffiliateOfferPayload>
@@ -2404,10 +2276,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.ArticleAffiliateOfferUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.ArticleAffiliateOfferUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ArticleAffiliateOfferPayload>[]
           }
           upsert: {
             args: Prisma.ArticleAffiliateOfferUpsertArgs<ExtArgs>
@@ -2459,10 +2327,6 @@ export namespace Prisma {
             args: Prisma.ReleaseEventCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.ReleaseEventCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ReleaseEventPayload>[]
-          }
           delete: {
             args: Prisma.ReleaseEventDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$ReleaseEventPayload>
@@ -2478,10 +2342,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.ReleaseEventUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.ReleaseEventUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$ReleaseEventPayload>[]
           }
           upsert: {
             args: Prisma.ReleaseEventUpsertArgs<ExtArgs>
@@ -2533,10 +2393,6 @@ export namespace Prisma {
             args: Prisma.SubscriberCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.SubscriberCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$SubscriberPayload>[]
-          }
           delete: {
             args: Prisma.SubscriberDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$SubscriberPayload>
@@ -2552,10 +2408,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.SubscriberUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.SubscriberUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$SubscriberPayload>[]
           }
           upsert: {
             args: Prisma.SubscriberUpsertArgs<ExtArgs>
@@ -2607,10 +2459,6 @@ export namespace Prisma {
             args: Prisma.PushSubscriptionCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.PushSubscriptionCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$PushSubscriptionPayload>[]
-          }
           delete: {
             args: Prisma.PushSubscriptionDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$PushSubscriptionPayload>
@@ -2626,10 +2474,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.PushSubscriptionUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.PushSubscriptionUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$PushSubscriptionPayload>[]
           }
           upsert: {
             args: Prisma.PushSubscriptionUpsertArgs<ExtArgs>
@@ -2681,10 +2525,6 @@ export namespace Prisma {
             args: Prisma.PushNotificationCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.PushNotificationCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$PushNotificationPayload>[]
-          }
           delete: {
             args: Prisma.PushNotificationDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$PushNotificationPayload>
@@ -2700,10 +2540,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.PushNotificationUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.PushNotificationUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$PushNotificationPayload>[]
           }
           upsert: {
             args: Prisma.PushNotificationUpsertArgs<ExtArgs>
@@ -2755,10 +2591,6 @@ export namespace Prisma {
             args: Prisma.PushDeliveryCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.PushDeliveryCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$PushDeliveryPayload>[]
-          }
           delete: {
             args: Prisma.PushDeliveryDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$PushDeliveryPayload>
@@ -2774,10 +2606,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.PushDeliveryUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.PushDeliveryUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$PushDeliveryPayload>[]
           }
           upsert: {
             args: Prisma.PushDeliveryUpsertArgs<ExtArgs>
@@ -2829,10 +2657,6 @@ export namespace Prisma {
             args: Prisma.FranchiseFollowCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.FranchiseFollowCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$FranchiseFollowPayload>[]
-          }
           delete: {
             args: Prisma.FranchiseFollowDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$FranchiseFollowPayload>
@@ -2848,10 +2672,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.FranchiseFollowUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.FranchiseFollowUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$FranchiseFollowPayload>[]
           }
           upsert: {
             args: Prisma.FranchiseFollowUpsertArgs<ExtArgs>
@@ -2903,10 +2723,6 @@ export namespace Prisma {
             args: Prisma.CommentAuthorCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.CommentAuthorCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$CommentAuthorPayload>[]
-          }
           delete: {
             args: Prisma.CommentAuthorDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$CommentAuthorPayload>
@@ -2922,10 +2738,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.CommentAuthorUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.CommentAuthorUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$CommentAuthorPayload>[]
           }
           upsert: {
             args: Prisma.CommentAuthorUpsertArgs<ExtArgs>
@@ -2977,10 +2789,6 @@ export namespace Prisma {
             args: Prisma.CommentSessionCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.CommentSessionCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$CommentSessionPayload>[]
-          }
           delete: {
             args: Prisma.CommentSessionDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$CommentSessionPayload>
@@ -2996,10 +2804,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.CommentSessionUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.CommentSessionUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$CommentSessionPayload>[]
           }
           upsert: {
             args: Prisma.CommentSessionUpsertArgs<ExtArgs>
@@ -3051,10 +2855,6 @@ export namespace Prisma {
             args: Prisma.CommentCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.CommentCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$CommentPayload>[]
-          }
           delete: {
             args: Prisma.CommentDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$CommentPayload>
@@ -3070,10 +2870,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.CommentUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.CommentUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$CommentPayload>[]
           }
           upsert: {
             args: Prisma.CommentUpsertArgs<ExtArgs>
@@ -3125,10 +2921,6 @@ export namespace Prisma {
             args: Prisma.PipelineEventCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.PipelineEventCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$PipelineEventPayload>[]
-          }
           delete: {
             args: Prisma.PipelineEventDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$PipelineEventPayload>
@@ -3144,10 +2936,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.PipelineEventUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.PipelineEventUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$PipelineEventPayload>[]
           }
           upsert: {
             args: Prisma.PipelineEventUpsertArgs<ExtArgs>
@@ -3199,10 +2987,6 @@ export namespace Prisma {
             args: Prisma.PipelineRunCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.PipelineRunCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$PipelineRunPayload>[]
-          }
           delete: {
             args: Prisma.PipelineRunDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$PipelineRunPayload>
@@ -3218,10 +3002,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.PipelineRunUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.PipelineRunUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$PipelineRunPayload>[]
           }
           upsert: {
             args: Prisma.PipelineRunUpsertArgs<ExtArgs>
@@ -3273,10 +3053,6 @@ export namespace Prisma {
             args: Prisma.AuditLogCreateManyArgs<ExtArgs>
             result: BatchPayload
           }
-          createManyAndReturn: {
-            args: Prisma.AuditLogCreateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$AuditLogPayload>[]
-          }
           delete: {
             args: Prisma.AuditLogDeleteArgs<ExtArgs>
             result: $Utils.PayloadToResult<Prisma.$AuditLogPayload>
@@ -3292,10 +3068,6 @@ export namespace Prisma {
           updateMany: {
             args: Prisma.AuditLogUpdateManyArgs<ExtArgs>
             result: BatchPayload
-          }
-          updateManyAndReturn: {
-            args: Prisma.AuditLogUpdateManyAndReturnArgs<ExtArgs>
-            result: $Utils.PayloadToResult<Prisma.$AuditLogPayload>[]
           }
           upsert: {
             args: Prisma.AuditLogUpsertArgs<ExtArgs>
@@ -4330,37 +4102,7 @@ export namespace Prisma {
     _count?: boolean | CategoryCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["category"]>
 
-  export type CategorySelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    slug?: boolean
-    name?: boolean
-    shortName?: boolean
-    description?: boolean
-    accentColor?: boolean
-    monitoringPriority?: boolean
-    launchPhase?: boolean
-    affiliateWeight?: boolean
-    seoTitle?: boolean
-    seoDescription?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-  }, ExtArgs["result"]["category"]>
 
-  export type CategorySelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    slug?: boolean
-    name?: boolean
-    shortName?: boolean
-    description?: boolean
-    accentColor?: boolean
-    monitoringPriority?: boolean
-    launchPhase?: boolean
-    affiliateWeight?: boolean
-    seoTitle?: boolean
-    seoDescription?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-  }, ExtArgs["result"]["category"]>
 
   export type CategorySelectScalar = {
     id?: boolean
@@ -4386,8 +4128,6 @@ export namespace Prisma {
     subcategories?: boolean | Category$subcategoriesArgs<ExtArgs>
     _count?: boolean | CategoryCountOutputTypeDefaultArgs<ExtArgs>
   }
-  export type CategoryIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
-  export type CategoryIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
 
   export type $CategoryPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Category"
@@ -4529,30 +4269,6 @@ export namespace Prisma {
     createMany<T extends CategoryCreateManyArgs>(args?: SelectSubset<T, CategoryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many Categories and returns the data saved in the database.
-     * @param {CategoryCreateManyAndReturnArgs} args - Arguments to create many Categories.
-     * @example
-     * // Create many Categories
-     * const category = await prisma.category.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many Categories and only return the `id`
-     * const categoryWithIdOnly = await prisma.category.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends CategoryCreateManyAndReturnArgs>(args?: SelectSubset<T, CategoryCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CategoryPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a Category.
      * @param {CategoryDeleteArgs} args - Arguments to delete one Category.
      * @example
@@ -4615,36 +4331,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends CategoryUpdateManyArgs>(args: SelectSubset<T, CategoryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more Categories and returns the data updated in the database.
-     * @param {CategoryUpdateManyAndReturnArgs} args - Arguments to update many Categories.
-     * @example
-     * // Update many Categories
-     * const category = await prisma.category.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more Categories and only return the `id`
-     * const categoryWithIdOnly = await prisma.category.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends CategoryUpdateManyAndReturnArgs>(args: SelectSubset<T, CategoryUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CategoryPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one Category.
@@ -5084,25 +4770,6 @@ export namespace Prisma {
   }
 
   /**
-   * Category createManyAndReturn
-   */
-  export type CategoryCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Category
-     */
-    select?: CategorySelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Category
-     */
-    omit?: CategoryOmit<ExtArgs> | null
-    /**
-     * The data used to create many Categories.
-     */
-    data: CategoryCreateManyInput | CategoryCreateManyInput[]
-    skipDuplicates?: boolean
-  }
-
-  /**
    * Category update
    */
   export type CategoryUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -5132,32 +4799,6 @@ export namespace Prisma {
    * Category updateMany
    */
   export type CategoryUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to update Categories.
-     */
-    data: XOR<CategoryUpdateManyMutationInput, CategoryUncheckedUpdateManyInput>
-    /**
-     * Filter which Categories to update
-     */
-    where?: CategoryWhereInput
-    /**
-     * Limit how many Categories to update.
-     */
-    limit?: number
-  }
-
-  /**
-   * Category updateManyAndReturn
-   */
-  export type CategoryUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Category
-     */
-    select?: CategorySelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Category
-     */
-    omit?: CategoryOmit<ExtArgs> | null
     /**
      * The data used to update Categories.
      */
@@ -5580,29 +5221,7 @@ export namespace Prisma {
     _count?: boolean | SubcategoryCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["subcategory"]>
 
-  export type SubcategorySelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    slug?: boolean
-    name?: boolean
-    description?: boolean
-    categoryId?: boolean
-    affiliateWeight?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-    category?: boolean | CategoryDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["subcategory"]>
 
-  export type SubcategorySelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    slug?: boolean
-    name?: boolean
-    description?: boolean
-    categoryId?: boolean
-    affiliateWeight?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-    category?: boolean | CategoryDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["subcategory"]>
 
   export type SubcategorySelectScalar = {
     id?: boolean
@@ -5620,12 +5239,6 @@ export namespace Prisma {
     category?: boolean | CategoryDefaultArgs<ExtArgs>
     articles?: boolean | Subcategory$articlesArgs<ExtArgs>
     _count?: boolean | SubcategoryCountOutputTypeDefaultArgs<ExtArgs>
-  }
-  export type SubcategoryIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    category?: boolean | CategoryDefaultArgs<ExtArgs>
-  }
-  export type SubcategoryIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    category?: boolean | CategoryDefaultArgs<ExtArgs>
   }
 
   export type $SubcategoryPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -5769,30 +5382,6 @@ export namespace Prisma {
     createMany<T extends SubcategoryCreateManyArgs>(args?: SelectSubset<T, SubcategoryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many Subcategories and returns the data saved in the database.
-     * @param {SubcategoryCreateManyAndReturnArgs} args - Arguments to create many Subcategories.
-     * @example
-     * // Create many Subcategories
-     * const subcategory = await prisma.subcategory.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many Subcategories and only return the `id`
-     * const subcategoryWithIdOnly = await prisma.subcategory.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends SubcategoryCreateManyAndReturnArgs>(args?: SelectSubset<T, SubcategoryCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SubcategoryPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a Subcategory.
      * @param {SubcategoryDeleteArgs} args - Arguments to delete one Subcategory.
      * @example
@@ -5855,36 +5444,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends SubcategoryUpdateManyArgs>(args: SelectSubset<T, SubcategoryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more Subcategories and returns the data updated in the database.
-     * @param {SubcategoryUpdateManyAndReturnArgs} args - Arguments to update many Subcategories.
-     * @example
-     * // Update many Subcategories
-     * const subcategory = await prisma.subcategory.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more Subcategories and only return the `id`
-     * const subcategoryWithIdOnly = await prisma.subcategory.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends SubcategoryUpdateManyAndReturnArgs>(args: SelectSubset<T, SubcategoryUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SubcategoryPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one Subcategory.
@@ -6317,29 +5876,6 @@ export namespace Prisma {
   }
 
   /**
-   * Subcategory createManyAndReturn
-   */
-  export type SubcategoryCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Subcategory
-     */
-    select?: SubcategorySelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Subcategory
-     */
-    omit?: SubcategoryOmit<ExtArgs> | null
-    /**
-     * The data used to create many Subcategories.
-     */
-    data: SubcategoryCreateManyInput | SubcategoryCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: SubcategoryIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * Subcategory update
    */
   export type SubcategoryUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -6381,36 +5917,6 @@ export namespace Prisma {
      * Limit how many Subcategories to update.
      */
     limit?: number
-  }
-
-  /**
-   * Subcategory updateManyAndReturn
-   */
-  export type SubcategoryUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Subcategory
-     */
-    select?: SubcategorySelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Subcategory
-     */
-    omit?: SubcategoryOmit<ExtArgs> | null
-    /**
-     * The data used to update Subcategories.
-     */
-    data: XOR<SubcategoryUpdateManyMutationInput, SubcategoryUncheckedUpdateManyInput>
-    /**
-     * Filter which Subcategories to update
-     */
-    where?: SubcategoryWhereInput
-    /**
-     * Limit how many Subcategories to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: SubcategoryIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -6734,7 +6240,7 @@ export namespace Prisma {
     slug: string
     name: string
     description: string
-    aliases: string[]
+    aliases: JsonValue
     heroImageUrl: string | null
     logoUrl: string | null
     primaryCategoryId: string
@@ -6784,37 +6290,7 @@ export namespace Prisma {
     _count?: boolean | FranchiseCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["franchise"]>
 
-  export type FranchiseSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    slug?: boolean
-    name?: boolean
-    description?: boolean
-    aliases?: boolean
-    heroImageUrl?: boolean
-    logoUrl?: boolean
-    primaryCategoryId?: boolean
-    audienceAffinityIndex?: boolean
-    followerCount?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-    primaryCategory?: boolean | CategoryDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["franchise"]>
 
-  export type FranchiseSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    slug?: boolean
-    name?: boolean
-    description?: boolean
-    aliases?: boolean
-    heroImageUrl?: boolean
-    logoUrl?: boolean
-    primaryCategoryId?: boolean
-    audienceAffinityIndex?: boolean
-    followerCount?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-    primaryCategory?: boolean | CategoryDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["franchise"]>
 
   export type FranchiseSelectScalar = {
     id?: boolean
@@ -6840,12 +6316,6 @@ export namespace Prisma {
     follows?: boolean | Franchise$followsArgs<ExtArgs>
     _count?: boolean | FranchiseCountOutputTypeDefaultArgs<ExtArgs>
   }
-  export type FranchiseIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    primaryCategory?: boolean | CategoryDefaultArgs<ExtArgs>
-  }
-  export type FranchiseIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    primaryCategory?: boolean | CategoryDefaultArgs<ExtArgs>
-  }
 
   export type $FranchisePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Franchise"
@@ -6861,7 +6331,26 @@ export namespace Prisma {
       slug: string
       name: string
       description: string
-      aliases: string[]
+      /**
+       * Nomes alternativos usados pelos conectores para casar menções.
+       * 
+       * `Json` (era `String[]` no Postgres, que tem array nativo; MySQL não tem).
+       * A troca é de TIPO, não de comportamento: o Prisma Client continua entregando
+       * um array de strings ao TypeScript, e o curator continua fazendo
+       * `[franchise.name, ...franchise.aliases]` sem saber da diferença.
+       * 
+       * O que se PERDE: os filtros de array do conector Postgres (`has`, `hasSome`,
+       * `isEmpty`) deixam de existir. Aqui não custa nada — este campo é sempre
+       * lido junto do pai, como bloco, e nunca filtrado dentro do banco. Se um dia
+       * precisar ser, a resposta é uma tabela de junção, não `JSON_CONTAINS` (que
+       * não usa índice e varre a tabela inteira).
+       * 
+       * O `@default("[]")` é declarado aqui e o Prisma Client o aplica, mas ATENÇÃO:
+       * por um bug conhecido (prisma#23250) ele NÃO chega ao banco no conector
+       * MySQL. Consequência prática: todo `INSERT` feito por SQL cru precisa passar
+       * o valor explicitamente, senão viola o NOT NULL.
+       */
+      aliases: Prisma.JsonValue
       heroImageUrl: string | null
       logoUrl: string | null
       primaryCategoryId: string
@@ -6992,30 +6481,6 @@ export namespace Prisma {
     createMany<T extends FranchiseCreateManyArgs>(args?: SelectSubset<T, FranchiseCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many Franchises and returns the data saved in the database.
-     * @param {FranchiseCreateManyAndReturnArgs} args - Arguments to create many Franchises.
-     * @example
-     * // Create many Franchises
-     * const franchise = await prisma.franchise.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many Franchises and only return the `id`
-     * const franchiseWithIdOnly = await prisma.franchise.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends FranchiseCreateManyAndReturnArgs>(args?: SelectSubset<T, FranchiseCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FranchisePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a Franchise.
      * @param {FranchiseDeleteArgs} args - Arguments to delete one Franchise.
      * @example
@@ -7078,36 +6543,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends FranchiseUpdateManyArgs>(args: SelectSubset<T, FranchiseUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more Franchises and returns the data updated in the database.
-     * @param {FranchiseUpdateManyAndReturnArgs} args - Arguments to update many Franchises.
-     * @example
-     * // Update many Franchises
-     * const franchise = await prisma.franchise.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more Franchises and only return the `id`
-     * const franchiseWithIdOnly = await prisma.franchise.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends FranchiseUpdateManyAndReturnArgs>(args: SelectSubset<T, FranchiseUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FranchisePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one Franchise.
@@ -7306,7 +6741,7 @@ export namespace Prisma {
     readonly slug: FieldRef<"Franchise", 'String'>
     readonly name: FieldRef<"Franchise", 'String'>
     readonly description: FieldRef<"Franchise", 'String'>
-    readonly aliases: FieldRef<"Franchise", 'String[]'>
+    readonly aliases: FieldRef<"Franchise", 'Json'>
     readonly heroImageUrl: FieldRef<"Franchise", 'String'>
     readonly logoUrl: FieldRef<"Franchise", 'String'>
     readonly primaryCategoryId: FieldRef<"Franchise", 'String'>
@@ -7547,29 +6982,6 @@ export namespace Prisma {
   }
 
   /**
-   * Franchise createManyAndReturn
-   */
-  export type FranchiseCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Franchise
-     */
-    select?: FranchiseSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Franchise
-     */
-    omit?: FranchiseOmit<ExtArgs> | null
-    /**
-     * The data used to create many Franchises.
-     */
-    data: FranchiseCreateManyInput | FranchiseCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: FranchiseIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * Franchise update
    */
   export type FranchiseUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -7611,36 +7023,6 @@ export namespace Prisma {
      * Limit how many Franchises to update.
      */
     limit?: number
-  }
-
-  /**
-   * Franchise updateManyAndReturn
-   */
-  export type FranchiseUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Franchise
-     */
-    select?: FranchiseSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Franchise
-     */
-    omit?: FranchiseOmit<ExtArgs> | null
-    /**
-     * The data used to update Franchises.
-     */
-    data: XOR<FranchiseUpdateManyMutationInput, FranchiseUncheckedUpdateManyInput>
-    /**
-     * Filter which Franchises to update
-     */
-    where?: FranchiseWhereInput
-    /**
-     * Limit how many Franchises to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: FranchiseIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -7992,21 +7374,7 @@ export namespace Prisma {
     _count?: boolean | TagCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["tag"]>
 
-  export type TagSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    slug?: boolean
-    name?: boolean
-    kind?: boolean
-    createdAt?: boolean
-  }, ExtArgs["result"]["tag"]>
 
-  export type TagSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    slug?: boolean
-    name?: boolean
-    kind?: boolean
-    createdAt?: boolean
-  }, ExtArgs["result"]["tag"]>
 
   export type TagSelectScalar = {
     id?: boolean
@@ -8021,8 +7389,6 @@ export namespace Prisma {
     articles?: boolean | Tag$articlesArgs<ExtArgs>
     _count?: boolean | TagCountOutputTypeDefaultArgs<ExtArgs>
   }
-  export type TagIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
-  export type TagIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
 
   export type $TagPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Tag"
@@ -8156,30 +7522,6 @@ export namespace Prisma {
     createMany<T extends TagCreateManyArgs>(args?: SelectSubset<T, TagCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many Tags and returns the data saved in the database.
-     * @param {TagCreateManyAndReturnArgs} args - Arguments to create many Tags.
-     * @example
-     * // Create many Tags
-     * const tag = await prisma.tag.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many Tags and only return the `id`
-     * const tagWithIdOnly = await prisma.tag.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends TagCreateManyAndReturnArgs>(args?: SelectSubset<T, TagCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TagPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a Tag.
      * @param {TagDeleteArgs} args - Arguments to delete one Tag.
      * @example
@@ -8242,36 +7584,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends TagUpdateManyArgs>(args: SelectSubset<T, TagUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more Tags and returns the data updated in the database.
-     * @param {TagUpdateManyAndReturnArgs} args - Arguments to update many Tags.
-     * @example
-     * // Update many Tags
-     * const tag = await prisma.tag.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more Tags and only return the `id`
-     * const tagWithIdOnly = await prisma.tag.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends TagUpdateManyAndReturnArgs>(args: SelectSubset<T, TagUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TagPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one Tag.
@@ -8700,25 +8012,6 @@ export namespace Prisma {
   }
 
   /**
-   * Tag createManyAndReturn
-   */
-  export type TagCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Tag
-     */
-    select?: TagSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Tag
-     */
-    omit?: TagOmit<ExtArgs> | null
-    /**
-     * The data used to create many Tags.
-     */
-    data: TagCreateManyInput | TagCreateManyInput[]
-    skipDuplicates?: boolean
-  }
-
-  /**
    * Tag update
    */
   export type TagUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -8748,32 +8041,6 @@ export namespace Prisma {
    * Tag updateMany
    */
   export type TagUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to update Tags.
-     */
-    data: XOR<TagUpdateManyMutationInput, TagUncheckedUpdateManyInput>
-    /**
-     * Filter which Tags to update
-     */
-    where?: TagWhereInput
-    /**
-     * Limit how many Tags to update.
-     */
-    limit?: number
-  }
-
-  /**
-   * Tag updateManyAndReturn
-   */
-  export type TagUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Tag
-     */
-    select?: TagSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Tag
-     */
-    omit?: TagOmit<ExtArgs> | null
     /**
      * The data used to update Tags.
      */
@@ -9091,7 +8358,7 @@ export namespace Prisma {
     avatarUrl: string | null
     role: string
     socialLinks: JsonValue
-    expertiseAreas: string[]
+    expertiseAreas: JsonValue
     systemRole: string
     passwordHash: string | null
     isActive: boolean
@@ -9139,41 +8406,7 @@ export namespace Prisma {
     _count?: boolean | AuthorCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["author"]>
 
-  export type AuthorSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    slug?: boolean
-    name?: boolean
-    email?: boolean
-    bio?: boolean
-    avatarUrl?: boolean
-    role?: boolean
-    socialLinks?: boolean
-    expertiseAreas?: boolean
-    systemRole?: boolean
-    passwordHash?: boolean
-    isActive?: boolean
-    lastLoginAt?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-  }, ExtArgs["result"]["author"]>
 
-  export type AuthorSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    slug?: boolean
-    name?: boolean
-    email?: boolean
-    bio?: boolean
-    avatarUrl?: boolean
-    role?: boolean
-    socialLinks?: boolean
-    expertiseAreas?: boolean
-    systemRole?: boolean
-    passwordHash?: boolean
-    isActive?: boolean
-    lastLoginAt?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-  }, ExtArgs["result"]["author"]>
 
   export type AuthorSelectScalar = {
     id?: boolean
@@ -9200,8 +8433,6 @@ export namespace Prisma {
     staffSessions?: boolean | Author$staffSessionsArgs<ExtArgs>
     _count?: boolean | AuthorCountOutputTypeDefaultArgs<ExtArgs>
   }
-  export type AuthorIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
-  export type AuthorIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
 
   export type $AuthorPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Author"
@@ -9219,6 +8450,14 @@ export namespace Prisma {
        * minúsculas (normalizado na escrita) — senão "Marina@..." e "marina@..."
        * viram duas contas, e o índice único não impede porque são strings
        * diferentes.
+       * 
+       * `VarChar(255)` para casar com o validador: `server/security.ts` aceita
+       * e-mail de até 254 caracteres (o limite da RFC 5321), e a coluna no padrão
+       * do Prisma teria 191. Sem isto, um endereço longo e perfeitamente válido
+       * passaria pela validação e seria TRUNCADO em silêncio no banco (o servidor
+       * não está em `sql_mode` estrito) — criando uma conta cujo e-mail de login
+       * não é o que a pessoa digitou. 255 × 4 bytes = 1.020, bem abaixo do teto de
+       * 3.072 do InnoDB, então o índice `@unique` continua cabendo.
        */
       email: string
       bio: string
@@ -9234,9 +8473,23 @@ export namespace Prisma {
        * Links sociais e credenciais viram schema.org/Person com `sameAs`.
        * É assim que o Google conecta o autor a uma identidade verificável — peça
        * central de E-E-A-T em nicho de notícias.
+       * 
+       * ⚠ O `@default("[]")` NÃO chega ao banco no conector MySQL (prisma#23250):
+       * a coluna nasce `NOT NULL` e sem default. Pela aplicação isso é invisível (o
+       * Prisma Client conhece o default e o envia), mas qualquer `INSERT` por SQL
+       * cru — inclusive o script de migração de dados — precisa passar `[]`
+       * explicitamente, senão a linha é rejeitada.
        */
       socialLinks: Prisma.JsonValue
-      expertiseAreas: string[]
+      /**
+       * Editorias em que este autor tem expertise declarada (E-E-A-T).
+       * Era `String[]`; virou `Json` pelo mesmo motivo e com as mesmas
+       * consequências descritas em `Franchise.aliases`. Continua sendo lido como
+       * array em `db/src/mappers.ts`, que filtra por `isCategorySlug` — e essa
+       * validação na borda passa a valer DOBRADO: `Json` aceita qualquer forma, e
+       * quem garante que só entra slug de categoria é o mapper, não mais o banco.
+       */
+      expertiseAreas: Prisma.JsonValue
       /**
        * NÍVEL DE ACESSO ao painel. Vocabulário fechado: 'admin' | 'redator'.
        * 
@@ -9261,6 +8514,15 @@ export namespace Prisma {
        * como autor sem lhe dar uma conta — e é o estado em que ficam os autores que
        * existiam antes deste sistema. Sem senha, a rota de login recusa SEMPRE,
        * mesmo que o e-mail exista.
+       * 
+       * `VarChar(255)` é margem de segurança barata, não necessidade de hoje: o
+       * formato atual cabe folgado em 191. Mas o comprimento depende dos parâmetros
+       * do scrypt (N, r, p) e do tamanho do sal — subir o custo do KDF, que é uma
+       * mudança de UMA LINHA em password.ts e a coisa certa a fazer com o tempo,
+       * alongaria o hash. E o modo de falha aqui é dos piores: sem `sql_mode`
+       * estrito, o servidor TRUNCA em silêncio (ver o cabeçalho do arquivo). Um
+       * hash truncado não dá erro nenhum — ele simplesmente nunca mais confere, e o
+       * sintoma é "trocaram minha senha" para toda a redação de uma vez.
        */
       passwordHash: string | null
       /**
@@ -9396,30 +8658,6 @@ export namespace Prisma {
     createMany<T extends AuthorCreateManyArgs>(args?: SelectSubset<T, AuthorCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many Authors and returns the data saved in the database.
-     * @param {AuthorCreateManyAndReturnArgs} args - Arguments to create many Authors.
-     * @example
-     * // Create many Authors
-     * const author = await prisma.author.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many Authors and only return the `id`
-     * const authorWithIdOnly = await prisma.author.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends AuthorCreateManyAndReturnArgs>(args?: SelectSubset<T, AuthorCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AuthorPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a Author.
      * @param {AuthorDeleteArgs} args - Arguments to delete one Author.
      * @example
@@ -9482,36 +8720,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends AuthorUpdateManyArgs>(args: SelectSubset<T, AuthorUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more Authors and returns the data updated in the database.
-     * @param {AuthorUpdateManyAndReturnArgs} args - Arguments to update many Authors.
-     * @example
-     * // Update many Authors
-     * const author = await prisma.author.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more Authors and only return the `id`
-     * const authorWithIdOnly = await prisma.author.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends AuthorUpdateManyAndReturnArgs>(args: SelectSubset<T, AuthorUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AuthorPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one Author.
@@ -9712,7 +8920,7 @@ export namespace Prisma {
     readonly avatarUrl: FieldRef<"Author", 'String'>
     readonly role: FieldRef<"Author", 'String'>
     readonly socialLinks: FieldRef<"Author", 'Json'>
-    readonly expertiseAreas: FieldRef<"Author", 'String[]'>
+    readonly expertiseAreas: FieldRef<"Author", 'Json'>
     readonly systemRole: FieldRef<"Author", 'String'>
     readonly passwordHash: FieldRef<"Author", 'String'>
     readonly isActive: FieldRef<"Author", 'Boolean'>
@@ -9952,25 +9160,6 @@ export namespace Prisma {
   }
 
   /**
-   * Author createManyAndReturn
-   */
-  export type AuthorCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Author
-     */
-    select?: AuthorSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Author
-     */
-    omit?: AuthorOmit<ExtArgs> | null
-    /**
-     * The data used to create many Authors.
-     */
-    data: AuthorCreateManyInput | AuthorCreateManyInput[]
-    skipDuplicates?: boolean
-  }
-
-  /**
    * Author update
    */
   export type AuthorUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -10000,32 +9189,6 @@ export namespace Prisma {
    * Author updateMany
    */
   export type AuthorUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to update Authors.
-     */
-    data: XOR<AuthorUpdateManyMutationInput, AuthorUncheckedUpdateManyInput>
-    /**
-     * Filter which Authors to update
-     */
-    where?: AuthorWhereInput
-    /**
-     * Limit how many Authors to update.
-     */
-    limit?: number
-  }
-
-  /**
-   * Author updateManyAndReturn
-   */
-  export type AuthorUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Author
-     */
-    select?: AuthorSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Author
-     */
-    omit?: AuthorOmit<ExtArgs> | null
     /**
      * The data used to update Authors.
      */
@@ -10380,27 +9543,7 @@ export namespace Prisma {
     author?: boolean | AuthorDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["staffSession"]>
 
-  export type StaffSessionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    tokenHash?: boolean
-    authorId?: boolean
-    expiresAt?: boolean
-    userAgent?: boolean
-    ipHash?: boolean
-    createdAt?: boolean
-    author?: boolean | AuthorDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["staffSession"]>
 
-  export type StaffSessionSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    tokenHash?: boolean
-    authorId?: boolean
-    expiresAt?: boolean
-    userAgent?: boolean
-    ipHash?: boolean
-    createdAt?: boolean
-    author?: boolean | AuthorDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["staffSession"]>
 
   export type StaffSessionSelectScalar = {
     id?: boolean
@@ -10414,12 +9557,6 @@ export namespace Prisma {
 
   export type StaffSessionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "tokenHash" | "authorId" | "expiresAt" | "userAgent" | "ipHash" | "createdAt", ExtArgs["result"]["staffSession"]>
   export type StaffSessionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    author?: boolean | AuthorDefaultArgs<ExtArgs>
-  }
-  export type StaffSessionIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    author?: boolean | AuthorDefaultArgs<ExtArgs>
-  }
-  export type StaffSessionIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     author?: boolean | AuthorDefaultArgs<ExtArgs>
   }
 
@@ -10554,30 +9691,6 @@ export namespace Prisma {
     createMany<T extends StaffSessionCreateManyArgs>(args?: SelectSubset<T, StaffSessionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many StaffSessions and returns the data saved in the database.
-     * @param {StaffSessionCreateManyAndReturnArgs} args - Arguments to create many StaffSessions.
-     * @example
-     * // Create many StaffSessions
-     * const staffSession = await prisma.staffSession.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many StaffSessions and only return the `id`
-     * const staffSessionWithIdOnly = await prisma.staffSession.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends StaffSessionCreateManyAndReturnArgs>(args?: SelectSubset<T, StaffSessionCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$StaffSessionPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a StaffSession.
      * @param {StaffSessionDeleteArgs} args - Arguments to delete one StaffSession.
      * @example
@@ -10640,36 +9753,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends StaffSessionUpdateManyArgs>(args: SelectSubset<T, StaffSessionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more StaffSessions and returns the data updated in the database.
-     * @param {StaffSessionUpdateManyAndReturnArgs} args - Arguments to update many StaffSessions.
-     * @example
-     * // Update many StaffSessions
-     * const staffSession = await prisma.staffSession.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more StaffSessions and only return the `id`
-     * const staffSessionWithIdOnly = await prisma.staffSession.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends StaffSessionUpdateManyAndReturnArgs>(args: SelectSubset<T, StaffSessionUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$StaffSessionPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one StaffSession.
@@ -11100,29 +10183,6 @@ export namespace Prisma {
   }
 
   /**
-   * StaffSession createManyAndReturn
-   */
-  export type StaffSessionCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the StaffSession
-     */
-    select?: StaffSessionSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the StaffSession
-     */
-    omit?: StaffSessionOmit<ExtArgs> | null
-    /**
-     * The data used to create many StaffSessions.
-     */
-    data: StaffSessionCreateManyInput | StaffSessionCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: StaffSessionIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * StaffSession update
    */
   export type StaffSessionUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -11164,36 +10224,6 @@ export namespace Prisma {
      * Limit how many StaffSessions to update.
      */
     limit?: number
-  }
-
-  /**
-   * StaffSession updateManyAndReturn
-   */
-  export type StaffSessionUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the StaffSession
-     */
-    select?: StaffSessionSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the StaffSession
-     */
-    omit?: StaffSessionOmit<ExtArgs> | null
-    /**
-     * The data used to update StaffSessions.
-     */
-    data: XOR<StaffSessionUpdateManyMutationInput, StaffSessionUncheckedUpdateManyInput>
-    /**
-     * Filter which StaffSessions to update
-     */
-    where?: StaffSessionWhereInput
-    /**
-     * Limit how many StaffSessions to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: StaffSessionIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -11625,7 +10655,7 @@ export namespace Prisma {
   export type TopicGroupByOutputType = {
     id: string
     query: string
-    aliases: string[]
+    aliases: JsonValue
     title: string
     summary: string
     categoryId: string | null
@@ -11639,7 +10669,7 @@ export namespace Prisma {
     seoOpportunity: number
     confidence: number
     termType: string
-    emotionalTriggers: string[]
+    emotionalTriggers: JsonValue
     requiresHumanReview: boolean
     scoreSummary: string
     weightsVersion: string
@@ -11719,79 +10749,7 @@ export namespace Prisma {
     _count?: boolean | TopicCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["topic"]>
 
-  export type TopicSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    query?: boolean
-    aliases?: boolean
-    title?: boolean
-    summary?: boolean
-    categoryId?: boolean
-    sourceUrl?: boolean
-    sourceName?: boolean
-    sourceTier?: boolean
-    dedupeHash?: boolean
-    currentScore?: boolean
-    currentBand?: boolean
-    scoreDelta1h?: boolean
-    seoOpportunity?: boolean
-    confidence?: boolean
-    termType?: boolean
-    emotionalTriggers?: boolean
-    requiresHumanReview?: boolean
-    scoreSummary?: boolean
-    weightsVersion?: boolean
-    manualScoreOverride?: boolean
-    manualOverrideReason?: boolean
-    manualOverrideById?: boolean
-    manualOverrideAt?: boolean
-    status?: boolean
-    firstSeenAt?: boolean
-    lastScoredAt?: boolean
-    becameHotAt?: boolean
-    claimedAt?: boolean
-    claimedById?: boolean
-    publishedAt?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-    category?: boolean | Topic$categoryArgs<ExtArgs>
-  }, ExtArgs["result"]["topic"]>
 
-  export type TopicSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    query?: boolean
-    aliases?: boolean
-    title?: boolean
-    summary?: boolean
-    categoryId?: boolean
-    sourceUrl?: boolean
-    sourceName?: boolean
-    sourceTier?: boolean
-    dedupeHash?: boolean
-    currentScore?: boolean
-    currentBand?: boolean
-    scoreDelta1h?: boolean
-    seoOpportunity?: boolean
-    confidence?: boolean
-    termType?: boolean
-    emotionalTriggers?: boolean
-    requiresHumanReview?: boolean
-    scoreSummary?: boolean
-    weightsVersion?: boolean
-    manualScoreOverride?: boolean
-    manualOverrideReason?: boolean
-    manualOverrideById?: boolean
-    manualOverrideAt?: boolean
-    status?: boolean
-    firstSeenAt?: boolean
-    lastScoredAt?: boolean
-    becameHotAt?: boolean
-    claimedAt?: boolean
-    claimedById?: boolean
-    publishedAt?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-    category?: boolean | Topic$categoryArgs<ExtArgs>
-  }, ExtArgs["result"]["topic"]>
 
   export type TopicSelectScalar = {
     id?: boolean
@@ -11838,12 +10796,6 @@ export namespace Prisma {
     signalReadings?: boolean | Topic$signalReadingsArgs<ExtArgs>
     _count?: boolean | TopicCountOutputTypeDefaultArgs<ExtArgs>
   }
-  export type TopicIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    category?: boolean | Topic$categoryArgs<ExtArgs>
-  }
-  export type TopicIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    category?: boolean | Topic$categoryArgs<ExtArgs>
-  }
 
   export type $TopicPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Topic"
@@ -11858,9 +10810,20 @@ export namespace Prisma {
       id: string
       /**
        * Termo canônico usado nas consultas aos conectores.
+       * 
+       * ⚠ `VarChar(255)` NÃO É ENFEITE — é o campo mais perigoso desta migração.
+       * `services/curator/src/pipeline/curate.ts` grava `item.title.slice(0, 200)`,
+       * ou seja, um valor que pode ter 200 caracteres: 9 a mais que o `VARCHAR(191)`
+       * que o Prisma usaria por padrão. Com o padrão, TODA manchete longa derrubaria
+       * a transação inteira do ciclo de curadoria com erro 1406 — dentro de um
+       * processo de fundo, onde ninguém veria o erro até o score parar de atualizar.
        */
       query: string
-      aliases: string[]
+      /**
+       * Sinônimos do termo. Era `String[]`; ver `Franchise.aliases` para o racional
+       * completo da troca por `Json`.
+       */
+      aliases: Prisma.JsonValue
       title: string
       summary: string
       categoryId: string | null
@@ -11885,7 +10848,12 @@ export namespace Prisma {
       seoOpportunity: number
       confidence: number
       termType: string
-      emotionalTriggers: string[]
+      /**
+       * Gatilhos emocionais detectados pelo motor de score ('leak', 'hype'...).
+       * Era `String[]`; ver `Franchise.aliases`. Lido só para exibição no painel
+       * (`admin/page.tsx` → `topic-row.tsx`), nunca filtrado no banco.
+       */
+      emotionalTriggers: Prisma.JsonValue
       requiresHumanReview: boolean
       scoreSummary: string
       weightsVersion: string
@@ -12033,30 +11001,6 @@ export namespace Prisma {
     createMany<T extends TopicCreateManyArgs>(args?: SelectSubset<T, TopicCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many Topics and returns the data saved in the database.
-     * @param {TopicCreateManyAndReturnArgs} args - Arguments to create many Topics.
-     * @example
-     * // Create many Topics
-     * const topic = await prisma.topic.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many Topics and only return the `id`
-     * const topicWithIdOnly = await prisma.topic.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends TopicCreateManyAndReturnArgs>(args?: SelectSubset<T, TopicCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TopicPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a Topic.
      * @param {TopicDeleteArgs} args - Arguments to delete one Topic.
      * @example
@@ -12119,36 +11063,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends TopicUpdateManyArgs>(args: SelectSubset<T, TopicUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more Topics and returns the data updated in the database.
-     * @param {TopicUpdateManyAndReturnArgs} args - Arguments to update many Topics.
-     * @example
-     * // Update many Topics
-     * const topic = await prisma.topic.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more Topics and only return the `id`
-     * const topicWithIdOnly = await prisma.topic.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends TopicUpdateManyAndReturnArgs>(args: SelectSubset<T, TopicUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TopicPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one Topic.
@@ -12345,7 +11259,7 @@ export namespace Prisma {
   interface TopicFieldRefs {
     readonly id: FieldRef<"Topic", 'String'>
     readonly query: FieldRef<"Topic", 'String'>
-    readonly aliases: FieldRef<"Topic", 'String[]'>
+    readonly aliases: FieldRef<"Topic", 'Json'>
     readonly title: FieldRef<"Topic", 'String'>
     readonly summary: FieldRef<"Topic", 'String'>
     readonly categoryId: FieldRef<"Topic", 'String'>
@@ -12359,7 +11273,7 @@ export namespace Prisma {
     readonly seoOpportunity: FieldRef<"Topic", 'Float'>
     readonly confidence: FieldRef<"Topic", 'Float'>
     readonly termType: FieldRef<"Topic", 'String'>
-    readonly emotionalTriggers: FieldRef<"Topic", 'String[]'>
+    readonly emotionalTriggers: FieldRef<"Topic", 'Json'>
     readonly requiresHumanReview: FieldRef<"Topic", 'Boolean'>
     readonly scoreSummary: FieldRef<"Topic", 'String'>
     readonly weightsVersion: FieldRef<"Topic", 'String'>
@@ -12609,29 +11523,6 @@ export namespace Prisma {
   }
 
   /**
-   * Topic createManyAndReturn
-   */
-  export type TopicCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Topic
-     */
-    select?: TopicSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Topic
-     */
-    omit?: TopicOmit<ExtArgs> | null
-    /**
-     * The data used to create many Topics.
-     */
-    data: TopicCreateManyInput | TopicCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TopicIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * Topic update
    */
   export type TopicUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -12673,36 +11564,6 @@ export namespace Prisma {
      * Limit how many Topics to update.
      */
     limit?: number
-  }
-
-  /**
-   * Topic updateManyAndReturn
-   */
-  export type TopicUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Topic
-     */
-    select?: TopicSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Topic
-     */
-    omit?: TopicOmit<ExtArgs> | null
-    /**
-     * The data used to update Topics.
-     */
-    data: XOR<TopicUpdateManyMutationInput, TopicUncheckedUpdateManyInput>
-    /**
-     * Filter which Topics to update
-     */
-    where?: TopicWhereInput
-    /**
-     * Limit how many Topics to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TopicIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -13049,19 +11910,7 @@ export namespace Prisma {
     franchise?: boolean | FranchiseDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["topicFranchise"]>
 
-  export type TopicFranchiseSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    topicId?: boolean
-    franchiseId?: boolean
-    topic?: boolean | TopicDefaultArgs<ExtArgs>
-    franchise?: boolean | FranchiseDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["topicFranchise"]>
 
-  export type TopicFranchiseSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    topicId?: boolean
-    franchiseId?: boolean
-    topic?: boolean | TopicDefaultArgs<ExtArgs>
-    franchise?: boolean | FranchiseDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["topicFranchise"]>
 
   export type TopicFranchiseSelectScalar = {
     topicId?: boolean
@@ -13070,14 +11919,6 @@ export namespace Prisma {
 
   export type TopicFranchiseOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"topicId" | "franchiseId", ExtArgs["result"]["topicFranchise"]>
   export type TopicFranchiseInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    topic?: boolean | TopicDefaultArgs<ExtArgs>
-    franchise?: boolean | FranchiseDefaultArgs<ExtArgs>
-  }
-  export type TopicFranchiseIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    topic?: boolean | TopicDefaultArgs<ExtArgs>
-    franchise?: boolean | FranchiseDefaultArgs<ExtArgs>
-  }
-  export type TopicFranchiseIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     topic?: boolean | TopicDefaultArgs<ExtArgs>
     franchise?: boolean | FranchiseDefaultArgs<ExtArgs>
   }
@@ -13209,30 +12050,6 @@ export namespace Prisma {
     createMany<T extends TopicFranchiseCreateManyArgs>(args?: SelectSubset<T, TopicFranchiseCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many TopicFranchises and returns the data saved in the database.
-     * @param {TopicFranchiseCreateManyAndReturnArgs} args - Arguments to create many TopicFranchises.
-     * @example
-     * // Create many TopicFranchises
-     * const topicFranchise = await prisma.topicFranchise.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many TopicFranchises and only return the `topicId`
-     * const topicFranchiseWithTopicIdOnly = await prisma.topicFranchise.createManyAndReturn({
-     *   select: { topicId: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends TopicFranchiseCreateManyAndReturnArgs>(args?: SelectSubset<T, TopicFranchiseCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TopicFranchisePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a TopicFranchise.
      * @param {TopicFranchiseDeleteArgs} args - Arguments to delete one TopicFranchise.
      * @example
@@ -13295,36 +12112,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends TopicFranchiseUpdateManyArgs>(args: SelectSubset<T, TopicFranchiseUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more TopicFranchises and returns the data updated in the database.
-     * @param {TopicFranchiseUpdateManyAndReturnArgs} args - Arguments to update many TopicFranchises.
-     * @example
-     * // Update many TopicFranchises
-     * const topicFranchise = await prisma.topicFranchise.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more TopicFranchises and only return the `topicId`
-     * const topicFranchiseWithTopicIdOnly = await prisma.topicFranchise.updateManyAndReturn({
-     *   select: { topicId: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends TopicFranchiseUpdateManyAndReturnArgs>(args: SelectSubset<T, TopicFranchiseUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$TopicFranchisePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one TopicFranchise.
@@ -13751,29 +12538,6 @@ export namespace Prisma {
   }
 
   /**
-   * TopicFranchise createManyAndReturn
-   */
-  export type TopicFranchiseCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TopicFranchise
-     */
-    select?: TopicFranchiseSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the TopicFranchise
-     */
-    omit?: TopicFranchiseOmit<ExtArgs> | null
-    /**
-     * The data used to create many TopicFranchises.
-     */
-    data: TopicFranchiseCreateManyInput | TopicFranchiseCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TopicFranchiseIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * TopicFranchise update
    */
   export type TopicFranchiseUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -13815,36 +12579,6 @@ export namespace Prisma {
      * Limit how many TopicFranchises to update.
      */
     limit?: number
-  }
-
-  /**
-   * TopicFranchise updateManyAndReturn
-   */
-  export type TopicFranchiseUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the TopicFranchise
-     */
-    select?: TopicFranchiseSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the TopicFranchise
-     */
-    omit?: TopicFranchiseOmit<ExtArgs> | null
-    /**
-     * The data used to update TopicFranchises.
-     */
-    data: XOR<TopicFranchiseUpdateManyMutationInput, TopicFranchiseUncheckedUpdateManyInput>
-    /**
-     * Filter which TopicFranchises to update
-     */
-    where?: TopicFranchiseWhereInput
-    /**
-     * Limit how many TopicFranchises to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: TopicFranchiseIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -14177,33 +12911,7 @@ export namespace Prisma {
     topic?: boolean | TopicDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["scoreSnapshot"]>
 
-  export type ScoreSnapshotSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    topicId?: boolean
-    score?: boolean
-    band?: boolean
-    seoOpportunity?: boolean
-    confidence?: boolean
-    contributions?: boolean
-    weightsVersion?: boolean
-    isShadow?: boolean
-    calculatedAt?: boolean
-    topic?: boolean | TopicDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["scoreSnapshot"]>
 
-  export type ScoreSnapshotSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    topicId?: boolean
-    score?: boolean
-    band?: boolean
-    seoOpportunity?: boolean
-    confidence?: boolean
-    contributions?: boolean
-    weightsVersion?: boolean
-    isShadow?: boolean
-    calculatedAt?: boolean
-    topic?: boolean | TopicDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["scoreSnapshot"]>
 
   export type ScoreSnapshotSelectScalar = {
     id?: boolean
@@ -14220,12 +12928,6 @@ export namespace Prisma {
 
   export type ScoreSnapshotOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "topicId" | "score" | "band" | "seoOpportunity" | "confidence" | "contributions" | "weightsVersion" | "isShadow" | "calculatedAt", ExtArgs["result"]["scoreSnapshot"]>
   export type ScoreSnapshotInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    topic?: boolean | TopicDefaultArgs<ExtArgs>
-  }
-  export type ScoreSnapshotIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    topic?: boolean | TopicDefaultArgs<ExtArgs>
-  }
-  export type ScoreSnapshotIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     topic?: boolean | TopicDefaultArgs<ExtArgs>
   }
 
@@ -14372,30 +13074,6 @@ export namespace Prisma {
     createMany<T extends ScoreSnapshotCreateManyArgs>(args?: SelectSubset<T, ScoreSnapshotCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many ScoreSnapshots and returns the data saved in the database.
-     * @param {ScoreSnapshotCreateManyAndReturnArgs} args - Arguments to create many ScoreSnapshots.
-     * @example
-     * // Create many ScoreSnapshots
-     * const scoreSnapshot = await prisma.scoreSnapshot.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many ScoreSnapshots and only return the `id`
-     * const scoreSnapshotWithIdOnly = await prisma.scoreSnapshot.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends ScoreSnapshotCreateManyAndReturnArgs>(args?: SelectSubset<T, ScoreSnapshotCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ScoreSnapshotPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a ScoreSnapshot.
      * @param {ScoreSnapshotDeleteArgs} args - Arguments to delete one ScoreSnapshot.
      * @example
@@ -14458,36 +13136,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends ScoreSnapshotUpdateManyArgs>(args: SelectSubset<T, ScoreSnapshotUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more ScoreSnapshots and returns the data updated in the database.
-     * @param {ScoreSnapshotUpdateManyAndReturnArgs} args - Arguments to update many ScoreSnapshots.
-     * @example
-     * // Update many ScoreSnapshots
-     * const scoreSnapshot = await prisma.scoreSnapshot.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more ScoreSnapshots and only return the `id`
-     * const scoreSnapshotWithIdOnly = await prisma.scoreSnapshot.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends ScoreSnapshotUpdateManyAndReturnArgs>(args: SelectSubset<T, ScoreSnapshotUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ScoreSnapshotPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one ScoreSnapshot.
@@ -14921,29 +13569,6 @@ export namespace Prisma {
   }
 
   /**
-   * ScoreSnapshot createManyAndReturn
-   */
-  export type ScoreSnapshotCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the ScoreSnapshot
-     */
-    select?: ScoreSnapshotSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the ScoreSnapshot
-     */
-    omit?: ScoreSnapshotOmit<ExtArgs> | null
-    /**
-     * The data used to create many ScoreSnapshots.
-     */
-    data: ScoreSnapshotCreateManyInput | ScoreSnapshotCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: ScoreSnapshotIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * ScoreSnapshot update
    */
   export type ScoreSnapshotUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -14985,36 +13610,6 @@ export namespace Prisma {
      * Limit how many ScoreSnapshots to update.
      */
     limit?: number
-  }
-
-  /**
-   * ScoreSnapshot updateManyAndReturn
-   */
-  export type ScoreSnapshotUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the ScoreSnapshot
-     */
-    select?: ScoreSnapshotSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the ScoreSnapshot
-     */
-    omit?: ScoreSnapshotOmit<ExtArgs> | null
-    /**
-     * The data used to update ScoreSnapshots.
-     */
-    data: XOR<ScoreSnapshotUpdateManyMutationInput, ScoreSnapshotUncheckedUpdateManyInput>
-    /**
-     * Filter which ScoreSnapshots to update
-     */
-    where?: ScoreSnapshotWhereInput
-    /**
-     * Limit how many ScoreSnapshots to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: ScoreSnapshotIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -15343,33 +13938,7 @@ export namespace Prisma {
     topic?: boolean | TopicDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["signalReading"]>
 
-  export type SignalReadingSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    topicId?: boolean
-    connectorId?: boolean
-    dimension?: boolean
-    value?: boolean
-    rawValue?: boolean
-    confidence?: boolean
-    explanation?: boolean
-    rawPayload?: boolean
-    observedAt?: boolean
-    topic?: boolean | TopicDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["signalReading"]>
 
-  export type SignalReadingSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    topicId?: boolean
-    connectorId?: boolean
-    dimension?: boolean
-    value?: boolean
-    rawValue?: boolean
-    confidence?: boolean
-    explanation?: boolean
-    rawPayload?: boolean
-    observedAt?: boolean
-    topic?: boolean | TopicDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["signalReading"]>
 
   export type SignalReadingSelectScalar = {
     id?: boolean
@@ -15386,12 +13955,6 @@ export namespace Prisma {
 
   export type SignalReadingOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "topicId" | "connectorId" | "dimension" | "value" | "rawValue" | "confidence" | "explanation" | "rawPayload" | "observedAt", ExtArgs["result"]["signalReading"]>
   export type SignalReadingInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    topic?: boolean | TopicDefaultArgs<ExtArgs>
-  }
-  export type SignalReadingIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    topic?: boolean | TopicDefaultArgs<ExtArgs>
-  }
-  export type SignalReadingIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     topic?: boolean | TopicDefaultArgs<ExtArgs>
   }
 
@@ -15532,30 +14095,6 @@ export namespace Prisma {
     createMany<T extends SignalReadingCreateManyArgs>(args?: SelectSubset<T, SignalReadingCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many SignalReadings and returns the data saved in the database.
-     * @param {SignalReadingCreateManyAndReturnArgs} args - Arguments to create many SignalReadings.
-     * @example
-     * // Create many SignalReadings
-     * const signalReading = await prisma.signalReading.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many SignalReadings and only return the `id`
-     * const signalReadingWithIdOnly = await prisma.signalReading.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends SignalReadingCreateManyAndReturnArgs>(args?: SelectSubset<T, SignalReadingCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SignalReadingPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a SignalReading.
      * @param {SignalReadingDeleteArgs} args - Arguments to delete one SignalReading.
      * @example
@@ -15618,36 +14157,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends SignalReadingUpdateManyArgs>(args: SelectSubset<T, SignalReadingUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more SignalReadings and returns the data updated in the database.
-     * @param {SignalReadingUpdateManyAndReturnArgs} args - Arguments to update many SignalReadings.
-     * @example
-     * // Update many SignalReadings
-     * const signalReading = await prisma.signalReading.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more SignalReadings and only return the `id`
-     * const signalReadingWithIdOnly = await prisma.signalReading.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends SignalReadingUpdateManyAndReturnArgs>(args: SelectSubset<T, SignalReadingUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SignalReadingPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one SignalReading.
@@ -16081,29 +14590,6 @@ export namespace Prisma {
   }
 
   /**
-   * SignalReading createManyAndReturn
-   */
-  export type SignalReadingCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the SignalReading
-     */
-    select?: SignalReadingSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the SignalReading
-     */
-    omit?: SignalReadingOmit<ExtArgs> | null
-    /**
-     * The data used to create many SignalReadings.
-     */
-    data: SignalReadingCreateManyInput | SignalReadingCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: SignalReadingIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * SignalReading update
    */
   export type SignalReadingUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -16145,36 +14631,6 @@ export namespace Prisma {
      * Limit how many SignalReadings to update.
      */
     limit?: number
-  }
-
-  /**
-   * SignalReading updateManyAndReturn
-   */
-  export type SignalReadingUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the SignalReading
-     */
-    select?: SignalReadingSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the SignalReading
-     */
-    omit?: SignalReadingOmit<ExtArgs> | null
-    /**
-     * The data used to update SignalReadings.
-     */
-    data: XOR<SignalReadingUpdateManyMutationInput, SignalReadingUncheckedUpdateManyInput>
-    /**
-     * Filter which SignalReadings to update
-     */
-    where?: SignalReadingWhereInput
-    /**
-     * Limit how many SignalReadings to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: SignalReadingIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -16558,41 +15014,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }, ExtArgs["result"]["connectorHealth"]>
 
-  export type ConnectorHealthSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    connectorId?: boolean
-    isEnabled?: boolean
-    circuitState?: boolean
-    consecutiveFailures?: boolean
-    totalRuns?: boolean
-    totalFailures?: boolean
-    avgDurationMs?: boolean
-    lastSuccessAt?: boolean
-    lastFailureAt?: boolean
-    lastError?: boolean
-    circuitOpenUntil?: boolean
-    callsThisPeriod?: boolean
-    periodResetAt?: boolean
-    updatedAt?: boolean
-  }, ExtArgs["result"]["connectorHealth"]>
 
-  export type ConnectorHealthSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    connectorId?: boolean
-    isEnabled?: boolean
-    circuitState?: boolean
-    consecutiveFailures?: boolean
-    totalRuns?: boolean
-    totalFailures?: boolean
-    avgDurationMs?: boolean
-    lastSuccessAt?: boolean
-    lastFailureAt?: boolean
-    lastError?: boolean
-    circuitOpenUntil?: boolean
-    callsThisPeriod?: boolean
-    periodResetAt?: boolean
-    updatedAt?: boolean
-  }, ExtArgs["result"]["connectorHealth"]>
 
   export type ConnectorHealthSelectScalar = {
     id?: boolean
@@ -16760,30 +15182,6 @@ export namespace Prisma {
     createMany<T extends ConnectorHealthCreateManyArgs>(args?: SelectSubset<T, ConnectorHealthCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many ConnectorHealths and returns the data saved in the database.
-     * @param {ConnectorHealthCreateManyAndReturnArgs} args - Arguments to create many ConnectorHealths.
-     * @example
-     * // Create many ConnectorHealths
-     * const connectorHealth = await prisma.connectorHealth.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many ConnectorHealths and only return the `id`
-     * const connectorHealthWithIdOnly = await prisma.connectorHealth.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends ConnectorHealthCreateManyAndReturnArgs>(args?: SelectSubset<T, ConnectorHealthCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ConnectorHealthPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a ConnectorHealth.
      * @param {ConnectorHealthDeleteArgs} args - Arguments to delete one ConnectorHealth.
      * @example
@@ -16846,36 +15244,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends ConnectorHealthUpdateManyArgs>(args: SelectSubset<T, ConnectorHealthUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more ConnectorHealths and returns the data updated in the database.
-     * @param {ConnectorHealthUpdateManyAndReturnArgs} args - Arguments to update many ConnectorHealths.
-     * @example
-     * // Update many ConnectorHealths
-     * const connectorHealth = await prisma.connectorHealth.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more ConnectorHealths and only return the `id`
-     * const connectorHealthWithIdOnly = await prisma.connectorHealth.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends ConnectorHealthUpdateManyAndReturnArgs>(args: SelectSubset<T, ConnectorHealthUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ConnectorHealthPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one ConnectorHealth.
@@ -17289,25 +15657,6 @@ export namespace Prisma {
   }
 
   /**
-   * ConnectorHealth createManyAndReturn
-   */
-  export type ConnectorHealthCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the ConnectorHealth
-     */
-    select?: ConnectorHealthSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the ConnectorHealth
-     */
-    omit?: ConnectorHealthOmit<ExtArgs> | null
-    /**
-     * The data used to create many ConnectorHealths.
-     */
-    data: ConnectorHealthCreateManyInput | ConnectorHealthCreateManyInput[]
-    skipDuplicates?: boolean
-  }
-
-  /**
    * ConnectorHealth update
    */
   export type ConnectorHealthUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -17333,32 +15682,6 @@ export namespace Prisma {
    * ConnectorHealth updateMany
    */
   export type ConnectorHealthUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to update ConnectorHealths.
-     */
-    data: XOR<ConnectorHealthUpdateManyMutationInput, ConnectorHealthUncheckedUpdateManyInput>
-    /**
-     * Filter which ConnectorHealths to update
-     */
-    where?: ConnectorHealthWhereInput
-    /**
-     * Limit how many ConnectorHealths to update.
-     */
-    limit?: number
-  }
-
-  /**
-   * ConnectorHealth updateManyAndReturn
-   */
-  export type ConnectorHealthUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the ConnectorHealth
-     */
-    select?: ConnectorHealthSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the ConnectorHealth
-     */
-    omit?: ConnectorHealthOmit<ExtArgs> | null
     /**
      * The data used to update ConnectorHealths.
      */
@@ -17888,7 +16211,7 @@ export namespace Prisma {
     isLive: boolean
     updatesCount: number
     hasSpoiler: boolean
-    tldr: string[]
+    tldr: JsonValue
     reviewData: JsonValue | null
     scoreAtPublish: number | null
     currentScore: number
@@ -17981,103 +16304,7 @@ export namespace Prisma {
     _count?: boolean | ArticleCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["article"]>
 
-  export type ArticleSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    slug?: boolean
-    title?: boolean
-    excerpt?: boolean
-    content?: boolean
-    blocks?: boolean
-    status?: boolean
-    categoryId?: boolean
-    subcategoryId?: boolean
-    authorId?: boolean
-    topicId?: boolean
-    coverImageUrl?: boolean
-    coverImageAlt?: boolean
-    videoUrl?: boolean
-    videoThumbnailUrl?: boolean
-    videoDurationSeconds?: boolean
-    seoTitle?: boolean
-    seoDescription?: boolean
-    canonicalUrl?: boolean
-    noIndex?: boolean
-    isBreaking?: boolean
-    readingMinutes?: boolean
-    format?: boolean
-    isLive?: boolean
-    updatesCount?: boolean
-    hasSpoiler?: boolean
-    tldr?: boolean
-    reviewData?: boolean
-    scoreAtPublish?: boolean
-    currentScore?: boolean
-    currentBand?: boolean
-    scoreDelta1h?: boolean
-    scoreUpdatedAt?: boolean
-    viewCount?: boolean
-    pageviews24h?: boolean
-    avgTimeOnPageSeconds?: boolean
-    scrollDepthAvg?: boolean
-    shareCount?: boolean
-    publishedAt?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-    hasAffiliateLinks?: boolean
-    category?: boolean | CategoryDefaultArgs<ExtArgs>
-    subcategory?: boolean | Article$subcategoryArgs<ExtArgs>
-    author?: boolean | AuthorDefaultArgs<ExtArgs>
-    topic?: boolean | Article$topicArgs<ExtArgs>
-  }, ExtArgs["result"]["article"]>
 
-  export type ArticleSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    slug?: boolean
-    title?: boolean
-    excerpt?: boolean
-    content?: boolean
-    blocks?: boolean
-    status?: boolean
-    categoryId?: boolean
-    subcategoryId?: boolean
-    authorId?: boolean
-    topicId?: boolean
-    coverImageUrl?: boolean
-    coverImageAlt?: boolean
-    videoUrl?: boolean
-    videoThumbnailUrl?: boolean
-    videoDurationSeconds?: boolean
-    seoTitle?: boolean
-    seoDescription?: boolean
-    canonicalUrl?: boolean
-    noIndex?: boolean
-    isBreaking?: boolean
-    readingMinutes?: boolean
-    format?: boolean
-    isLive?: boolean
-    updatesCount?: boolean
-    hasSpoiler?: boolean
-    tldr?: boolean
-    reviewData?: boolean
-    scoreAtPublish?: boolean
-    currentScore?: boolean
-    currentBand?: boolean
-    scoreDelta1h?: boolean
-    scoreUpdatedAt?: boolean
-    viewCount?: boolean
-    pageviews24h?: boolean
-    avgTimeOnPageSeconds?: boolean
-    scrollDepthAvg?: boolean
-    shareCount?: boolean
-    publishedAt?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-    hasAffiliateLinks?: boolean
-    category?: boolean | CategoryDefaultArgs<ExtArgs>
-    subcategory?: boolean | Article$subcategoryArgs<ExtArgs>
-    author?: boolean | AuthorDefaultArgs<ExtArgs>
-    topic?: boolean | Article$topicArgs<ExtArgs>
-  }, ExtArgs["result"]["article"]>
 
   export type ArticleSelectScalar = {
     id?: boolean
@@ -18138,18 +16365,6 @@ export namespace Prisma {
     comments?: boolean | Article$commentsArgs<ExtArgs>
     _count?: boolean | ArticleCountOutputTypeDefaultArgs<ExtArgs>
   }
-  export type ArticleIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    category?: boolean | CategoryDefaultArgs<ExtArgs>
-    subcategory?: boolean | Article$subcategoryArgs<ExtArgs>
-    author?: boolean | AuthorDefaultArgs<ExtArgs>
-    topic?: boolean | Article$topicArgs<ExtArgs>
-  }
-  export type ArticleIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    category?: boolean | CategoryDefaultArgs<ExtArgs>
-    subcategory?: boolean | Article$subcategoryArgs<ExtArgs>
-    author?: boolean | AuthorDefaultArgs<ExtArgs>
-    topic?: boolean | Article$topicArgs<ExtArgs>
-  }
 
   export type $ArticlePayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "Article"
@@ -18180,11 +16395,20 @@ export namespace Prisma {
        * deixa de ser o que o leitor vê e passa a ser uma PROJEÇÃO EM TEXTO PURO dos
        * blocos, gravada pelo servidor a cada salvamento. Ela continua existindo por
        * dois motivos concretos, e nenhum deles é nostalgia:
-       * 1. `searchVector` é coluna GERADA a partir de title/excerpt/content — se
-       * o corpo saísse daqui, toda matéria escrita em blocos ficaria invisível
-       * na busca do site, sem nenhum erro aparecer em lugar nenhum;
+       * 1. é UMA DAS COLUNAS DO ÍNDICE FULLTEXT da busca — se o corpo saísse
+       * daqui, toda matéria escrita em blocos ficaria invisível na busca do
+       * site, sem nenhum erro aparecer em lugar nenhum;
        * 2. é a rede de segurança de renderização: `blocks` nulo (as matérias
        * antigas) continua caindo no renderizador de Markdown de sempre.
+       * 
+       * ⚠ POR QUE `MediumText` E NÃO `Text`, que seria o padrão para texto livre:
+       * `TEXT` no MySQL guarda 65.535 BYTES — não caracteres. O validador de
+       * entrada (`server/article-input.ts`) aceita até 20.000 CARACTERES neste
+       * campo. Em português puro isso dá uns 21 KB e caberia; mas `utf8mb4` gasta
+       * até 4 bytes por caractere, então 20.000 caracteres de emoji dão 80 KB e
+       * ESTOURAM o `TEXT`. O modo de falha seria o pior possível: erro 1406 na hora
+       * de publicar, numa matéria específica que ninguém consegue reproduzir.
+       * `MEDIUMTEXT` (16 MB) custa 1 byte a mais por linha e encerra a dúvida.
        */
       content: string
       /**
@@ -18262,8 +16486,15 @@ export namespace Prisma {
       /**
        * Resumo em 3 a 5 bullets. OBRIGATÓRIO em 'breaking' e 'review' — a
        * validação vive em core/presentation.ts e é aplicada no painel editorial.
+       * 
+       * Era `String[]`; virou `Json` (ver `Franchise.aliases`). É o array com mais
+       * pontos de leitura do projeto — `queries.ts`, a página do artigo e os dois
+       * formulários do admin —, e todos continuam tratando o valor como
+       * `string[]`. O que muda é DE ONDE vem essa garantia: antes era o tipo da
+       * coluna, agora é o `CardRow`/`toCardData` na borda de leitura. Por isso a
+       * leitura passa por um normalizador em vez de confiar no que vier do banco.
        */
-      tldr: string[]
+      tldr: Prisma.JsonValue
       /**
        * Dados de análise, quando format = 'review'. Json porque a estrutura
        * (nota, prós, contras) só existe para um formato entre oito — colunas
@@ -18430,30 +16661,6 @@ export namespace Prisma {
     createMany<T extends ArticleCreateManyArgs>(args?: SelectSubset<T, ArticleCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many Articles and returns the data saved in the database.
-     * @param {ArticleCreateManyAndReturnArgs} args - Arguments to create many Articles.
-     * @example
-     * // Create many Articles
-     * const article = await prisma.article.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many Articles and only return the `id`
-     * const articleWithIdOnly = await prisma.article.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends ArticleCreateManyAndReturnArgs>(args?: SelectSubset<T, ArticleCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ArticlePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a Article.
      * @param {ArticleDeleteArgs} args - Arguments to delete one Article.
      * @example
@@ -18516,36 +16723,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends ArticleUpdateManyArgs>(args: SelectSubset<T, ArticleUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more Articles and returns the data updated in the database.
-     * @param {ArticleUpdateManyAndReturnArgs} args - Arguments to update many Articles.
-     * @example
-     * // Update many Articles
-     * const article = await prisma.article.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more Articles and only return the `id`
-     * const articleWithIdOnly = await prisma.article.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends ArticleUpdateManyAndReturnArgs>(args: SelectSubset<T, ArticleUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ArticlePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one Article.
@@ -18771,7 +16948,7 @@ export namespace Prisma {
     readonly isLive: FieldRef<"Article", 'Boolean'>
     readonly updatesCount: FieldRef<"Article", 'Int'>
     readonly hasSpoiler: FieldRef<"Article", 'Boolean'>
-    readonly tldr: FieldRef<"Article", 'String[]'>
+    readonly tldr: FieldRef<"Article", 'Json'>
     readonly reviewData: FieldRef<"Article", 'Json'>
     readonly scoreAtPublish: FieldRef<"Article", 'Float'>
     readonly currentScore: FieldRef<"Article", 'Float'>
@@ -19020,29 +17197,6 @@ export namespace Prisma {
   }
 
   /**
-   * Article createManyAndReturn
-   */
-  export type ArticleCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Article
-     */
-    select?: ArticleSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Article
-     */
-    omit?: ArticleOmit<ExtArgs> | null
-    /**
-     * The data used to create many Articles.
-     */
-    data: ArticleCreateManyInput | ArticleCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: ArticleIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * Article update
    */
   export type ArticleUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -19084,36 +17238,6 @@ export namespace Prisma {
      * Limit how many Articles to update.
      */
     limit?: number
-  }
-
-  /**
-   * Article updateManyAndReturn
-   */
-  export type ArticleUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Article
-     */
-    select?: ArticleSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Article
-     */
-    omit?: ArticleOmit<ExtArgs> | null
-    /**
-     * The data used to update Articles.
-     */
-    data: XOR<ArticleUpdateManyMutationInput, ArticleUncheckedUpdateManyInput>
-    /**
-     * Filter which Articles to update
-     */
-    where?: ArticleWhereInput
-    /**
-     * Limit how many Articles to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: ArticleIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -19527,19 +17651,7 @@ export namespace Prisma {
     franchise?: boolean | FranchiseDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["articleFranchise"]>
 
-  export type ArticleFranchiseSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    articleId?: boolean
-    franchiseId?: boolean
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-    franchise?: boolean | FranchiseDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["articleFranchise"]>
 
-  export type ArticleFranchiseSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    articleId?: boolean
-    franchiseId?: boolean
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-    franchise?: boolean | FranchiseDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["articleFranchise"]>
 
   export type ArticleFranchiseSelectScalar = {
     articleId?: boolean
@@ -19548,14 +17660,6 @@ export namespace Prisma {
 
   export type ArticleFranchiseOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"articleId" | "franchiseId", ExtArgs["result"]["articleFranchise"]>
   export type ArticleFranchiseInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-    franchise?: boolean | FranchiseDefaultArgs<ExtArgs>
-  }
-  export type ArticleFranchiseIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-    franchise?: boolean | FranchiseDefaultArgs<ExtArgs>
-  }
-  export type ArticleFranchiseIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     article?: boolean | ArticleDefaultArgs<ExtArgs>
     franchise?: boolean | FranchiseDefaultArgs<ExtArgs>
   }
@@ -19687,30 +17791,6 @@ export namespace Prisma {
     createMany<T extends ArticleFranchiseCreateManyArgs>(args?: SelectSubset<T, ArticleFranchiseCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many ArticleFranchises and returns the data saved in the database.
-     * @param {ArticleFranchiseCreateManyAndReturnArgs} args - Arguments to create many ArticleFranchises.
-     * @example
-     * // Create many ArticleFranchises
-     * const articleFranchise = await prisma.articleFranchise.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many ArticleFranchises and only return the `articleId`
-     * const articleFranchiseWithArticleIdOnly = await prisma.articleFranchise.createManyAndReturn({
-     *   select: { articleId: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends ArticleFranchiseCreateManyAndReturnArgs>(args?: SelectSubset<T, ArticleFranchiseCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ArticleFranchisePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a ArticleFranchise.
      * @param {ArticleFranchiseDeleteArgs} args - Arguments to delete one ArticleFranchise.
      * @example
@@ -19773,36 +17853,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends ArticleFranchiseUpdateManyArgs>(args: SelectSubset<T, ArticleFranchiseUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more ArticleFranchises and returns the data updated in the database.
-     * @param {ArticleFranchiseUpdateManyAndReturnArgs} args - Arguments to update many ArticleFranchises.
-     * @example
-     * // Update many ArticleFranchises
-     * const articleFranchise = await prisma.articleFranchise.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more ArticleFranchises and only return the `articleId`
-     * const articleFranchiseWithArticleIdOnly = await prisma.articleFranchise.updateManyAndReturn({
-     *   select: { articleId: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends ArticleFranchiseUpdateManyAndReturnArgs>(args: SelectSubset<T, ArticleFranchiseUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ArticleFranchisePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one ArticleFranchise.
@@ -20229,29 +18279,6 @@ export namespace Prisma {
   }
 
   /**
-   * ArticleFranchise createManyAndReturn
-   */
-  export type ArticleFranchiseCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the ArticleFranchise
-     */
-    select?: ArticleFranchiseSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the ArticleFranchise
-     */
-    omit?: ArticleFranchiseOmit<ExtArgs> | null
-    /**
-     * The data used to create many ArticleFranchises.
-     */
-    data: ArticleFranchiseCreateManyInput | ArticleFranchiseCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: ArticleFranchiseIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * ArticleFranchise update
    */
   export type ArticleFranchiseUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -20293,36 +18320,6 @@ export namespace Prisma {
      * Limit how many ArticleFranchises to update.
      */
     limit?: number
-  }
-
-  /**
-   * ArticleFranchise updateManyAndReturn
-   */
-  export type ArticleFranchiseUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the ArticleFranchise
-     */
-    select?: ArticleFranchiseSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the ArticleFranchise
-     */
-    omit?: ArticleFranchiseOmit<ExtArgs> | null
-    /**
-     * The data used to update ArticleFranchises.
-     */
-    data: XOR<ArticleFranchiseUpdateManyMutationInput, ArticleFranchiseUncheckedUpdateManyInput>
-    /**
-     * Filter which ArticleFranchises to update
-     */
-    where?: ArticleFranchiseWhereInput
-    /**
-     * Limit how many ArticleFranchises to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: ArticleFranchiseIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -20554,19 +18551,7 @@ export namespace Prisma {
     tag?: boolean | TagDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["articleTag"]>
 
-  export type ArticleTagSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    articleId?: boolean
-    tagId?: boolean
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-    tag?: boolean | TagDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["articleTag"]>
 
-  export type ArticleTagSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    articleId?: boolean
-    tagId?: boolean
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-    tag?: boolean | TagDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["articleTag"]>
 
   export type ArticleTagSelectScalar = {
     articleId?: boolean
@@ -20575,14 +18560,6 @@ export namespace Prisma {
 
   export type ArticleTagOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"articleId" | "tagId", ExtArgs["result"]["articleTag"]>
   export type ArticleTagInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-    tag?: boolean | TagDefaultArgs<ExtArgs>
-  }
-  export type ArticleTagIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-    tag?: boolean | TagDefaultArgs<ExtArgs>
-  }
-  export type ArticleTagIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     article?: boolean | ArticleDefaultArgs<ExtArgs>
     tag?: boolean | TagDefaultArgs<ExtArgs>
   }
@@ -20714,30 +18691,6 @@ export namespace Prisma {
     createMany<T extends ArticleTagCreateManyArgs>(args?: SelectSubset<T, ArticleTagCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many ArticleTags and returns the data saved in the database.
-     * @param {ArticleTagCreateManyAndReturnArgs} args - Arguments to create many ArticleTags.
-     * @example
-     * // Create many ArticleTags
-     * const articleTag = await prisma.articleTag.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many ArticleTags and only return the `articleId`
-     * const articleTagWithArticleIdOnly = await prisma.articleTag.createManyAndReturn({
-     *   select: { articleId: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends ArticleTagCreateManyAndReturnArgs>(args?: SelectSubset<T, ArticleTagCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ArticleTagPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a ArticleTag.
      * @param {ArticleTagDeleteArgs} args - Arguments to delete one ArticleTag.
      * @example
@@ -20800,36 +18753,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends ArticleTagUpdateManyArgs>(args: SelectSubset<T, ArticleTagUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more ArticleTags and returns the data updated in the database.
-     * @param {ArticleTagUpdateManyAndReturnArgs} args - Arguments to update many ArticleTags.
-     * @example
-     * // Update many ArticleTags
-     * const articleTag = await prisma.articleTag.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more ArticleTags and only return the `articleId`
-     * const articleTagWithArticleIdOnly = await prisma.articleTag.updateManyAndReturn({
-     *   select: { articleId: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends ArticleTagUpdateManyAndReturnArgs>(args: SelectSubset<T, ArticleTagUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ArticleTagPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one ArticleTag.
@@ -21256,29 +19179,6 @@ export namespace Prisma {
   }
 
   /**
-   * ArticleTag createManyAndReturn
-   */
-  export type ArticleTagCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the ArticleTag
-     */
-    select?: ArticleTagSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the ArticleTag
-     */
-    omit?: ArticleTagOmit<ExtArgs> | null
-    /**
-     * The data used to create many ArticleTags.
-     */
-    data: ArticleTagCreateManyInput | ArticleTagCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: ArticleTagIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * ArticleTag update
    */
   export type ArticleTagUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -21320,36 +19220,6 @@ export namespace Prisma {
      * Limit how many ArticleTags to update.
      */
     limit?: number
-  }
-
-  /**
-   * ArticleTag updateManyAndReturn
-   */
-  export type ArticleTagUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the ArticleTag
-     */
-    select?: ArticleTagSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the ArticleTag
-     */
-    omit?: ArticleTagOmit<ExtArgs> | null
-    /**
-     * The data used to update ArticleTags.
-     */
-    data: XOR<ArticleTagUpdateManyMutationInput, ArticleTagUncheckedUpdateManyInput>
-    /**
-     * Filter which ArticleTags to update
-     */
-    where?: ArticleTagWhereInput
-    /**
-     * Limit how many ArticleTags to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: ArticleTagIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -21612,25 +19482,7 @@ export namespace Prisma {
     article?: boolean | ArticleDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["liveUpdate"]>
 
-  export type LiveUpdateSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    articleId?: boolean
-    content?: boolean
-    isHighlight?: boolean
-    authorName?: boolean
-    createdAt?: boolean
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["liveUpdate"]>
 
-  export type LiveUpdateSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    articleId?: boolean
-    content?: boolean
-    isHighlight?: boolean
-    authorName?: boolean
-    createdAt?: boolean
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["liveUpdate"]>
 
   export type LiveUpdateSelectScalar = {
     id?: boolean
@@ -21643,12 +19495,6 @@ export namespace Prisma {
 
   export type LiveUpdateOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "articleId" | "content" | "isHighlight" | "authorName" | "createdAt", ExtArgs["result"]["liveUpdate"]>
   export type LiveUpdateInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-  }
-  export type LiveUpdateIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-  }
-  export type LiveUpdateIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     article?: boolean | ArticleDefaultArgs<ExtArgs>
   }
 
@@ -21782,30 +19628,6 @@ export namespace Prisma {
     createMany<T extends LiveUpdateCreateManyArgs>(args?: SelectSubset<T, LiveUpdateCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many LiveUpdates and returns the data saved in the database.
-     * @param {LiveUpdateCreateManyAndReturnArgs} args - Arguments to create many LiveUpdates.
-     * @example
-     * // Create many LiveUpdates
-     * const liveUpdate = await prisma.liveUpdate.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many LiveUpdates and only return the `id`
-     * const liveUpdateWithIdOnly = await prisma.liveUpdate.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends LiveUpdateCreateManyAndReturnArgs>(args?: SelectSubset<T, LiveUpdateCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$LiveUpdatePayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a LiveUpdate.
      * @param {LiveUpdateDeleteArgs} args - Arguments to delete one LiveUpdate.
      * @example
@@ -21868,36 +19690,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends LiveUpdateUpdateManyArgs>(args: SelectSubset<T, LiveUpdateUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more LiveUpdates and returns the data updated in the database.
-     * @param {LiveUpdateUpdateManyAndReturnArgs} args - Arguments to update many LiveUpdates.
-     * @example
-     * // Update many LiveUpdates
-     * const liveUpdate = await prisma.liveUpdate.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more LiveUpdates and only return the `id`
-     * const liveUpdateWithIdOnly = await prisma.liveUpdate.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends LiveUpdateUpdateManyAndReturnArgs>(args: SelectSubset<T, LiveUpdateUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$LiveUpdatePayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one LiveUpdate.
@@ -22327,29 +20119,6 @@ export namespace Prisma {
   }
 
   /**
-   * LiveUpdate createManyAndReturn
-   */
-  export type LiveUpdateCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the LiveUpdate
-     */
-    select?: LiveUpdateSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the LiveUpdate
-     */
-    omit?: LiveUpdateOmit<ExtArgs> | null
-    /**
-     * The data used to create many LiveUpdates.
-     */
-    data: LiveUpdateCreateManyInput | LiveUpdateCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: LiveUpdateIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * LiveUpdate update
    */
   export type LiveUpdateUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -22391,36 +20160,6 @@ export namespace Prisma {
      * Limit how many LiveUpdates to update.
      */
     limit?: number
-  }
-
-  /**
-   * LiveUpdate updateManyAndReturn
-   */
-  export type LiveUpdateUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the LiveUpdate
-     */
-    select?: LiveUpdateSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the LiveUpdate
-     */
-    omit?: LiveUpdateOmit<ExtArgs> | null
-    /**
-     * The data used to update LiveUpdates.
-     */
-    data: XOR<LiveUpdateUpdateManyMutationInput, LiveUpdateUncheckedUpdateManyInput>
-    /**
-     * Filter which LiveUpdates to update
-     */
-    where?: LiveUpdateWhereInput
-    /**
-     * Limit how many LiveUpdates to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: LiveUpdateIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -22822,49 +20561,7 @@ export namespace Prisma {
     _count?: boolean | AffiliateOfferCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["affiliateOffer"]>
 
-  export type AffiliateOfferSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    productName?: boolean
-    retailerName?: boolean
-    brand?: boolean
-    priceCents?: boolean
-    currency?: boolean
-    offerUrl?: boolean
-    programCategory?: boolean
-    network?: boolean
-    externalId?: boolean
-    imageUrl?: boolean
-    availability?: boolean
-    disclosureKind?: boolean
-    priceUpdatedAt?: boolean
-    lastCheckedAt?: boolean
-    isActive?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-    createdById?: boolean
-  }, ExtArgs["result"]["affiliateOffer"]>
 
-  export type AffiliateOfferSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    productName?: boolean
-    retailerName?: boolean
-    brand?: boolean
-    priceCents?: boolean
-    currency?: boolean
-    offerUrl?: boolean
-    programCategory?: boolean
-    network?: boolean
-    externalId?: boolean
-    imageUrl?: boolean
-    availability?: boolean
-    disclosureKind?: boolean
-    priceUpdatedAt?: boolean
-    lastCheckedAt?: boolean
-    isActive?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-    createdById?: boolean
-  }, ExtArgs["result"]["affiliateOffer"]>
 
   export type AffiliateOfferSelectScalar = {
     id?: boolean
@@ -22893,8 +20590,6 @@ export namespace Prisma {
     articles?: boolean | AffiliateOffer$articlesArgs<ExtArgs>
     _count?: boolean | AffiliateOfferCountOutputTypeDefaultArgs<ExtArgs>
   }
-  export type AffiliateOfferIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
-  export type AffiliateOfferIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
 
   export type $AffiliateOfferPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "AffiliateOffer"
@@ -22921,6 +20616,12 @@ export namespace Prisma {
       /**
        * URL final de afiliado (já com o código de rastreio do programa).
        * Sanitizada na renderização — ver apps/web/src/lib/safe-url.ts.
+       * 
+       * `VarChar(2048)` (o padrão de URL deste schema — ver `Franchise.heroImageUrl`):
+       * link de afiliado é, por natureza, das URLs mais longas que existem — leva ID
+       * de programa, de campanha e de sub-id encadeados. Cortar não daria erro de
+       * negócio visível: daria um link QUEBRADO, que é pior, porque a comissão
+       * simplesmente não é atribuída e ninguém percebe.
        */
       offerUrl: string
       /**
@@ -23088,30 +20789,6 @@ export namespace Prisma {
     createMany<T extends AffiliateOfferCreateManyArgs>(args?: SelectSubset<T, AffiliateOfferCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many AffiliateOffers and returns the data saved in the database.
-     * @param {AffiliateOfferCreateManyAndReturnArgs} args - Arguments to create many AffiliateOffers.
-     * @example
-     * // Create many AffiliateOffers
-     * const affiliateOffer = await prisma.affiliateOffer.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many AffiliateOffers and only return the `id`
-     * const affiliateOfferWithIdOnly = await prisma.affiliateOffer.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends AffiliateOfferCreateManyAndReturnArgs>(args?: SelectSubset<T, AffiliateOfferCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AffiliateOfferPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a AffiliateOffer.
      * @param {AffiliateOfferDeleteArgs} args - Arguments to delete one AffiliateOffer.
      * @example
@@ -23174,36 +20851,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends AffiliateOfferUpdateManyArgs>(args: SelectSubset<T, AffiliateOfferUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more AffiliateOffers and returns the data updated in the database.
-     * @param {AffiliateOfferUpdateManyAndReturnArgs} args - Arguments to update many AffiliateOffers.
-     * @example
-     * // Update many AffiliateOffers
-     * const affiliateOffer = await prisma.affiliateOffer.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more AffiliateOffers and only return the `id`
-     * const affiliateOfferWithIdOnly = await prisma.affiliateOffer.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends AffiliateOfferUpdateManyAndReturnArgs>(args: SelectSubset<T, AffiliateOfferUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AffiliateOfferPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one AffiliateOffer.
@@ -23646,25 +21293,6 @@ export namespace Prisma {
   }
 
   /**
-   * AffiliateOffer createManyAndReturn
-   */
-  export type AffiliateOfferCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the AffiliateOffer
-     */
-    select?: AffiliateOfferSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the AffiliateOffer
-     */
-    omit?: AffiliateOfferOmit<ExtArgs> | null
-    /**
-     * The data used to create many AffiliateOffers.
-     */
-    data: AffiliateOfferCreateManyInput | AffiliateOfferCreateManyInput[]
-    skipDuplicates?: boolean
-  }
-
-  /**
    * AffiliateOffer update
    */
   export type AffiliateOfferUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -23694,32 +21322,6 @@ export namespace Prisma {
    * AffiliateOffer updateMany
    */
   export type AffiliateOfferUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to update AffiliateOffers.
-     */
-    data: XOR<AffiliateOfferUpdateManyMutationInput, AffiliateOfferUncheckedUpdateManyInput>
-    /**
-     * Filter which AffiliateOffers to update
-     */
-    where?: AffiliateOfferWhereInput
-    /**
-     * Limit how many AffiliateOffers to update.
-     */
-    limit?: number
-  }
-
-  /**
-   * AffiliateOffer updateManyAndReturn
-   */
-  export type AffiliateOfferUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the AffiliateOffer
-     */
-    select?: AffiliateOfferSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the AffiliateOffer
-     */
-    omit?: AffiliateOfferOmit<ExtArgs> | null
     /**
      * The data used to update AffiliateOffers.
      */
@@ -24061,29 +21663,7 @@ export namespace Prisma {
     offer?: boolean | AffiliateOfferDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["articleAffiliateOffer"]>
 
-  export type ArticleAffiliateOfferSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    articleId?: boolean
-    offerId?: boolean
-    position?: boolean
-    isHighlighted?: boolean
-    label?: boolean
-    addedById?: boolean
-    createdAt?: boolean
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-    offer?: boolean | AffiliateOfferDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["articleAffiliateOffer"]>
 
-  export type ArticleAffiliateOfferSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    articleId?: boolean
-    offerId?: boolean
-    position?: boolean
-    isHighlighted?: boolean
-    label?: boolean
-    addedById?: boolean
-    createdAt?: boolean
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-    offer?: boolean | AffiliateOfferDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["articleAffiliateOffer"]>
 
   export type ArticleAffiliateOfferSelectScalar = {
     articleId?: boolean
@@ -24097,14 +21677,6 @@ export namespace Prisma {
 
   export type ArticleAffiliateOfferOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"articleId" | "offerId" | "position" | "isHighlighted" | "label" | "addedById" | "createdAt", ExtArgs["result"]["articleAffiliateOffer"]>
   export type ArticleAffiliateOfferInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-    offer?: boolean | AffiliateOfferDefaultArgs<ExtArgs>
-  }
-  export type ArticleAffiliateOfferIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-    offer?: boolean | AffiliateOfferDefaultArgs<ExtArgs>
-  }
-  export type ArticleAffiliateOfferIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     article?: boolean | ArticleDefaultArgs<ExtArgs>
     offer?: boolean | AffiliateOfferDefaultArgs<ExtArgs>
   }
@@ -24252,30 +21824,6 @@ export namespace Prisma {
     createMany<T extends ArticleAffiliateOfferCreateManyArgs>(args?: SelectSubset<T, ArticleAffiliateOfferCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many ArticleAffiliateOffers and returns the data saved in the database.
-     * @param {ArticleAffiliateOfferCreateManyAndReturnArgs} args - Arguments to create many ArticleAffiliateOffers.
-     * @example
-     * // Create many ArticleAffiliateOffers
-     * const articleAffiliateOffer = await prisma.articleAffiliateOffer.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many ArticleAffiliateOffers and only return the `articleId`
-     * const articleAffiliateOfferWithArticleIdOnly = await prisma.articleAffiliateOffer.createManyAndReturn({
-     *   select: { articleId: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends ArticleAffiliateOfferCreateManyAndReturnArgs>(args?: SelectSubset<T, ArticleAffiliateOfferCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ArticleAffiliateOfferPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a ArticleAffiliateOffer.
      * @param {ArticleAffiliateOfferDeleteArgs} args - Arguments to delete one ArticleAffiliateOffer.
      * @example
@@ -24338,36 +21886,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends ArticleAffiliateOfferUpdateManyArgs>(args: SelectSubset<T, ArticleAffiliateOfferUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more ArticleAffiliateOffers and returns the data updated in the database.
-     * @param {ArticleAffiliateOfferUpdateManyAndReturnArgs} args - Arguments to update many ArticleAffiliateOffers.
-     * @example
-     * // Update many ArticleAffiliateOffers
-     * const articleAffiliateOffer = await prisma.articleAffiliateOffer.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more ArticleAffiliateOffers and only return the `articleId`
-     * const articleAffiliateOfferWithArticleIdOnly = await prisma.articleAffiliateOffer.updateManyAndReturn({
-     *   select: { articleId: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends ArticleAffiliateOfferUpdateManyAndReturnArgs>(args: SelectSubset<T, ArticleAffiliateOfferUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ArticleAffiliateOfferPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one ArticleAffiliateOffer.
@@ -24799,29 +22317,6 @@ export namespace Prisma {
   }
 
   /**
-   * ArticleAffiliateOffer createManyAndReturn
-   */
-  export type ArticleAffiliateOfferCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the ArticleAffiliateOffer
-     */
-    select?: ArticleAffiliateOfferSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the ArticleAffiliateOffer
-     */
-    omit?: ArticleAffiliateOfferOmit<ExtArgs> | null
-    /**
-     * The data used to create many ArticleAffiliateOffers.
-     */
-    data: ArticleAffiliateOfferCreateManyInput | ArticleAffiliateOfferCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: ArticleAffiliateOfferIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * ArticleAffiliateOffer update
    */
   export type ArticleAffiliateOfferUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -24863,36 +22358,6 @@ export namespace Prisma {
      * Limit how many ArticleAffiliateOffers to update.
      */
     limit?: number
-  }
-
-  /**
-   * ArticleAffiliateOffer updateManyAndReturn
-   */
-  export type ArticleAffiliateOfferUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the ArticleAffiliateOffer
-     */
-    select?: ArticleAffiliateOfferSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the ArticleAffiliateOffer
-     */
-    omit?: ArticleAffiliateOfferOmit<ExtArgs> | null
-    /**
-     * The data used to update ArticleAffiliateOffers.
-     */
-    data: XOR<ArticleAffiliateOfferUpdateManyMutationInput, ArticleAffiliateOfferUncheckedUpdateManyInput>
-    /**
-     * Filter which ArticleAffiliateOffers to update
-     */
-    where?: ArticleAffiliateOfferWhereInput
-    /**
-     * Limit how many ArticleAffiliateOffers to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: ArticleAffiliateOfferIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -25195,35 +22660,7 @@ export namespace Prisma {
     franchise?: boolean | ReleaseEvent$franchiseArgs<ExtArgs>
   }, ExtArgs["result"]["releaseEvent"]>
 
-  export type ReleaseEventSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    title?: boolean
-    slug?: boolean
-    franchiseId?: boolean
-    kind?: boolean
-    releaseDate?: boolean
-    isConfirmed?: boolean
-    platform?: boolean
-    region?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-    franchise?: boolean | ReleaseEvent$franchiseArgs<ExtArgs>
-  }, ExtArgs["result"]["releaseEvent"]>
 
-  export type ReleaseEventSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    title?: boolean
-    slug?: boolean
-    franchiseId?: boolean
-    kind?: boolean
-    releaseDate?: boolean
-    isConfirmed?: boolean
-    platform?: boolean
-    region?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-    franchise?: boolean | ReleaseEvent$franchiseArgs<ExtArgs>
-  }, ExtArgs["result"]["releaseEvent"]>
 
   export type ReleaseEventSelectScalar = {
     id?: boolean
@@ -25241,12 +22678,6 @@ export namespace Prisma {
 
   export type ReleaseEventOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "title" | "slug" | "franchiseId" | "kind" | "releaseDate" | "isConfirmed" | "platform" | "region" | "createdAt" | "updatedAt", ExtArgs["result"]["releaseEvent"]>
   export type ReleaseEventInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    franchise?: boolean | ReleaseEvent$franchiseArgs<ExtArgs>
-  }
-  export type ReleaseEventIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    franchise?: boolean | ReleaseEvent$franchiseArgs<ExtArgs>
-  }
-  export type ReleaseEventIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     franchise?: boolean | ReleaseEvent$franchiseArgs<ExtArgs>
   }
 
@@ -25392,30 +22823,6 @@ export namespace Prisma {
     createMany<T extends ReleaseEventCreateManyArgs>(args?: SelectSubset<T, ReleaseEventCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many ReleaseEvents and returns the data saved in the database.
-     * @param {ReleaseEventCreateManyAndReturnArgs} args - Arguments to create many ReleaseEvents.
-     * @example
-     * // Create many ReleaseEvents
-     * const releaseEvent = await prisma.releaseEvent.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many ReleaseEvents and only return the `id`
-     * const releaseEventWithIdOnly = await prisma.releaseEvent.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends ReleaseEventCreateManyAndReturnArgs>(args?: SelectSubset<T, ReleaseEventCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReleaseEventPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a ReleaseEvent.
      * @param {ReleaseEventDeleteArgs} args - Arguments to delete one ReleaseEvent.
      * @example
@@ -25478,36 +22885,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends ReleaseEventUpdateManyArgs>(args: SelectSubset<T, ReleaseEventUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more ReleaseEvents and returns the data updated in the database.
-     * @param {ReleaseEventUpdateManyAndReturnArgs} args - Arguments to update many ReleaseEvents.
-     * @example
-     * // Update many ReleaseEvents
-     * const releaseEvent = await prisma.releaseEvent.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more ReleaseEvents and only return the `id`
-     * const releaseEventWithIdOnly = await prisma.releaseEvent.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends ReleaseEventUpdateManyAndReturnArgs>(args: SelectSubset<T, ReleaseEventUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$ReleaseEventPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one ReleaseEvent.
@@ -25942,29 +23319,6 @@ export namespace Prisma {
   }
 
   /**
-   * ReleaseEvent createManyAndReturn
-   */
-  export type ReleaseEventCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the ReleaseEvent
-     */
-    select?: ReleaseEventSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the ReleaseEvent
-     */
-    omit?: ReleaseEventOmit<ExtArgs> | null
-    /**
-     * The data used to create many ReleaseEvents.
-     */
-    data: ReleaseEventCreateManyInput | ReleaseEventCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: ReleaseEventIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * ReleaseEvent update
    */
   export type ReleaseEventUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -26006,36 +23360,6 @@ export namespace Prisma {
      * Limit how many ReleaseEvents to update.
      */
     limit?: number
-  }
-
-  /**
-   * ReleaseEvent updateManyAndReturn
-   */
-  export type ReleaseEventUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the ReleaseEvent
-     */
-    select?: ReleaseEventSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the ReleaseEvent
-     */
-    omit?: ReleaseEventOmit<ExtArgs> | null
-    /**
-     * The data used to update ReleaseEvents.
-     */
-    data: XOR<ReleaseEventUpdateManyMutationInput, ReleaseEventUncheckedUpdateManyInput>
-    /**
-     * Filter which ReleaseEvents to update
-     */
-    where?: ReleaseEventWhereInput
-    /**
-     * Limit how many ReleaseEvents to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: ReleaseEventIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -26398,7 +23722,7 @@ export namespace Prisma {
     confirmedAt: Date | null
     unsubscribeTokenHash: string | null
     unsubscribedAt: Date | null
-    preferredCategories: string[]
+    preferredCategories: JsonValue
     signupIpHash: string | null
     signupUserAgent: string | null
     signupSource: string
@@ -26450,47 +23774,7 @@ export namespace Prisma {
     updatedAt?: boolean
   }, ExtArgs["result"]["subscriber"]>
 
-  export type SubscriberSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    email?: boolean
-    status?: boolean
-    confirmationTokenHash?: boolean
-    confirmationExpiresAt?: boolean
-    confirmedAt?: boolean
-    unsubscribeTokenHash?: boolean
-    unsubscribedAt?: boolean
-    preferredCategories?: boolean
-    signupIpHash?: boolean
-    signupUserAgent?: boolean
-    signupSource?: boolean
-    emailsSent?: boolean
-    emailsOpened?: boolean
-    emailsClicked?: boolean
-    lastOpenedAt?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-  }, ExtArgs["result"]["subscriber"]>
 
-  export type SubscriberSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    email?: boolean
-    status?: boolean
-    confirmationTokenHash?: boolean
-    confirmationExpiresAt?: boolean
-    confirmedAt?: boolean
-    unsubscribeTokenHash?: boolean
-    unsubscribedAt?: boolean
-    preferredCategories?: boolean
-    signupIpHash?: boolean
-    signupUserAgent?: boolean
-    signupSource?: boolean
-    emailsSent?: boolean
-    emailsOpened?: boolean
-    emailsClicked?: boolean
-    lastOpenedAt?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-  }, ExtArgs["result"]["subscriber"]>
 
   export type SubscriberSelectScalar = {
     id?: boolean
@@ -26540,8 +23824,10 @@ export namespace Prisma {
       unsubscribedAt: Date | null
       /**
        * Preferências de conteúdo — franquias e categorias seguidas.
+       * Era `String[]`; ver `Franchise.aliases`. Hoje não existe caminho de escrita
+       * ativo para este campo, o que torna a troca de tipo inteiramente inócua aqui.
        */
-      preferredCategories: string[]
+      preferredCategories: Prisma.JsonValue
       /**
        * IP e user-agent do momento do opt-in. Guardados por serem a prova do
        * consentimento. IP é dado pessoal: incluído na política de retenção.
@@ -26673,30 +23959,6 @@ export namespace Prisma {
     createMany<T extends SubscriberCreateManyArgs>(args?: SelectSubset<T, SubscriberCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many Subscribers and returns the data saved in the database.
-     * @param {SubscriberCreateManyAndReturnArgs} args - Arguments to create many Subscribers.
-     * @example
-     * // Create many Subscribers
-     * const subscriber = await prisma.subscriber.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many Subscribers and only return the `id`
-     * const subscriberWithIdOnly = await prisma.subscriber.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends SubscriberCreateManyAndReturnArgs>(args?: SelectSubset<T, SubscriberCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SubscriberPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a Subscriber.
      * @param {SubscriberDeleteArgs} args - Arguments to delete one Subscriber.
      * @example
@@ -26759,36 +24021,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends SubscriberUpdateManyArgs>(args: SelectSubset<T, SubscriberUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more Subscribers and returns the data updated in the database.
-     * @param {SubscriberUpdateManyAndReturnArgs} args - Arguments to update many Subscribers.
-     * @example
-     * // Update many Subscribers
-     * const subscriber = await prisma.subscriber.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more Subscribers and only return the `id`
-     * const subscriberWithIdOnly = await prisma.subscriber.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends SubscriberUpdateManyAndReturnArgs>(args: SelectSubset<T, SubscriberUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$SubscriberPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one Subscriber.
@@ -26986,7 +24218,7 @@ export namespace Prisma {
     readonly confirmedAt: FieldRef<"Subscriber", 'DateTime'>
     readonly unsubscribeTokenHash: FieldRef<"Subscriber", 'String'>
     readonly unsubscribedAt: FieldRef<"Subscriber", 'DateTime'>
-    readonly preferredCategories: FieldRef<"Subscriber", 'String[]'>
+    readonly preferredCategories: FieldRef<"Subscriber", 'Json'>
     readonly signupIpHash: FieldRef<"Subscriber", 'String'>
     readonly signupUserAgent: FieldRef<"Subscriber", 'String'>
     readonly signupSource: FieldRef<"Subscriber", 'String'>
@@ -27205,25 +24437,6 @@ export namespace Prisma {
   }
 
   /**
-   * Subscriber createManyAndReturn
-   */
-  export type SubscriberCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Subscriber
-     */
-    select?: SubscriberSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Subscriber
-     */
-    omit?: SubscriberOmit<ExtArgs> | null
-    /**
-     * The data used to create many Subscribers.
-     */
-    data: SubscriberCreateManyInput | SubscriberCreateManyInput[]
-    skipDuplicates?: boolean
-  }
-
-  /**
    * Subscriber update
    */
   export type SubscriberUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -27249,32 +24462,6 @@ export namespace Prisma {
    * Subscriber updateMany
    */
   export type SubscriberUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to update Subscribers.
-     */
-    data: XOR<SubscriberUpdateManyMutationInput, SubscriberUncheckedUpdateManyInput>
-    /**
-     * Filter which Subscribers to update
-     */
-    where?: SubscriberWhereInput
-    /**
-     * Limit how many Subscribers to update.
-     */
-    limit?: number
-  }
-
-  /**
-   * Subscriber updateManyAndReturn
-   */
-  export type SubscriberUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Subscriber
-     */
-    select?: SubscriberSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Subscriber
-     */
-    omit?: SubscriberOmit<ExtArgs> | null
     /**
      * The data used to update Subscribers.
      */
@@ -27597,8 +24784,8 @@ export namespace Prisma {
     p256dh: string
     auth: string
     userAgent: string | null
-    preferredCategories: string[]
-    preferredFranchises: string[]
+    preferredCategories: JsonValue
+    preferredFranchises: JsonValue
     minScoreThreshold: number
     isActive: boolean
     lastFailureAt: Date | null
@@ -27648,41 +24835,7 @@ export namespace Prisma {
     _count?: boolean | PushSubscriptionCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["pushSubscription"]>
 
-  export type PushSubscriptionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    endpoint?: boolean
-    p256dh?: boolean
-    auth?: boolean
-    userAgent?: boolean
-    preferredCategories?: boolean
-    preferredFranchises?: boolean
-    minScoreThreshold?: boolean
-    isActive?: boolean
-    lastFailureAt?: boolean
-    failureCount?: boolean
-    notificationsSent?: boolean
-    notificationsClicked?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-  }, ExtArgs["result"]["pushSubscription"]>
 
-  export type PushSubscriptionSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    endpoint?: boolean
-    p256dh?: boolean
-    auth?: boolean
-    userAgent?: boolean
-    preferredCategories?: boolean
-    preferredFranchises?: boolean
-    minScoreThreshold?: boolean
-    isActive?: boolean
-    lastFailureAt?: boolean
-    failureCount?: boolean
-    notificationsSent?: boolean
-    notificationsClicked?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-  }, ExtArgs["result"]["pushSubscription"]>
 
   export type PushSubscriptionSelectScalar = {
     id?: boolean
@@ -27707,8 +24860,6 @@ export namespace Prisma {
     deliveries?: boolean | PushSubscription$deliveriesArgs<ExtArgs>
     _count?: boolean | PushSubscriptionCountOutputTypeDefaultArgs<ExtArgs>
   }
-  export type PushSubscriptionIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
-  export type PushSubscriptionIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
 
   export type $PushSubscriptionPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "PushSubscription"
@@ -27719,6 +24870,14 @@ export namespace Prisma {
       id: string
       /**
        * Endpoint único fornecido pelo navegador.
+       * 
+       * ⚠ O CAMPO MAIS DELICADO DE DIMENSIONAR DESTE SCHEMA, porque é `@unique` —
+       * ou seja, precisa CABER NUM ÍNDICE. Endpoints de FCM e do Mozilla passam de
+       * 191 com folga, então o padrão do Prisma quebraria toda inscrição de push.
+       * E `Text` não resolve: o InnoDB não indexa `TEXT` sem prefixo declarado.
+       * A conta que fecha o número: 512 caracteres × 4 bytes (utf8mb4) = 2.048
+       * bytes, abaixo do teto de 3.072 do InnoDB com row format DYNAMIC. Sobra
+       * margem, e a coluna continua indexável.
        */
       endpoint: string
       /**
@@ -27730,9 +24889,19 @@ export namespace Prisma {
       userAgent: string | null
       /**
        * Segmentação: só quero push de Games? Só de uma franquia?
+       * 
+       * Eram `String[]`, e este é o ÚNICO array do projeto que era filtrado DENTRO
+       * do banco — `push-sender.ts` usava `{ isEmpty: true }` / `{ has: slug }`,
+       * filtros que só existem no conector Postgres. Com `Json` eles deixam de
+       * compilar, e a segmentação passou a ser feita EM MEMÓRIA (ver o comentário
+       * longo em apps/web/src/server/push-sender.ts, que explica a escolha).
+       * 
+       * A régua para reabrir essa decisão está escrita lá: quando a base de push
+       * passar da casa das dezenas de milhares, o caminho é uma tabela de junção
+       * `PushSubscriptionCategory` — indexável de verdade —, não `JSON_CONTAINS`.
        */
-      preferredCategories: string[]
-      preferredFranchises: string[]
+      preferredCategories: Prisma.JsonValue
+      preferredFranchises: Prisma.JsonValue
       /**
        * Só recebe push de score >= este valor. Padrão 80 = apenas QUENTE.
        */
@@ -27865,30 +25034,6 @@ export namespace Prisma {
     createMany<T extends PushSubscriptionCreateManyArgs>(args?: SelectSubset<T, PushSubscriptionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many PushSubscriptions and returns the data saved in the database.
-     * @param {PushSubscriptionCreateManyAndReturnArgs} args - Arguments to create many PushSubscriptions.
-     * @example
-     * // Create many PushSubscriptions
-     * const pushSubscription = await prisma.pushSubscription.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many PushSubscriptions and only return the `id`
-     * const pushSubscriptionWithIdOnly = await prisma.pushSubscription.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends PushSubscriptionCreateManyAndReturnArgs>(args?: SelectSubset<T, PushSubscriptionCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PushSubscriptionPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a PushSubscription.
      * @param {PushSubscriptionDeleteArgs} args - Arguments to delete one PushSubscription.
      * @example
@@ -27951,36 +25096,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends PushSubscriptionUpdateManyArgs>(args: SelectSubset<T, PushSubscriptionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more PushSubscriptions and returns the data updated in the database.
-     * @param {PushSubscriptionUpdateManyAndReturnArgs} args - Arguments to update many PushSubscriptions.
-     * @example
-     * // Update many PushSubscriptions
-     * const pushSubscription = await prisma.pushSubscription.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more PushSubscriptions and only return the `id`
-     * const pushSubscriptionWithIdOnly = await prisma.pushSubscription.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends PushSubscriptionUpdateManyAndReturnArgs>(args: SelectSubset<T, PushSubscriptionUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PushSubscriptionPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one PushSubscription.
@@ -28176,8 +25291,8 @@ export namespace Prisma {
     readonly p256dh: FieldRef<"PushSubscription", 'String'>
     readonly auth: FieldRef<"PushSubscription", 'String'>
     readonly userAgent: FieldRef<"PushSubscription", 'String'>
-    readonly preferredCategories: FieldRef<"PushSubscription", 'String[]'>
-    readonly preferredFranchises: FieldRef<"PushSubscription", 'String[]'>
+    readonly preferredCategories: FieldRef<"PushSubscription", 'Json'>
+    readonly preferredFranchises: FieldRef<"PushSubscription", 'Json'>
     readonly minScoreThreshold: FieldRef<"PushSubscription", 'Int'>
     readonly isActive: FieldRef<"PushSubscription", 'Boolean'>
     readonly lastFailureAt: FieldRef<"PushSubscription", 'DateTime'>
@@ -28419,25 +25534,6 @@ export namespace Prisma {
   }
 
   /**
-   * PushSubscription createManyAndReturn
-   */
-  export type PushSubscriptionCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the PushSubscription
-     */
-    select?: PushSubscriptionSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the PushSubscription
-     */
-    omit?: PushSubscriptionOmit<ExtArgs> | null
-    /**
-     * The data used to create many PushSubscriptions.
-     */
-    data: PushSubscriptionCreateManyInput | PushSubscriptionCreateManyInput[]
-    skipDuplicates?: boolean
-  }
-
-  /**
    * PushSubscription update
    */
   export type PushSubscriptionUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -28467,32 +25563,6 @@ export namespace Prisma {
    * PushSubscription updateMany
    */
   export type PushSubscriptionUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to update PushSubscriptions.
-     */
-    data: XOR<PushSubscriptionUpdateManyMutationInput, PushSubscriptionUncheckedUpdateManyInput>
-    /**
-     * Filter which PushSubscriptions to update
-     */
-    where?: PushSubscriptionWhereInput
-    /**
-     * Limit how many PushSubscriptions to update.
-     */
-    limit?: number
-  }
-
-  /**
-   * PushSubscription updateManyAndReturn
-   */
-  export type PushSubscriptionUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the PushSubscription
-     */
-    select?: PushSubscriptionSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the PushSubscription
-     */
-    omit?: PushSubscriptionOmit<ExtArgs> | null
     /**
      * The data used to update PushSubscriptions.
      */
@@ -28919,45 +25989,7 @@ export namespace Prisma {
     _count?: boolean | PushNotificationCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["pushNotification"]>
 
-  export type PushNotificationSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    articleId?: boolean
-    title?: boolean
-    body?: boolean
-    iconUrl?: boolean
-    url?: boolean
-    trigger?: boolean
-    scoreAtTrigger?: boolean
-    approvedById?: boolean
-    status?: boolean
-    recipientCount?: boolean
-    deliveredCount?: boolean
-    clickedCount?: boolean
-    scheduledFor?: boolean
-    sentAt?: boolean
-    createdAt?: boolean
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["pushNotification"]>
 
-  export type PushNotificationSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    articleId?: boolean
-    title?: boolean
-    body?: boolean
-    iconUrl?: boolean
-    url?: boolean
-    trigger?: boolean
-    scoreAtTrigger?: boolean
-    approvedById?: boolean
-    status?: boolean
-    recipientCount?: boolean
-    deliveredCount?: boolean
-    clickedCount?: boolean
-    scheduledFor?: boolean
-    sentAt?: boolean
-    createdAt?: boolean
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["pushNotification"]>
 
   export type PushNotificationSelectScalar = {
     id?: boolean
@@ -28983,12 +26015,6 @@ export namespace Prisma {
     article?: boolean | ArticleDefaultArgs<ExtArgs>
     deliveries?: boolean | PushNotification$deliveriesArgs<ExtArgs>
     _count?: boolean | PushNotificationCountOutputTypeDefaultArgs<ExtArgs>
-  }
-  export type PushNotificationIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-  }
-  export type PushNotificationIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
   }
 
   export type $PushNotificationPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -29138,30 +26164,6 @@ export namespace Prisma {
     createMany<T extends PushNotificationCreateManyArgs>(args?: SelectSubset<T, PushNotificationCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many PushNotifications and returns the data saved in the database.
-     * @param {PushNotificationCreateManyAndReturnArgs} args - Arguments to create many PushNotifications.
-     * @example
-     * // Create many PushNotifications
-     * const pushNotification = await prisma.pushNotification.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many PushNotifications and only return the `id`
-     * const pushNotificationWithIdOnly = await prisma.pushNotification.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends PushNotificationCreateManyAndReturnArgs>(args?: SelectSubset<T, PushNotificationCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PushNotificationPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a PushNotification.
      * @param {PushNotificationDeleteArgs} args - Arguments to delete one PushNotification.
      * @example
@@ -29224,36 +26226,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends PushNotificationUpdateManyArgs>(args: SelectSubset<T, PushNotificationUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more PushNotifications and returns the data updated in the database.
-     * @param {PushNotificationUpdateManyAndReturnArgs} args - Arguments to update many PushNotifications.
-     * @example
-     * // Update many PushNotifications
-     * const pushNotification = await prisma.pushNotification.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more PushNotifications and only return the `id`
-     * const pushNotificationWithIdOnly = await prisma.pushNotification.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends PushNotificationUpdateManyAndReturnArgs>(args: SelectSubset<T, PushNotificationUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PushNotificationPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one PushNotification.
@@ -29694,29 +26666,6 @@ export namespace Prisma {
   }
 
   /**
-   * PushNotification createManyAndReturn
-   */
-  export type PushNotificationCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the PushNotification
-     */
-    select?: PushNotificationSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the PushNotification
-     */
-    omit?: PushNotificationOmit<ExtArgs> | null
-    /**
-     * The data used to create many PushNotifications.
-     */
-    data: PushNotificationCreateManyInput | PushNotificationCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: PushNotificationIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * PushNotification update
    */
   export type PushNotificationUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -29758,36 +26707,6 @@ export namespace Prisma {
      * Limit how many PushNotifications to update.
      */
     limit?: number
-  }
-
-  /**
-   * PushNotification updateManyAndReturn
-   */
-  export type PushNotificationUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the PushNotification
-     */
-    select?: PushNotificationSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the PushNotification
-     */
-    omit?: PushNotificationOmit<ExtArgs> | null
-    /**
-     * The data used to update PushNotifications.
-     */
-    data: XOR<PushNotificationUpdateManyMutationInput, PushNotificationUncheckedUpdateManyInput>
-    /**
-     * Filter which PushNotifications to update
-     */
-    where?: PushNotificationWhereInput
-    /**
-     * Limit how many PushNotifications to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: PushNotificationIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -30083,29 +27002,7 @@ export namespace Prisma {
     subscription?: boolean | PushSubscriptionDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["pushDelivery"]>
 
-  export type PushDeliverySelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    notificationId?: boolean
-    subscriptionId?: boolean
-    status?: boolean
-    clickedAt?: boolean
-    error?: boolean
-    createdAt?: boolean
-    notification?: boolean | PushNotificationDefaultArgs<ExtArgs>
-    subscription?: boolean | PushSubscriptionDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["pushDelivery"]>
 
-  export type PushDeliverySelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    notificationId?: boolean
-    subscriptionId?: boolean
-    status?: boolean
-    clickedAt?: boolean
-    error?: boolean
-    createdAt?: boolean
-    notification?: boolean | PushNotificationDefaultArgs<ExtArgs>
-    subscription?: boolean | PushSubscriptionDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["pushDelivery"]>
 
   export type PushDeliverySelectScalar = {
     id?: boolean
@@ -30119,14 +27016,6 @@ export namespace Prisma {
 
   export type PushDeliveryOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "notificationId" | "subscriptionId" | "status" | "clickedAt" | "error" | "createdAt", ExtArgs["result"]["pushDelivery"]>
   export type PushDeliveryInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    notification?: boolean | PushNotificationDefaultArgs<ExtArgs>
-    subscription?: boolean | PushSubscriptionDefaultArgs<ExtArgs>
-  }
-  export type PushDeliveryIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    notification?: boolean | PushNotificationDefaultArgs<ExtArgs>
-    subscription?: boolean | PushSubscriptionDefaultArgs<ExtArgs>
-  }
-  export type PushDeliveryIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     notification?: boolean | PushNotificationDefaultArgs<ExtArgs>
     subscription?: boolean | PushSubscriptionDefaultArgs<ExtArgs>
   }
@@ -30266,30 +27155,6 @@ export namespace Prisma {
     createMany<T extends PushDeliveryCreateManyArgs>(args?: SelectSubset<T, PushDeliveryCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many PushDeliveries and returns the data saved in the database.
-     * @param {PushDeliveryCreateManyAndReturnArgs} args - Arguments to create many PushDeliveries.
-     * @example
-     * // Create many PushDeliveries
-     * const pushDelivery = await prisma.pushDelivery.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many PushDeliveries and only return the `id`
-     * const pushDeliveryWithIdOnly = await prisma.pushDelivery.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends PushDeliveryCreateManyAndReturnArgs>(args?: SelectSubset<T, PushDeliveryCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PushDeliveryPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a PushDelivery.
      * @param {PushDeliveryDeleteArgs} args - Arguments to delete one PushDelivery.
      * @example
@@ -30352,36 +27217,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends PushDeliveryUpdateManyArgs>(args: SelectSubset<T, PushDeliveryUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more PushDeliveries and returns the data updated in the database.
-     * @param {PushDeliveryUpdateManyAndReturnArgs} args - Arguments to update many PushDeliveries.
-     * @example
-     * // Update many PushDeliveries
-     * const pushDelivery = await prisma.pushDelivery.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more PushDeliveries and only return the `id`
-     * const pushDeliveryWithIdOnly = await prisma.pushDelivery.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends PushDeliveryUpdateManyAndReturnArgs>(args: SelectSubset<T, PushDeliveryUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PushDeliveryPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one PushDelivery.
@@ -30813,29 +27648,6 @@ export namespace Prisma {
   }
 
   /**
-   * PushDelivery createManyAndReturn
-   */
-  export type PushDeliveryCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the PushDelivery
-     */
-    select?: PushDeliverySelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the PushDelivery
-     */
-    omit?: PushDeliveryOmit<ExtArgs> | null
-    /**
-     * The data used to create many PushDeliveries.
-     */
-    data: PushDeliveryCreateManyInput | PushDeliveryCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: PushDeliveryIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * PushDelivery update
    */
   export type PushDeliveryUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -30877,36 +27689,6 @@ export namespace Prisma {
      * Limit how many PushDeliveries to update.
      */
     limit?: number
-  }
-
-  /**
-   * PushDelivery updateManyAndReturn
-   */
-  export type PushDeliveryUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the PushDelivery
-     */
-    select?: PushDeliverySelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the PushDelivery
-     */
-    omit?: PushDeliveryOmit<ExtArgs> | null
-    /**
-     * The data used to update PushDeliveries.
-     */
-    data: XOR<PushDeliveryUpdateManyMutationInput, PushDeliveryUncheckedUpdateManyInput>
-    /**
-     * Filter which PushDeliveries to update
-     */
-    where?: PushDeliveryWhereInput
-    /**
-     * Limit how many PushDeliveries to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: PushDeliveryIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -31162,25 +27944,7 @@ export namespace Prisma {
     commentAuthor?: boolean | FranchiseFollow$commentAuthorArgs<ExtArgs>
   }, ExtArgs["result"]["franchiseFollow"]>
 
-  export type FranchiseFollowSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    franchiseId?: boolean
-    visitorId?: boolean
-    commentAuthorId?: boolean
-    createdAt?: boolean
-    franchise?: boolean | FranchiseDefaultArgs<ExtArgs>
-    commentAuthor?: boolean | FranchiseFollow$commentAuthorArgs<ExtArgs>
-  }, ExtArgs["result"]["franchiseFollow"]>
 
-  export type FranchiseFollowSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    franchiseId?: boolean
-    visitorId?: boolean
-    commentAuthorId?: boolean
-    createdAt?: boolean
-    franchise?: boolean | FranchiseDefaultArgs<ExtArgs>
-    commentAuthor?: boolean | FranchiseFollow$commentAuthorArgs<ExtArgs>
-  }, ExtArgs["result"]["franchiseFollow"]>
 
   export type FranchiseFollowSelectScalar = {
     id?: boolean
@@ -31192,14 +27956,6 @@ export namespace Prisma {
 
   export type FranchiseFollowOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "franchiseId" | "visitorId" | "commentAuthorId" | "createdAt", ExtArgs["result"]["franchiseFollow"]>
   export type FranchiseFollowInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    franchise?: boolean | FranchiseDefaultArgs<ExtArgs>
-    commentAuthor?: boolean | FranchiseFollow$commentAuthorArgs<ExtArgs>
-  }
-  export type FranchiseFollowIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    franchise?: boolean | FranchiseDefaultArgs<ExtArgs>
-    commentAuthor?: boolean | FranchiseFollow$commentAuthorArgs<ExtArgs>
-  }
-  export type FranchiseFollowIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     franchise?: boolean | FranchiseDefaultArgs<ExtArgs>
     commentAuthor?: boolean | FranchiseFollow$commentAuthorArgs<ExtArgs>
   }
@@ -31346,30 +28102,6 @@ export namespace Prisma {
     createMany<T extends FranchiseFollowCreateManyArgs>(args?: SelectSubset<T, FranchiseFollowCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many FranchiseFollows and returns the data saved in the database.
-     * @param {FranchiseFollowCreateManyAndReturnArgs} args - Arguments to create many FranchiseFollows.
-     * @example
-     * // Create many FranchiseFollows
-     * const franchiseFollow = await prisma.franchiseFollow.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many FranchiseFollows and only return the `id`
-     * const franchiseFollowWithIdOnly = await prisma.franchiseFollow.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends FranchiseFollowCreateManyAndReturnArgs>(args?: SelectSubset<T, FranchiseFollowCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FranchiseFollowPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a FranchiseFollow.
      * @param {FranchiseFollowDeleteArgs} args - Arguments to delete one FranchiseFollow.
      * @example
@@ -31432,36 +28164,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends FranchiseFollowUpdateManyArgs>(args: SelectSubset<T, FranchiseFollowUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more FranchiseFollows and returns the data updated in the database.
-     * @param {FranchiseFollowUpdateManyAndReturnArgs} args - Arguments to update many FranchiseFollows.
-     * @example
-     * // Update many FranchiseFollows
-     * const franchiseFollow = await prisma.franchiseFollow.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more FranchiseFollows and only return the `id`
-     * const franchiseFollowWithIdOnly = await prisma.franchiseFollow.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends FranchiseFollowUpdateManyAndReturnArgs>(args: SelectSubset<T, FranchiseFollowUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$FranchiseFollowPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one FranchiseFollow.
@@ -31891,29 +28593,6 @@ export namespace Prisma {
   }
 
   /**
-   * FranchiseFollow createManyAndReturn
-   */
-  export type FranchiseFollowCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the FranchiseFollow
-     */
-    select?: FranchiseFollowSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the FranchiseFollow
-     */
-    omit?: FranchiseFollowOmit<ExtArgs> | null
-    /**
-     * The data used to create many FranchiseFollows.
-     */
-    data: FranchiseFollowCreateManyInput | FranchiseFollowCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: FranchiseFollowIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * FranchiseFollow update
    */
   export type FranchiseFollowUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -31955,36 +28634,6 @@ export namespace Prisma {
      * Limit how many FranchiseFollows to update.
      */
     limit?: number
-  }
-
-  /**
-   * FranchiseFollow updateManyAndReturn
-   */
-  export type FranchiseFollowUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the FranchiseFollow
-     */
-    select?: FranchiseFollowSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the FranchiseFollow
-     */
-    omit?: FranchiseFollowOmit<ExtArgs> | null
-    /**
-     * The data used to update FranchiseFollows.
-     */
-    data: XOR<FranchiseFollowUpdateManyMutationInput, FranchiseFollowUncheckedUpdateManyInput>
-    /**
-     * Filter which FranchiseFollows to update
-     */
-    where?: FranchiseFollowWhereInput
-    /**
-     * Limit how many FranchiseFollows to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: FranchiseFollowIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -32351,35 +29000,7 @@ export namespace Prisma {
     _count?: boolean | CommentAuthorCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["commentAuthor"]>
 
-  export type CommentAuthorSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    provider?: boolean
-    providerAccountHash?: boolean
-    displayName?: boolean
-    avatarUrl?: boolean
-    emailHash?: boolean
-    isBlocked?: boolean
-    blockedAt?: boolean
-    blockReason?: boolean
-    approvedCount?: boolean
-    createdAt?: boolean
-    lastSeenAt?: boolean
-  }, ExtArgs["result"]["commentAuthor"]>
 
-  export type CommentAuthorSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    provider?: boolean
-    providerAccountHash?: boolean
-    displayName?: boolean
-    avatarUrl?: boolean
-    emailHash?: boolean
-    isBlocked?: boolean
-    blockedAt?: boolean
-    blockReason?: boolean
-    approvedCount?: boolean
-    createdAt?: boolean
-    lastSeenAt?: boolean
-  }, ExtArgs["result"]["commentAuthor"]>
 
   export type CommentAuthorSelectScalar = {
     id?: boolean
@@ -32403,8 +29024,6 @@ export namespace Prisma {
     follows?: boolean | CommentAuthor$followsArgs<ExtArgs>
     _count?: boolean | CommentAuthorCountOutputTypeDefaultArgs<ExtArgs>
   }
-  export type CommentAuthorIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
-  export type CommentAuthorIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {}
 
   export type $CommentAuthorPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     name: "CommentAuthor"
@@ -32583,30 +29202,6 @@ export namespace Prisma {
     createMany<T extends CommentAuthorCreateManyArgs>(args?: SelectSubset<T, CommentAuthorCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many CommentAuthors and returns the data saved in the database.
-     * @param {CommentAuthorCreateManyAndReturnArgs} args - Arguments to create many CommentAuthors.
-     * @example
-     * // Create many CommentAuthors
-     * const commentAuthor = await prisma.commentAuthor.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many CommentAuthors and only return the `id`
-     * const commentAuthorWithIdOnly = await prisma.commentAuthor.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends CommentAuthorCreateManyAndReturnArgs>(args?: SelectSubset<T, CommentAuthorCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CommentAuthorPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a CommentAuthor.
      * @param {CommentAuthorDeleteArgs} args - Arguments to delete one CommentAuthor.
      * @example
@@ -32669,36 +29264,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends CommentAuthorUpdateManyArgs>(args: SelectSubset<T, CommentAuthorUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more CommentAuthors and returns the data updated in the database.
-     * @param {CommentAuthorUpdateManyAndReturnArgs} args - Arguments to update many CommentAuthors.
-     * @example
-     * // Update many CommentAuthors
-     * const commentAuthor = await prisma.commentAuthor.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more CommentAuthors and only return the `id`
-     * const commentAuthorWithIdOnly = await prisma.commentAuthor.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends CommentAuthorUpdateManyAndReturnArgs>(args: SelectSubset<T, CommentAuthorUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CommentAuthorPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one CommentAuthor.
@@ -33136,25 +29701,6 @@ export namespace Prisma {
   }
 
   /**
-   * CommentAuthor createManyAndReturn
-   */
-  export type CommentAuthorCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the CommentAuthor
-     */
-    select?: CommentAuthorSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the CommentAuthor
-     */
-    omit?: CommentAuthorOmit<ExtArgs> | null
-    /**
-     * The data used to create many CommentAuthors.
-     */
-    data: CommentAuthorCreateManyInput | CommentAuthorCreateManyInput[]
-    skipDuplicates?: boolean
-  }
-
-  /**
    * CommentAuthor update
    */
   export type CommentAuthorUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -33184,32 +29730,6 @@ export namespace Prisma {
    * CommentAuthor updateMany
    */
   export type CommentAuthorUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to update CommentAuthors.
-     */
-    data: XOR<CommentAuthorUpdateManyMutationInput, CommentAuthorUncheckedUpdateManyInput>
-    /**
-     * Filter which CommentAuthors to update
-     */
-    where?: CommentAuthorWhereInput
-    /**
-     * Limit how many CommentAuthors to update.
-     */
-    limit?: number
-  }
-
-  /**
-   * CommentAuthor updateManyAndReturn
-   */
-  export type CommentAuthorUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the CommentAuthor
-     */
-    select?: CommentAuthorSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the CommentAuthor
-     */
-    omit?: CommentAuthorOmit<ExtArgs> | null
     /**
      * The data used to update CommentAuthors.
      */
@@ -33564,27 +30084,7 @@ export namespace Prisma {
     author?: boolean | CommentAuthorDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["commentSession"]>
 
-  export type CommentSessionSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    tokenHash?: boolean
-    authorId?: boolean
-    expiresAt?: boolean
-    userAgent?: boolean
-    ipHash?: boolean
-    createdAt?: boolean
-    author?: boolean | CommentAuthorDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["commentSession"]>
 
-  export type CommentSessionSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    tokenHash?: boolean
-    authorId?: boolean
-    expiresAt?: boolean
-    userAgent?: boolean
-    ipHash?: boolean
-    createdAt?: boolean
-    author?: boolean | CommentAuthorDefaultArgs<ExtArgs>
-  }, ExtArgs["result"]["commentSession"]>
 
   export type CommentSessionSelectScalar = {
     id?: boolean
@@ -33598,12 +30098,6 @@ export namespace Prisma {
 
   export type CommentSessionOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "tokenHash" | "authorId" | "expiresAt" | "userAgent" | "ipHash" | "createdAt", ExtArgs["result"]["commentSession"]>
   export type CommentSessionInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    author?: boolean | CommentAuthorDefaultArgs<ExtArgs>
-  }
-  export type CommentSessionIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    author?: boolean | CommentAuthorDefaultArgs<ExtArgs>
-  }
-  export type CommentSessionIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     author?: boolean | CommentAuthorDefaultArgs<ExtArgs>
   }
 
@@ -33738,30 +30232,6 @@ export namespace Prisma {
     createMany<T extends CommentSessionCreateManyArgs>(args?: SelectSubset<T, CommentSessionCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many CommentSessions and returns the data saved in the database.
-     * @param {CommentSessionCreateManyAndReturnArgs} args - Arguments to create many CommentSessions.
-     * @example
-     * // Create many CommentSessions
-     * const commentSession = await prisma.commentSession.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many CommentSessions and only return the `id`
-     * const commentSessionWithIdOnly = await prisma.commentSession.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends CommentSessionCreateManyAndReturnArgs>(args?: SelectSubset<T, CommentSessionCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CommentSessionPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a CommentSession.
      * @param {CommentSessionDeleteArgs} args - Arguments to delete one CommentSession.
      * @example
@@ -33824,36 +30294,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends CommentSessionUpdateManyArgs>(args: SelectSubset<T, CommentSessionUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more CommentSessions and returns the data updated in the database.
-     * @param {CommentSessionUpdateManyAndReturnArgs} args - Arguments to update many CommentSessions.
-     * @example
-     * // Update many CommentSessions
-     * const commentSession = await prisma.commentSession.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more CommentSessions and only return the `id`
-     * const commentSessionWithIdOnly = await prisma.commentSession.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends CommentSessionUpdateManyAndReturnArgs>(args: SelectSubset<T, CommentSessionUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CommentSessionPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one CommentSession.
@@ -34284,29 +30724,6 @@ export namespace Prisma {
   }
 
   /**
-   * CommentSession createManyAndReturn
-   */
-  export type CommentSessionCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the CommentSession
-     */
-    select?: CommentSessionSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the CommentSession
-     */
-    omit?: CommentSessionOmit<ExtArgs> | null
-    /**
-     * The data used to create many CommentSessions.
-     */
-    data: CommentSessionCreateManyInput | CommentSessionCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: CommentSessionIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * CommentSession update
    */
   export type CommentSessionUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -34348,36 +30765,6 @@ export namespace Prisma {
      * Limit how many CommentSessions to update.
      */
     limit?: number
-  }
-
-  /**
-   * CommentSession updateManyAndReturn
-   */
-  export type CommentSessionUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the CommentSession
-     */
-    select?: CommentSessionSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the CommentSession
-     */
-    omit?: CommentSessionOmit<ExtArgs> | null
-    /**
-     * The data used to update CommentSessions.
-     */
-    data: XOR<CommentSessionUpdateManyMutationInput, CommentSessionUncheckedUpdateManyInput>
-    /**
-     * Filter which CommentSessions to update
-     */
-    where?: CommentSessionWhereInput
-    /**
-     * Limit how many CommentSessions to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: CommentSessionIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -34750,47 +31137,7 @@ export namespace Prisma {
     _count?: boolean | CommentCountOutputTypeDefaultArgs<ExtArgs>
   }, ExtArgs["result"]["comment"]>
 
-  export type CommentSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    articleId?: boolean
-    authorAccountId?: boolean
-    authorName?: boolean
-    authorEmailHash?: boolean
-    content?: boolean
-    status?: boolean
-    moderatedAt?: boolean
-    moderatedBy?: boolean
-    moderationNote?: boolean
-    parentId?: boolean
-    ipHash?: boolean
-    upvotes?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-    authorAccount?: boolean | Comment$authorAccountArgs<ExtArgs>
-    parent?: boolean | Comment$parentArgs<ExtArgs>
-  }, ExtArgs["result"]["comment"]>
 
-  export type CommentSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    articleId?: boolean
-    authorAccountId?: boolean
-    authorName?: boolean
-    authorEmailHash?: boolean
-    content?: boolean
-    status?: boolean
-    moderatedAt?: boolean
-    moderatedBy?: boolean
-    moderationNote?: boolean
-    parentId?: boolean
-    ipHash?: boolean
-    upvotes?: boolean
-    createdAt?: boolean
-    updatedAt?: boolean
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-    authorAccount?: boolean | Comment$authorAccountArgs<ExtArgs>
-    parent?: boolean | Comment$parentArgs<ExtArgs>
-  }, ExtArgs["result"]["comment"]>
 
   export type CommentSelectScalar = {
     id?: boolean
@@ -34817,16 +31164,6 @@ export namespace Prisma {
     parent?: boolean | Comment$parentArgs<ExtArgs>
     replies?: boolean | Comment$repliesArgs<ExtArgs>
     _count?: boolean | CommentCountOutputTypeDefaultArgs<ExtArgs>
-  }
-  export type CommentIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-    authorAccount?: boolean | Comment$authorAccountArgs<ExtArgs>
-    parent?: boolean | Comment$parentArgs<ExtArgs>
-  }
-  export type CommentIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    article?: boolean | ArticleDefaultArgs<ExtArgs>
-    authorAccount?: boolean | Comment$authorAccountArgs<ExtArgs>
-    parent?: boolean | Comment$parentArgs<ExtArgs>
   }
 
   export type $CommentPayload<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -34857,6 +31194,11 @@ export namespace Prisma {
       authorEmailHash: string | null
       /**
        * Conteúdo em texto puro. NUNCA renderizar como HTML — ver ADR 0005 (XSS).
+       * 
+       * `Text` e não `VarChar`: o validador já corta em 1.500 caracteres
+       * (`COMMENT_MAX_LENGTH`), o que caberia num `VARCHAR(1500)`. Mas o limite é
+       * uma regra de PRODUTO, que muda numa linha de código, e o banco não pode ser
+       * o lugar onde essa mudança explode em erro 1406 na cara do leitor.
        */
       content: string
       /**
@@ -34996,30 +31338,6 @@ export namespace Prisma {
     createMany<T extends CommentCreateManyArgs>(args?: SelectSubset<T, CommentCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many Comments and returns the data saved in the database.
-     * @param {CommentCreateManyAndReturnArgs} args - Arguments to create many Comments.
-     * @example
-     * // Create many Comments
-     * const comment = await prisma.comment.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many Comments and only return the `id`
-     * const commentWithIdOnly = await prisma.comment.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends CommentCreateManyAndReturnArgs>(args?: SelectSubset<T, CommentCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CommentPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a Comment.
      * @param {CommentDeleteArgs} args - Arguments to delete one Comment.
      * @example
@@ -35082,36 +31400,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends CommentUpdateManyArgs>(args: SelectSubset<T, CommentUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more Comments and returns the data updated in the database.
-     * @param {CommentUpdateManyAndReturnArgs} args - Arguments to update many Comments.
-     * @example
-     * // Update many Comments
-     * const comment = await prisma.comment.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more Comments and only return the `id`
-     * const commentWithIdOnly = await prisma.comment.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends CommentUpdateManyAndReturnArgs>(args: SelectSubset<T, CommentUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$CommentPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one Comment.
@@ -35553,29 +31841,6 @@ export namespace Prisma {
   }
 
   /**
-   * Comment createManyAndReturn
-   */
-  export type CommentCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Comment
-     */
-    select?: CommentSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Comment
-     */
-    omit?: CommentOmit<ExtArgs> | null
-    /**
-     * The data used to create many Comments.
-     */
-    data: CommentCreateManyInput | CommentCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: CommentIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * Comment update
    */
   export type CommentUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -35617,36 +31882,6 @@ export namespace Prisma {
      * Limit how many Comments to update.
      */
     limit?: number
-  }
-
-  /**
-   * Comment updateManyAndReturn
-   */
-  export type CommentUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the Comment
-     */
-    select?: CommentSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the Comment
-     */
-    omit?: CommentOmit<ExtArgs> | null
-    /**
-     * The data used to update Comments.
-     */
-    data: XOR<CommentUpdateManyMutationInput, CommentUncheckedUpdateManyInput>
-    /**
-     * Filter which Comments to update
-     */
-    where?: CommentWhereInput
-    /**
-     * Limit how many Comments to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: CommentIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -36024,29 +32259,7 @@ export namespace Prisma {
     createdAt?: boolean
   }, ExtArgs["result"]["pipelineEvent"]>
 
-  export type PipelineEventSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    eventType?: boolean
-    topicId?: boolean
-    articleId?: boolean
-    connectorId?: boolean
-    actorId?: boolean
-    payload?: boolean
-    durationMs?: boolean
-    createdAt?: boolean
-  }, ExtArgs["result"]["pipelineEvent"]>
 
-  export type PipelineEventSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    eventType?: boolean
-    topicId?: boolean
-    articleId?: boolean
-    connectorId?: boolean
-    actorId?: boolean
-    payload?: boolean
-    durationMs?: boolean
-    createdAt?: boolean
-  }, ExtArgs["result"]["pipelineEvent"]>
 
   export type PipelineEventSelectScalar = {
     id?: boolean
@@ -36078,6 +32291,10 @@ export namespace Prisma {
       actorId: string | null
       /**
        * Payload específico do evento (score anterior/novo, duração, erro...).
+       * 
+       * ⚠ Mesmo aviso de `Author.socialLinks`: o `@default("{}")` NÃO chega ao
+       * banco no conector MySQL (prisma#23250). Pela aplicação é invisível; por SQL
+       * cru, é uma violação de NOT NULL esperando acontecer.
        */
       payload: Prisma.JsonValue
       /**
@@ -36204,30 +32421,6 @@ export namespace Prisma {
     createMany<T extends PipelineEventCreateManyArgs>(args?: SelectSubset<T, PipelineEventCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many PipelineEvents and returns the data saved in the database.
-     * @param {PipelineEventCreateManyAndReturnArgs} args - Arguments to create many PipelineEvents.
-     * @example
-     * // Create many PipelineEvents
-     * const pipelineEvent = await prisma.pipelineEvent.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many PipelineEvents and only return the `id`
-     * const pipelineEventWithIdOnly = await prisma.pipelineEvent.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends PipelineEventCreateManyAndReturnArgs>(args?: SelectSubset<T, PipelineEventCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PipelineEventPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a PipelineEvent.
      * @param {PipelineEventDeleteArgs} args - Arguments to delete one PipelineEvent.
      * @example
@@ -36290,36 +32483,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends PipelineEventUpdateManyArgs>(args: SelectSubset<T, PipelineEventUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more PipelineEvents and returns the data updated in the database.
-     * @param {PipelineEventUpdateManyAndReturnArgs} args - Arguments to update many PipelineEvents.
-     * @example
-     * // Update many PipelineEvents
-     * const pipelineEvent = await prisma.pipelineEvent.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more PipelineEvents and only return the `id`
-     * const pipelineEventWithIdOnly = await prisma.pipelineEvent.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends PipelineEventUpdateManyAndReturnArgs>(args: SelectSubset<T, PipelineEventUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PipelineEventPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one PipelineEvent.
@@ -36727,25 +32890,6 @@ export namespace Prisma {
   }
 
   /**
-   * PipelineEvent createManyAndReturn
-   */
-  export type PipelineEventCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the PipelineEvent
-     */
-    select?: PipelineEventSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the PipelineEvent
-     */
-    omit?: PipelineEventOmit<ExtArgs> | null
-    /**
-     * The data used to create many PipelineEvents.
-     */
-    data: PipelineEventCreateManyInput | PipelineEventCreateManyInput[]
-    skipDuplicates?: boolean
-  }
-
-  /**
    * PipelineEvent update
    */
   export type PipelineEventUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -36771,32 +32915,6 @@ export namespace Prisma {
    * PipelineEvent updateMany
    */
   export type PipelineEventUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to update PipelineEvents.
-     */
-    data: XOR<PipelineEventUpdateManyMutationInput, PipelineEventUncheckedUpdateManyInput>
-    /**
-     * Filter which PipelineEvents to update
-     */
-    where?: PipelineEventWhereInput
-    /**
-     * Limit how many PipelineEvents to update.
-     */
-    limit?: number
-  }
-
-  /**
-   * PipelineEvent updateManyAndReturn
-   */
-  export type PipelineEventUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the PipelineEvent
-     */
-    select?: PipelineEventSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the PipelineEvent
-     */
-    omit?: PipelineEventOmit<ExtArgs> | null
     /**
      * The data used to update PipelineEvents.
      */
@@ -37172,37 +33290,7 @@ export namespace Prisma {
     error?: boolean
   }, ExtArgs["result"]["pipelineRun"]>
 
-  export type PipelineRunSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    stage?: boolean
-    status?: boolean
-    topicsDiscovered?: boolean
-    topicsScored?: boolean
-    topicsPromoted?: boolean
-    connectorsRun?: boolean
-    connectorsFailed?: boolean
-    estimatedCostCents?: boolean
-    startedAt?: boolean
-    finishedAt?: boolean
-    durationMs?: boolean
-    error?: boolean
-  }, ExtArgs["result"]["pipelineRun"]>
 
-  export type PipelineRunSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    stage?: boolean
-    status?: boolean
-    topicsDiscovered?: boolean
-    topicsScored?: boolean
-    topicsPromoted?: boolean
-    connectorsRun?: boolean
-    connectorsFailed?: boolean
-    estimatedCostCents?: boolean
-    startedAt?: boolean
-    finishedAt?: boolean
-    durationMs?: boolean
-    error?: boolean
-  }, ExtArgs["result"]["pipelineRun"]>
 
   export type PipelineRunSelectScalar = {
     id?: boolean
@@ -37365,30 +33453,6 @@ export namespace Prisma {
     createMany<T extends PipelineRunCreateManyArgs>(args?: SelectSubset<T, PipelineRunCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many PipelineRuns and returns the data saved in the database.
-     * @param {PipelineRunCreateManyAndReturnArgs} args - Arguments to create many PipelineRuns.
-     * @example
-     * // Create many PipelineRuns
-     * const pipelineRun = await prisma.pipelineRun.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many PipelineRuns and only return the `id`
-     * const pipelineRunWithIdOnly = await prisma.pipelineRun.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends PipelineRunCreateManyAndReturnArgs>(args?: SelectSubset<T, PipelineRunCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PipelineRunPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a PipelineRun.
      * @param {PipelineRunDeleteArgs} args - Arguments to delete one PipelineRun.
      * @example
@@ -37451,36 +33515,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends PipelineRunUpdateManyArgs>(args: SelectSubset<T, PipelineRunUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more PipelineRuns and returns the data updated in the database.
-     * @param {PipelineRunUpdateManyAndReturnArgs} args - Arguments to update many PipelineRuns.
-     * @example
-     * // Update many PipelineRuns
-     * const pipelineRun = await prisma.pipelineRun.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more PipelineRuns and only return the `id`
-     * const pipelineRunWithIdOnly = await prisma.pipelineRun.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends PipelineRunUpdateManyAndReturnArgs>(args: SelectSubset<T, PipelineRunUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$PipelineRunPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one PipelineRun.
@@ -37892,25 +33926,6 @@ export namespace Prisma {
   }
 
   /**
-   * PipelineRun createManyAndReturn
-   */
-  export type PipelineRunCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the PipelineRun
-     */
-    select?: PipelineRunSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the PipelineRun
-     */
-    omit?: PipelineRunOmit<ExtArgs> | null
-    /**
-     * The data used to create many PipelineRuns.
-     */
-    data: PipelineRunCreateManyInput | PipelineRunCreateManyInput[]
-    skipDuplicates?: boolean
-  }
-
-  /**
    * PipelineRun update
    */
   export type PipelineRunUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -37936,32 +33951,6 @@ export namespace Prisma {
    * PipelineRun updateMany
    */
   export type PipelineRunUpdateManyArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * The data used to update PipelineRuns.
-     */
-    data: XOR<PipelineRunUpdateManyMutationInput, PipelineRunUncheckedUpdateManyInput>
-    /**
-     * Filter which PipelineRuns to update
-     */
-    where?: PipelineRunWhereInput
-    /**
-     * Limit how many PipelineRuns to update.
-     */
-    limit?: number
-  }
-
-  /**
-   * PipelineRun updateManyAndReturn
-   */
-  export type PipelineRunUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the PipelineRun
-     */
-    select?: PipelineRunSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the PipelineRun
-     */
-    omit?: PipelineRunOmit<ExtArgs> | null
     /**
      * The data used to update PipelineRuns.
      */
@@ -38248,33 +34237,7 @@ export namespace Prisma {
     actor?: boolean | AuditLog$actorArgs<ExtArgs>
   }, ExtArgs["result"]["auditLog"]>
 
-  export type AuditLogSelectCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    actorId?: boolean
-    action?: boolean
-    entityType?: boolean
-    entityId?: boolean
-    before?: boolean
-    after?: boolean
-    reason?: boolean
-    ipHash?: boolean
-    createdAt?: boolean
-    actor?: boolean | AuditLog$actorArgs<ExtArgs>
-  }, ExtArgs["result"]["auditLog"]>
 
-  export type AuditLogSelectUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetSelect<{
-    id?: boolean
-    actorId?: boolean
-    action?: boolean
-    entityType?: boolean
-    entityId?: boolean
-    before?: boolean
-    after?: boolean
-    reason?: boolean
-    ipHash?: boolean
-    createdAt?: boolean
-    actor?: boolean | AuditLog$actorArgs<ExtArgs>
-  }, ExtArgs["result"]["auditLog"]>
 
   export type AuditLogSelectScalar = {
     id?: boolean
@@ -38291,12 +34254,6 @@ export namespace Prisma {
 
   export type AuditLogOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "actorId" | "action" | "entityType" | "entityId" | "before" | "after" | "reason" | "ipHash" | "createdAt", ExtArgs["result"]["auditLog"]>
   export type AuditLogInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    actor?: boolean | AuditLog$actorArgs<ExtArgs>
-  }
-  export type AuditLogIncludeCreateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    actor?: boolean | AuditLog$actorArgs<ExtArgs>
-  }
-  export type AuditLogIncludeUpdateManyAndReturn<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     actor?: boolean | AuditLog$actorArgs<ExtArgs>
   }
 
@@ -38434,30 +34391,6 @@ export namespace Prisma {
     createMany<T extends AuditLogCreateManyArgs>(args?: SelectSubset<T, AuditLogCreateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
 
     /**
-     * Create many AuditLogs and returns the data saved in the database.
-     * @param {AuditLogCreateManyAndReturnArgs} args - Arguments to create many AuditLogs.
-     * @example
-     * // Create many AuditLogs
-     * const auditLog = await prisma.auditLog.createManyAndReturn({
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Create many AuditLogs and only return the `id`
-     * const auditLogWithIdOnly = await prisma.auditLog.createManyAndReturn({
-     *   select: { id: true },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    createManyAndReturn<T extends AuditLogCreateManyAndReturnArgs>(args?: SelectSubset<T, AuditLogCreateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "createManyAndReturn", GlobalOmitOptions>>
-
-    /**
      * Delete a AuditLog.
      * @param {AuditLogDeleteArgs} args - Arguments to delete one AuditLog.
      * @example
@@ -38520,36 +34453,6 @@ export namespace Prisma {
      * 
      */
     updateMany<T extends AuditLogUpdateManyArgs>(args: SelectSubset<T, AuditLogUpdateManyArgs<ExtArgs>>): Prisma.PrismaPromise<BatchPayload>
-
-    /**
-     * Update zero or more AuditLogs and returns the data updated in the database.
-     * @param {AuditLogUpdateManyAndReturnArgs} args - Arguments to update many AuditLogs.
-     * @example
-     * // Update many AuditLogs
-     * const auditLog = await prisma.auditLog.updateManyAndReturn({
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * 
-     * // Update zero or more AuditLogs and only return the `id`
-     * const auditLogWithIdOnly = await prisma.auditLog.updateManyAndReturn({
-     *   select: { id: true },
-     *   where: {
-     *     // ... provide filter here
-     *   },
-     *   data: [
-     *     // ... provide data here
-     *   ]
-     * })
-     * Note, that providing `undefined` is treated as the value not being there.
-     * Read more here: https://pris.ly/d/null-undefined
-     * 
-     */
-    updateManyAndReturn<T extends AuditLogUpdateManyAndReturnArgs>(args: SelectSubset<T, AuditLogUpdateManyAndReturnArgs<ExtArgs>>): Prisma.PrismaPromise<$Result.GetResult<Prisma.$AuditLogPayload<ExtArgs>, T, "updateManyAndReturn", GlobalOmitOptions>>
 
     /**
      * Create or update one AuditLog.
@@ -38983,29 +34886,6 @@ export namespace Prisma {
   }
 
   /**
-   * AuditLog createManyAndReturn
-   */
-  export type AuditLogCreateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the AuditLog
-     */
-    select?: AuditLogSelectCreateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the AuditLog
-     */
-    omit?: AuditLogOmit<ExtArgs> | null
-    /**
-     * The data used to create many AuditLogs.
-     */
-    data: AuditLogCreateManyInput | AuditLogCreateManyInput[]
-    skipDuplicates?: boolean
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: AuditLogIncludeCreateManyAndReturn<ExtArgs> | null
-  }
-
-  /**
    * AuditLog update
    */
   export type AuditLogUpdateArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
@@ -39047,36 +34927,6 @@ export namespace Prisma {
      * Limit how many AuditLogs to update.
      */
     limit?: number
-  }
-
-  /**
-   * AuditLog updateManyAndReturn
-   */
-  export type AuditLogUpdateManyAndReturnArgs<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
-    /**
-     * Select specific fields to fetch from the AuditLog
-     */
-    select?: AuditLogSelectUpdateManyAndReturn<ExtArgs> | null
-    /**
-     * Omit specific fields from the AuditLog
-     */
-    omit?: AuditLogOmit<ExtArgs> | null
-    /**
-     * The data used to update AuditLogs.
-     */
-    data: XOR<AuditLogUpdateManyMutationInput, AuditLogUncheckedUpdateManyInput>
-    /**
-     * Filter which AuditLogs to update
-     */
-    where?: AuditLogWhereInput
-    /**
-     * Limit how many AuditLogs to update.
-     */
-    limit?: number
-    /**
-     * Choose, which related nodes to fetch as well
-     */
-    include?: AuditLogIncludeUpdateManyAndReturn<ExtArgs> | null
   }
 
   /**
@@ -39740,20 +35590,37 @@ export namespace Prisma {
   export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
-  export const QueryMode: {
-    default: 'default',
-    insensitive: 'insensitive'
-  };
-
-  export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
-
-
   export const NullsOrder: {
     first: 'first',
     last: 'last'
   };
 
   export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
+  export const CategoryOrderByRelevanceFieldEnum: {
+    id: 'id',
+    slug: 'slug',
+    name: 'name',
+    shortName: 'shortName',
+    description: 'description',
+    accentColor: 'accentColor',
+    seoTitle: 'seoTitle',
+    seoDescription: 'seoDescription'
+  };
+
+  export type CategoryOrderByRelevanceFieldEnum = (typeof CategoryOrderByRelevanceFieldEnum)[keyof typeof CategoryOrderByRelevanceFieldEnum]
+
+
+  export const SubcategoryOrderByRelevanceFieldEnum: {
+    id: 'id',
+    slug: 'slug',
+    name: 'name',
+    description: 'description',
+    categoryId: 'categoryId'
+  };
+
+  export type SubcategoryOrderByRelevanceFieldEnum = (typeof SubcategoryOrderByRelevanceFieldEnum)[keyof typeof SubcategoryOrderByRelevanceFieldEnum]
 
 
   export const JsonNullValueFilter: {
@@ -39763,6 +35630,356 @@ export namespace Prisma {
   };
 
   export type JsonNullValueFilter = (typeof JsonNullValueFilter)[keyof typeof JsonNullValueFilter]
+
+
+  export const QueryMode: {
+    default: 'default',
+    insensitive: 'insensitive'
+  };
+
+  export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
+
+
+  export const FranchiseOrderByRelevanceFieldEnum: {
+    id: 'id',
+    slug: 'slug',
+    name: 'name',
+    description: 'description',
+    heroImageUrl: 'heroImageUrl',
+    logoUrl: 'logoUrl',
+    primaryCategoryId: 'primaryCategoryId'
+  };
+
+  export type FranchiseOrderByRelevanceFieldEnum = (typeof FranchiseOrderByRelevanceFieldEnum)[keyof typeof FranchiseOrderByRelevanceFieldEnum]
+
+
+  export const TagOrderByRelevanceFieldEnum: {
+    id: 'id',
+    slug: 'slug',
+    name: 'name',
+    kind: 'kind'
+  };
+
+  export type TagOrderByRelevanceFieldEnum = (typeof TagOrderByRelevanceFieldEnum)[keyof typeof TagOrderByRelevanceFieldEnum]
+
+
+  export const AuthorOrderByRelevanceFieldEnum: {
+    id: 'id',
+    slug: 'slug',
+    name: 'name',
+    email: 'email',
+    bio: 'bio',
+    avatarUrl: 'avatarUrl',
+    role: 'role',
+    systemRole: 'systemRole',
+    passwordHash: 'passwordHash'
+  };
+
+  export type AuthorOrderByRelevanceFieldEnum = (typeof AuthorOrderByRelevanceFieldEnum)[keyof typeof AuthorOrderByRelevanceFieldEnum]
+
+
+  export const StaffSessionOrderByRelevanceFieldEnum: {
+    id: 'id',
+    tokenHash: 'tokenHash',
+    authorId: 'authorId',
+    userAgent: 'userAgent',
+    ipHash: 'ipHash'
+  };
+
+  export type StaffSessionOrderByRelevanceFieldEnum = (typeof StaffSessionOrderByRelevanceFieldEnum)[keyof typeof StaffSessionOrderByRelevanceFieldEnum]
+
+
+  export const TopicOrderByRelevanceFieldEnum: {
+    id: 'id',
+    query: 'query',
+    title: 'title',
+    summary: 'summary',
+    categoryId: 'categoryId',
+    sourceUrl: 'sourceUrl',
+    sourceName: 'sourceName',
+    sourceTier: 'sourceTier',
+    dedupeHash: 'dedupeHash',
+    currentBand: 'currentBand',
+    termType: 'termType',
+    scoreSummary: 'scoreSummary',
+    weightsVersion: 'weightsVersion',
+    manualOverrideReason: 'manualOverrideReason',
+    manualOverrideById: 'manualOverrideById',
+    status: 'status',
+    claimedById: 'claimedById'
+  };
+
+  export type TopicOrderByRelevanceFieldEnum = (typeof TopicOrderByRelevanceFieldEnum)[keyof typeof TopicOrderByRelevanceFieldEnum]
+
+
+  export const TopicFranchiseOrderByRelevanceFieldEnum: {
+    topicId: 'topicId',
+    franchiseId: 'franchiseId'
+  };
+
+  export type TopicFranchiseOrderByRelevanceFieldEnum = (typeof TopicFranchiseOrderByRelevanceFieldEnum)[keyof typeof TopicFranchiseOrderByRelevanceFieldEnum]
+
+
+  export const ScoreSnapshotOrderByRelevanceFieldEnum: {
+    id: 'id',
+    topicId: 'topicId',
+    band: 'band',
+    weightsVersion: 'weightsVersion'
+  };
+
+  export type ScoreSnapshotOrderByRelevanceFieldEnum = (typeof ScoreSnapshotOrderByRelevanceFieldEnum)[keyof typeof ScoreSnapshotOrderByRelevanceFieldEnum]
+
+
+  export const SignalReadingOrderByRelevanceFieldEnum: {
+    id: 'id',
+    topicId: 'topicId',
+    connectorId: 'connectorId',
+    dimension: 'dimension',
+    rawValue: 'rawValue',
+    explanation: 'explanation'
+  };
+
+  export type SignalReadingOrderByRelevanceFieldEnum = (typeof SignalReadingOrderByRelevanceFieldEnum)[keyof typeof SignalReadingOrderByRelevanceFieldEnum]
+
+
+  export const ConnectorHealthOrderByRelevanceFieldEnum: {
+    id: 'id',
+    connectorId: 'connectorId',
+    circuitState: 'circuitState',
+    lastError: 'lastError'
+  };
+
+  export type ConnectorHealthOrderByRelevanceFieldEnum = (typeof ConnectorHealthOrderByRelevanceFieldEnum)[keyof typeof ConnectorHealthOrderByRelevanceFieldEnum]
+
+
+  export const ArticleOrderByRelevanceFieldEnum: {
+    id: 'id',
+    slug: 'slug',
+    title: 'title',
+    excerpt: 'excerpt',
+    content: 'content',
+    status: 'status',
+    categoryId: 'categoryId',
+    subcategoryId: 'subcategoryId',
+    authorId: 'authorId',
+    topicId: 'topicId',
+    coverImageUrl: 'coverImageUrl',
+    coverImageAlt: 'coverImageAlt',
+    videoUrl: 'videoUrl',
+    videoThumbnailUrl: 'videoThumbnailUrl',
+    seoTitle: 'seoTitle',
+    seoDescription: 'seoDescription',
+    canonicalUrl: 'canonicalUrl',
+    format: 'format',
+    currentBand: 'currentBand'
+  };
+
+  export type ArticleOrderByRelevanceFieldEnum = (typeof ArticleOrderByRelevanceFieldEnum)[keyof typeof ArticleOrderByRelevanceFieldEnum]
+
+
+  export const ArticleFranchiseOrderByRelevanceFieldEnum: {
+    articleId: 'articleId',
+    franchiseId: 'franchiseId'
+  };
+
+  export type ArticleFranchiseOrderByRelevanceFieldEnum = (typeof ArticleFranchiseOrderByRelevanceFieldEnum)[keyof typeof ArticleFranchiseOrderByRelevanceFieldEnum]
+
+
+  export const ArticleTagOrderByRelevanceFieldEnum: {
+    articleId: 'articleId',
+    tagId: 'tagId'
+  };
+
+  export type ArticleTagOrderByRelevanceFieldEnum = (typeof ArticleTagOrderByRelevanceFieldEnum)[keyof typeof ArticleTagOrderByRelevanceFieldEnum]
+
+
+  export const LiveUpdateOrderByRelevanceFieldEnum: {
+    id: 'id',
+    articleId: 'articleId',
+    content: 'content',
+    authorName: 'authorName'
+  };
+
+  export type LiveUpdateOrderByRelevanceFieldEnum = (typeof LiveUpdateOrderByRelevanceFieldEnum)[keyof typeof LiveUpdateOrderByRelevanceFieldEnum]
+
+
+  export const AffiliateOfferOrderByRelevanceFieldEnum: {
+    id: 'id',
+    productName: 'productName',
+    retailerName: 'retailerName',
+    brand: 'brand',
+    currency: 'currency',
+    offerUrl: 'offerUrl',
+    programCategory: 'programCategory',
+    network: 'network',
+    externalId: 'externalId',
+    imageUrl: 'imageUrl',
+    availability: 'availability',
+    disclosureKind: 'disclosureKind',
+    createdById: 'createdById'
+  };
+
+  export type AffiliateOfferOrderByRelevanceFieldEnum = (typeof AffiliateOfferOrderByRelevanceFieldEnum)[keyof typeof AffiliateOfferOrderByRelevanceFieldEnum]
+
+
+  export const ArticleAffiliateOfferOrderByRelevanceFieldEnum: {
+    articleId: 'articleId',
+    offerId: 'offerId',
+    label: 'label',
+    addedById: 'addedById'
+  };
+
+  export type ArticleAffiliateOfferOrderByRelevanceFieldEnum = (typeof ArticleAffiliateOfferOrderByRelevanceFieldEnum)[keyof typeof ArticleAffiliateOfferOrderByRelevanceFieldEnum]
+
+
+  export const ReleaseEventOrderByRelevanceFieldEnum: {
+    id: 'id',
+    title: 'title',
+    slug: 'slug',
+    franchiseId: 'franchiseId',
+    kind: 'kind',
+    platform: 'platform',
+    region: 'region'
+  };
+
+  export type ReleaseEventOrderByRelevanceFieldEnum = (typeof ReleaseEventOrderByRelevanceFieldEnum)[keyof typeof ReleaseEventOrderByRelevanceFieldEnum]
+
+
+  export const SubscriberOrderByRelevanceFieldEnum: {
+    id: 'id',
+    email: 'email',
+    status: 'status',
+    confirmationTokenHash: 'confirmationTokenHash',
+    unsubscribeTokenHash: 'unsubscribeTokenHash',
+    signupIpHash: 'signupIpHash',
+    signupUserAgent: 'signupUserAgent',
+    signupSource: 'signupSource'
+  };
+
+  export type SubscriberOrderByRelevanceFieldEnum = (typeof SubscriberOrderByRelevanceFieldEnum)[keyof typeof SubscriberOrderByRelevanceFieldEnum]
+
+
+  export const PushSubscriptionOrderByRelevanceFieldEnum: {
+    id: 'id',
+    endpoint: 'endpoint',
+    p256dh: 'p256dh',
+    auth: 'auth',
+    userAgent: 'userAgent'
+  };
+
+  export type PushSubscriptionOrderByRelevanceFieldEnum = (typeof PushSubscriptionOrderByRelevanceFieldEnum)[keyof typeof PushSubscriptionOrderByRelevanceFieldEnum]
+
+
+  export const PushNotificationOrderByRelevanceFieldEnum: {
+    id: 'id',
+    articleId: 'articleId',
+    title: 'title',
+    body: 'body',
+    iconUrl: 'iconUrl',
+    url: 'url',
+    trigger: 'trigger',
+    approvedById: 'approvedById',
+    status: 'status'
+  };
+
+  export type PushNotificationOrderByRelevanceFieldEnum = (typeof PushNotificationOrderByRelevanceFieldEnum)[keyof typeof PushNotificationOrderByRelevanceFieldEnum]
+
+
+  export const PushDeliveryOrderByRelevanceFieldEnum: {
+    id: 'id',
+    notificationId: 'notificationId',
+    subscriptionId: 'subscriptionId',
+    status: 'status',
+    error: 'error'
+  };
+
+  export type PushDeliveryOrderByRelevanceFieldEnum = (typeof PushDeliveryOrderByRelevanceFieldEnum)[keyof typeof PushDeliveryOrderByRelevanceFieldEnum]
+
+
+  export const FranchiseFollowOrderByRelevanceFieldEnum: {
+    id: 'id',
+    franchiseId: 'franchiseId',
+    visitorId: 'visitorId',
+    commentAuthorId: 'commentAuthorId'
+  };
+
+  export type FranchiseFollowOrderByRelevanceFieldEnum = (typeof FranchiseFollowOrderByRelevanceFieldEnum)[keyof typeof FranchiseFollowOrderByRelevanceFieldEnum]
+
+
+  export const CommentAuthorOrderByRelevanceFieldEnum: {
+    id: 'id',
+    provider: 'provider',
+    providerAccountHash: 'providerAccountHash',
+    displayName: 'displayName',
+    avatarUrl: 'avatarUrl',
+    emailHash: 'emailHash',
+    blockReason: 'blockReason'
+  };
+
+  export type CommentAuthorOrderByRelevanceFieldEnum = (typeof CommentAuthorOrderByRelevanceFieldEnum)[keyof typeof CommentAuthorOrderByRelevanceFieldEnum]
+
+
+  export const CommentSessionOrderByRelevanceFieldEnum: {
+    id: 'id',
+    tokenHash: 'tokenHash',
+    authorId: 'authorId',
+    userAgent: 'userAgent',
+    ipHash: 'ipHash'
+  };
+
+  export type CommentSessionOrderByRelevanceFieldEnum = (typeof CommentSessionOrderByRelevanceFieldEnum)[keyof typeof CommentSessionOrderByRelevanceFieldEnum]
+
+
+  export const CommentOrderByRelevanceFieldEnum: {
+    id: 'id',
+    articleId: 'articleId',
+    authorAccountId: 'authorAccountId',
+    authorName: 'authorName',
+    authorEmailHash: 'authorEmailHash',
+    content: 'content',
+    status: 'status',
+    moderatedBy: 'moderatedBy',
+    moderationNote: 'moderationNote',
+    parentId: 'parentId',
+    ipHash: 'ipHash'
+  };
+
+  export type CommentOrderByRelevanceFieldEnum = (typeof CommentOrderByRelevanceFieldEnum)[keyof typeof CommentOrderByRelevanceFieldEnum]
+
+
+  export const PipelineEventOrderByRelevanceFieldEnum: {
+    id: 'id',
+    eventType: 'eventType',
+    topicId: 'topicId',
+    articleId: 'articleId',
+    connectorId: 'connectorId',
+    actorId: 'actorId'
+  };
+
+  export type PipelineEventOrderByRelevanceFieldEnum = (typeof PipelineEventOrderByRelevanceFieldEnum)[keyof typeof PipelineEventOrderByRelevanceFieldEnum]
+
+
+  export const PipelineRunOrderByRelevanceFieldEnum: {
+    id: 'id',
+    stage: 'stage',
+    status: 'status',
+    error: 'error'
+  };
+
+  export type PipelineRunOrderByRelevanceFieldEnum = (typeof PipelineRunOrderByRelevanceFieldEnum)[keyof typeof PipelineRunOrderByRelevanceFieldEnum]
+
+
+  export const AuditLogOrderByRelevanceFieldEnum: {
+    id: 'id',
+    actorId: 'actorId',
+    action: 'action',
+    entityType: 'entityType',
+    entityId: 'entityId',
+    reason: 'reason',
+    ipHash: 'ipHash'
+  };
+
+  export type AuditLogOrderByRelevanceFieldEnum = (typeof AuditLogOrderByRelevanceFieldEnum)[keyof typeof AuditLogOrderByRelevanceFieldEnum]
 
 
   /**
@@ -39778,23 +35995,9 @@ export namespace Prisma {
 
 
   /**
-   * Reference to a field of type 'String[]'
-   */
-  export type ListStringFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'String[]'>
-    
-
-
-  /**
    * Reference to a field of type 'Int'
    */
   export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
-    
-
-
-  /**
-   * Reference to a field of type 'Int[]'
-   */
-  export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
     
 
 
@@ -39806,23 +36009,9 @@ export namespace Prisma {
 
 
   /**
-   * Reference to a field of type 'Float[]'
-   */
-  export type ListFloatFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Float[]'>
-    
-
-
-  /**
    * Reference to a field of type 'DateTime'
    */
   export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime'>
-    
-
-
-  /**
-   * Reference to a field of type 'DateTime[]'
-   */
-  export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
     
 
 
@@ -39891,6 +36080,7 @@ export namespace Prisma {
     topics?: TopicOrderByRelationAggregateInput
     franchises?: FranchiseOrderByRelationAggregateInput
     subcategories?: SubcategoryOrderByRelationAggregateInput
+    _relevance?: CategoryOrderByRelevanceInput
   }
 
   export type CategoryWhereUniqueInput = Prisma.AtLeast<{
@@ -39983,6 +36173,7 @@ export namespace Prisma {
     updatedAt?: SortOrder
     category?: CategoryOrderByWithRelationInput
     articles?: ArticleOrderByRelationAggregateInput
+    _relevance?: SubcategoryOrderByRelevanceInput
   }
 
   export type SubcategoryWhereUniqueInput = Prisma.AtLeast<{
@@ -40040,7 +36231,7 @@ export namespace Prisma {
     slug?: StringFilter<"Franchise"> | string
     name?: StringFilter<"Franchise"> | string
     description?: StringFilter<"Franchise"> | string
-    aliases?: StringNullableListFilter<"Franchise">
+    aliases?: JsonFilter<"Franchise">
     heroImageUrl?: StringNullableFilter<"Franchise"> | string | null
     logoUrl?: StringNullableFilter<"Franchise"> | string | null
     primaryCategoryId?: StringFilter<"Franchise"> | string
@@ -40073,6 +36264,7 @@ export namespace Prisma {
     topics?: TopicFranchiseOrderByRelationAggregateInput
     releases?: ReleaseEventOrderByRelationAggregateInput
     follows?: FranchiseFollowOrderByRelationAggregateInput
+    _relevance?: FranchiseOrderByRelevanceInput
   }
 
   export type FranchiseWhereUniqueInput = Prisma.AtLeast<{
@@ -40083,7 +36275,7 @@ export namespace Prisma {
     NOT?: FranchiseWhereInput | FranchiseWhereInput[]
     name?: StringFilter<"Franchise"> | string
     description?: StringFilter<"Franchise"> | string
-    aliases?: StringNullableListFilter<"Franchise">
+    aliases?: JsonFilter<"Franchise">
     heroImageUrl?: StringNullableFilter<"Franchise"> | string | null
     logoUrl?: StringNullableFilter<"Franchise"> | string | null
     primaryCategoryId?: StringFilter<"Franchise"> | string
@@ -40126,7 +36318,7 @@ export namespace Prisma {
     slug?: StringWithAggregatesFilter<"Franchise"> | string
     name?: StringWithAggregatesFilter<"Franchise"> | string
     description?: StringWithAggregatesFilter<"Franchise"> | string
-    aliases?: StringNullableListFilter<"Franchise">
+    aliases?: JsonWithAggregatesFilter<"Franchise">
     heroImageUrl?: StringNullableWithAggregatesFilter<"Franchise"> | string | null
     logoUrl?: StringNullableWithAggregatesFilter<"Franchise"> | string | null
     primaryCategoryId?: StringWithAggregatesFilter<"Franchise"> | string
@@ -40155,6 +36347,7 @@ export namespace Prisma {
     kind?: SortOrder
     createdAt?: SortOrder
     articles?: ArticleTagOrderByRelationAggregateInput
+    _relevance?: TagOrderByRelevanceInput
   }
 
   export type TagWhereUniqueInput = Prisma.AtLeast<{
@@ -40203,7 +36396,7 @@ export namespace Prisma {
     avatarUrl?: StringNullableFilter<"Author"> | string | null
     role?: StringFilter<"Author"> | string
     socialLinks?: JsonFilter<"Author">
-    expertiseAreas?: StringNullableListFilter<"Author">
+    expertiseAreas?: JsonFilter<"Author">
     systemRole?: StringFilter<"Author"> | string
     passwordHash?: StringNullableFilter<"Author"> | string | null
     isActive?: BoolFilter<"Author"> | boolean
@@ -40234,6 +36427,7 @@ export namespace Prisma {
     articles?: ArticleOrderByRelationAggregateInput
     auditLogs?: AuditLogOrderByRelationAggregateInput
     staffSessions?: StaffSessionOrderByRelationAggregateInput
+    _relevance?: AuthorOrderByRelevanceInput
   }
 
   export type AuthorWhereUniqueInput = Prisma.AtLeast<{
@@ -40248,7 +36442,7 @@ export namespace Prisma {
     avatarUrl?: StringNullableFilter<"Author"> | string | null
     role?: StringFilter<"Author"> | string
     socialLinks?: JsonFilter<"Author">
-    expertiseAreas?: StringNullableListFilter<"Author">
+    expertiseAreas?: JsonFilter<"Author">
     systemRole?: StringFilter<"Author"> | string
     passwordHash?: StringNullableFilter<"Author"> | string | null
     isActive?: BoolFilter<"Author"> | boolean
@@ -40293,7 +36487,7 @@ export namespace Prisma {
     avatarUrl?: StringNullableWithAggregatesFilter<"Author"> | string | null
     role?: StringWithAggregatesFilter<"Author"> | string
     socialLinks?: JsonWithAggregatesFilter<"Author">
-    expertiseAreas?: StringNullableListFilter<"Author">
+    expertiseAreas?: JsonWithAggregatesFilter<"Author">
     systemRole?: StringWithAggregatesFilter<"Author"> | string
     passwordHash?: StringNullableWithAggregatesFilter<"Author"> | string | null
     isActive?: BoolWithAggregatesFilter<"Author"> | boolean
@@ -40325,6 +36519,7 @@ export namespace Prisma {
     ipHash?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     author?: AuthorOrderByWithRelationInput
+    _relevance?: StaffSessionOrderByRelevanceInput
   }
 
   export type StaffSessionWhereUniqueInput = Prisma.AtLeast<{
@@ -40373,7 +36568,7 @@ export namespace Prisma {
     NOT?: TopicWhereInput | TopicWhereInput[]
     id?: StringFilter<"Topic"> | string
     query?: StringFilter<"Topic"> | string
-    aliases?: StringNullableListFilter<"Topic">
+    aliases?: JsonFilter<"Topic">
     title?: StringFilter<"Topic"> | string
     summary?: StringFilter<"Topic"> | string
     categoryId?: StringNullableFilter<"Topic"> | string | null
@@ -40387,7 +36582,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFilter<"Topic"> | number
     confidence?: FloatFilter<"Topic"> | number
     termType?: StringFilter<"Topic"> | string
-    emotionalTriggers?: StringNullableListFilter<"Topic">
+    emotionalTriggers?: JsonFilter<"Topic">
     requiresHumanReview?: BoolFilter<"Topic"> | boolean
     scoreSummary?: StringFilter<"Topic"> | string
     weightsVersion?: StringFilter<"Topic"> | string
@@ -40450,6 +36645,7 @@ export namespace Prisma {
     articles?: ArticleOrderByRelationAggregateInput
     scoreSnapshots?: ScoreSnapshotOrderByRelationAggregateInput
     signalReadings?: SignalReadingOrderByRelationAggregateInput
+    _relevance?: TopicOrderByRelevanceInput
   }
 
   export type TopicWhereUniqueInput = Prisma.AtLeast<{
@@ -40459,7 +36655,7 @@ export namespace Prisma {
     OR?: TopicWhereInput[]
     NOT?: TopicWhereInput | TopicWhereInput[]
     query?: StringFilter<"Topic"> | string
-    aliases?: StringNullableListFilter<"Topic">
+    aliases?: JsonFilter<"Topic">
     title?: StringFilter<"Topic"> | string
     summary?: StringFilter<"Topic"> | string
     categoryId?: StringNullableFilter<"Topic"> | string | null
@@ -40472,7 +36668,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFilter<"Topic"> | number
     confidence?: FloatFilter<"Topic"> | number
     termType?: StringFilter<"Topic"> | string
-    emotionalTriggers?: StringNullableListFilter<"Topic">
+    emotionalTriggers?: JsonFilter<"Topic">
     requiresHumanReview?: BoolFilter<"Topic"> | boolean
     scoreSummary?: StringFilter<"Topic"> | string
     weightsVersion?: StringFilter<"Topic"> | string
@@ -40543,7 +36739,7 @@ export namespace Prisma {
     NOT?: TopicScalarWhereWithAggregatesInput | TopicScalarWhereWithAggregatesInput[]
     id?: StringWithAggregatesFilter<"Topic"> | string
     query?: StringWithAggregatesFilter<"Topic"> | string
-    aliases?: StringNullableListFilter<"Topic">
+    aliases?: JsonWithAggregatesFilter<"Topic">
     title?: StringWithAggregatesFilter<"Topic"> | string
     summary?: StringWithAggregatesFilter<"Topic"> | string
     categoryId?: StringNullableWithAggregatesFilter<"Topic"> | string | null
@@ -40557,7 +36753,7 @@ export namespace Prisma {
     seoOpportunity?: FloatWithAggregatesFilter<"Topic"> | number
     confidence?: FloatWithAggregatesFilter<"Topic"> | number
     termType?: StringWithAggregatesFilter<"Topic"> | string
-    emotionalTriggers?: StringNullableListFilter<"Topic">
+    emotionalTriggers?: JsonWithAggregatesFilter<"Topic">
     requiresHumanReview?: BoolWithAggregatesFilter<"Topic"> | boolean
     scoreSummary?: StringWithAggregatesFilter<"Topic"> | string
     weightsVersion?: StringWithAggregatesFilter<"Topic"> | string
@@ -40591,6 +36787,7 @@ export namespace Prisma {
     franchiseId?: SortOrder
     topic?: TopicOrderByWithRelationInput
     franchise?: FranchiseOrderByWithRelationInput
+    _relevance?: TopicFranchiseOrderByRelevanceInput
   }
 
   export type TopicFranchiseWhereUniqueInput = Prisma.AtLeast<{
@@ -40649,6 +36846,7 @@ export namespace Prisma {
     isShadow?: SortOrder
     calculatedAt?: SortOrder
     topic?: TopicOrderByWithRelationInput
+    _relevance?: ScoreSnapshotOrderByRelevanceInput
   }
 
   export type ScoreSnapshotWhereUniqueInput = Prisma.AtLeast<{
@@ -40731,6 +36929,7 @@ export namespace Prisma {
     rawPayload?: SortOrderInput | SortOrder
     observedAt?: SortOrder
     topic?: TopicOrderByWithRelationInput
+    _relevance?: SignalReadingOrderByRelevanceInput
   }
 
   export type SignalReadingWhereUniqueInput = Prisma.AtLeast<{
@@ -40821,6 +37020,7 @@ export namespace Prisma {
     callsThisPeriod?: SortOrder
     periodResetAt?: SortOrderInput | SortOrder
     updatedAt?: SortOrder
+    _relevance?: ConnectorHealthOrderByRelevanceInput
   }
 
   export type ConnectorHealthWhereUniqueInput = Prisma.AtLeast<{
@@ -40918,7 +37118,7 @@ export namespace Prisma {
     isLive?: BoolFilter<"Article"> | boolean
     updatesCount?: IntFilter<"Article"> | number
     hasSpoiler?: BoolFilter<"Article"> | boolean
-    tldr?: StringNullableListFilter<"Article">
+    tldr?: JsonFilter<"Article">
     reviewData?: JsonNullableFilter<"Article">
     scoreAtPublish?: FloatNullableFilter<"Article"> | number | null
     currentScore?: FloatFilter<"Article"> | number
@@ -40999,6 +37199,7 @@ export namespace Prisma {
     affiliateOffers?: ArticleAffiliateOfferOrderByRelationAggregateInput
     pushNotifications?: PushNotificationOrderByRelationAggregateInput
     comments?: CommentOrderByRelationAggregateInput
+    _relevance?: ArticleOrderByRelevanceInput
   }
 
   export type ArticleWhereUniqueInput = Prisma.AtLeast<{
@@ -41031,7 +37232,7 @@ export namespace Prisma {
     isLive?: BoolFilter<"Article"> | boolean
     updatesCount?: IntFilter<"Article"> | number
     hasSpoiler?: BoolFilter<"Article"> | boolean
-    tldr?: StringNullableListFilter<"Article">
+    tldr?: JsonFilter<"Article">
     reviewData?: JsonNullableFilter<"Article">
     scoreAtPublish?: FloatNullableFilter<"Article"> | number | null
     currentScore?: FloatFilter<"Article"> | number
@@ -41139,7 +37340,7 @@ export namespace Prisma {
     isLive?: BoolWithAggregatesFilter<"Article"> | boolean
     updatesCount?: IntWithAggregatesFilter<"Article"> | number
     hasSpoiler?: BoolWithAggregatesFilter<"Article"> | boolean
-    tldr?: StringNullableListFilter<"Article">
+    tldr?: JsonWithAggregatesFilter<"Article">
     reviewData?: JsonNullableWithAggregatesFilter<"Article">
     scoreAtPublish?: FloatNullableWithAggregatesFilter<"Article"> | number | null
     currentScore?: FloatWithAggregatesFilter<"Article"> | number
@@ -41172,6 +37373,7 @@ export namespace Prisma {
     franchiseId?: SortOrder
     article?: ArticleOrderByWithRelationInput
     franchise?: FranchiseOrderByWithRelationInput
+    _relevance?: ArticleFranchiseOrderByRelevanceInput
   }
 
   export type ArticleFranchiseWhereUniqueInput = Prisma.AtLeast<{
@@ -41216,6 +37418,7 @@ export namespace Prisma {
     tagId?: SortOrder
     article?: ArticleOrderByWithRelationInput
     tag?: TagOrderByWithRelationInput
+    _relevance?: ArticleTagOrderByRelevanceInput
   }
 
   export type ArticleTagWhereUniqueInput = Prisma.AtLeast<{
@@ -41266,6 +37469,7 @@ export namespace Prisma {
     authorName?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     article?: ArticleOrderByWithRelationInput
+    _relevance?: LiveUpdateOrderByRelevanceInput
   }
 
   export type LiveUpdateWhereUniqueInput = Prisma.AtLeast<{
@@ -41352,6 +37556,7 @@ export namespace Prisma {
     updatedAt?: SortOrder
     createdById?: SortOrderInput | SortOrder
     articles?: ArticleAffiliateOfferOrderByRelationAggregateInput
+    _relevance?: AffiliateOfferOrderByRelevanceInput
   }
 
   export type AffiliateOfferWhereUniqueInput = Prisma.AtLeast<{
@@ -41457,6 +37662,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     article?: ArticleOrderByWithRelationInput
     offer?: AffiliateOfferOrderByWithRelationInput
+    _relevance?: ArticleAffiliateOfferOrderByRelevanceInput
   }
 
   export type ArticleAffiliateOfferWhereUniqueInput = Prisma.AtLeast<{
@@ -41534,6 +37740,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     updatedAt?: SortOrder
     franchise?: FranchiseOrderByWithRelationInput
+    _relevance?: ReleaseEventOrderByRelevanceInput
   }
 
   export type ReleaseEventWhereUniqueInput = Prisma.AtLeast<{
@@ -41600,7 +37807,7 @@ export namespace Prisma {
     confirmedAt?: DateTimeNullableFilter<"Subscriber"> | Date | string | null
     unsubscribeTokenHash?: StringNullableFilter<"Subscriber"> | string | null
     unsubscribedAt?: DateTimeNullableFilter<"Subscriber"> | Date | string | null
-    preferredCategories?: StringNullableListFilter<"Subscriber">
+    preferredCategories?: JsonFilter<"Subscriber">
     signupIpHash?: StringNullableFilter<"Subscriber"> | string | null
     signupUserAgent?: StringNullableFilter<"Subscriber"> | string | null
     signupSource?: StringFilter<"Subscriber"> | string
@@ -41631,6 +37838,7 @@ export namespace Prisma {
     lastOpenedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+    _relevance?: SubscriberOrderByRelevanceInput
   }
 
   export type SubscriberWhereUniqueInput = Prisma.AtLeast<{
@@ -41645,7 +37853,7 @@ export namespace Prisma {
     confirmedAt?: DateTimeNullableFilter<"Subscriber"> | Date | string | null
     unsubscribeTokenHash?: StringNullableFilter<"Subscriber"> | string | null
     unsubscribedAt?: DateTimeNullableFilter<"Subscriber"> | Date | string | null
-    preferredCategories?: StringNullableListFilter<"Subscriber">
+    preferredCategories?: JsonFilter<"Subscriber">
     signupIpHash?: StringNullableFilter<"Subscriber"> | string | null
     signupUserAgent?: StringNullableFilter<"Subscriber"> | string | null
     signupSource?: StringFilter<"Subscriber"> | string
@@ -41695,7 +37903,7 @@ export namespace Prisma {
     confirmedAt?: DateTimeNullableWithAggregatesFilter<"Subscriber"> | Date | string | null
     unsubscribeTokenHash?: StringNullableWithAggregatesFilter<"Subscriber"> | string | null
     unsubscribedAt?: DateTimeNullableWithAggregatesFilter<"Subscriber"> | Date | string | null
-    preferredCategories?: StringNullableListFilter<"Subscriber">
+    preferredCategories?: JsonWithAggregatesFilter<"Subscriber">
     signupIpHash?: StringNullableWithAggregatesFilter<"Subscriber"> | string | null
     signupUserAgent?: StringNullableWithAggregatesFilter<"Subscriber"> | string | null
     signupSource?: StringWithAggregatesFilter<"Subscriber"> | string
@@ -41716,8 +37924,8 @@ export namespace Prisma {
     p256dh?: StringFilter<"PushSubscription"> | string
     auth?: StringFilter<"PushSubscription"> | string
     userAgent?: StringNullableFilter<"PushSubscription"> | string | null
-    preferredCategories?: StringNullableListFilter<"PushSubscription">
-    preferredFranchises?: StringNullableListFilter<"PushSubscription">
+    preferredCategories?: JsonFilter<"PushSubscription">
+    preferredFranchises?: JsonFilter<"PushSubscription">
     minScoreThreshold?: IntFilter<"PushSubscription"> | number
     isActive?: BoolFilter<"PushSubscription"> | boolean
     lastFailureAt?: DateTimeNullableFilter<"PushSubscription"> | Date | string | null
@@ -41746,6 +37954,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     updatedAt?: SortOrder
     deliveries?: PushDeliveryOrderByRelationAggregateInput
+    _relevance?: PushSubscriptionOrderByRelevanceInput
   }
 
   export type PushSubscriptionWhereUniqueInput = Prisma.AtLeast<{
@@ -41757,8 +37966,8 @@ export namespace Prisma {
     p256dh?: StringFilter<"PushSubscription"> | string
     auth?: StringFilter<"PushSubscription"> | string
     userAgent?: StringNullableFilter<"PushSubscription"> | string | null
-    preferredCategories?: StringNullableListFilter<"PushSubscription">
-    preferredFranchises?: StringNullableListFilter<"PushSubscription">
+    preferredCategories?: JsonFilter<"PushSubscription">
+    preferredFranchises?: JsonFilter<"PushSubscription">
     minScoreThreshold?: IntFilter<"PushSubscription"> | number
     isActive?: BoolFilter<"PushSubscription"> | boolean
     lastFailureAt?: DateTimeNullableFilter<"PushSubscription"> | Date | string | null
@@ -41802,8 +38011,8 @@ export namespace Prisma {
     p256dh?: StringWithAggregatesFilter<"PushSubscription"> | string
     auth?: StringWithAggregatesFilter<"PushSubscription"> | string
     userAgent?: StringNullableWithAggregatesFilter<"PushSubscription"> | string | null
-    preferredCategories?: StringNullableListFilter<"PushSubscription">
-    preferredFranchises?: StringNullableListFilter<"PushSubscription">
+    preferredCategories?: JsonWithAggregatesFilter<"PushSubscription">
+    preferredFranchises?: JsonWithAggregatesFilter<"PushSubscription">
     minScoreThreshold?: IntWithAggregatesFilter<"PushSubscription"> | number
     isActive?: BoolWithAggregatesFilter<"PushSubscription"> | boolean
     lastFailureAt?: DateTimeNullableWithAggregatesFilter<"PushSubscription"> | Date | string | null
@@ -41857,6 +38066,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     article?: ArticleOrderByWithRelationInput
     deliveries?: PushDeliveryOrderByRelationAggregateInput
+    _relevance?: PushNotificationOrderByRelevanceInput
   }
 
   export type PushNotificationWhereUniqueInput = Prisma.AtLeast<{
@@ -41954,6 +38164,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     notification?: PushNotificationOrderByWithRelationInput
     subscription?: PushSubscriptionOrderByWithRelationInput
+    _relevance?: PushDeliveryOrderByRelevanceInput
   }
 
   export type PushDeliveryWhereUniqueInput = Prisma.AtLeast<{
@@ -42019,6 +38230,7 @@ export namespace Prisma {
     createdAt?: SortOrder
     franchise?: FranchiseOrderByWithRelationInput
     commentAuthor?: CommentAuthorOrderByWithRelationInput
+    _relevance?: FranchiseFollowOrderByRelevanceInput
   }
 
   export type FranchiseFollowWhereUniqueInput = Prisma.AtLeast<{
@@ -42095,6 +38307,7 @@ export namespace Prisma {
     comments?: CommentOrderByRelationAggregateInput
     sessions?: CommentSessionOrderByRelationAggregateInput
     follows?: FranchiseFollowOrderByRelationAggregateInput
+    _relevance?: CommentAuthorOrderByRelevanceInput
   }
 
   export type CommentAuthorWhereUniqueInput = Prisma.AtLeast<{
@@ -42180,6 +38393,7 @@ export namespace Prisma {
     ipHash?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     author?: CommentAuthorOrderByWithRelationInput
+    _relevance?: CommentSessionOrderByRelevanceInput
   }
 
   export type CommentSessionWhereUniqueInput = Prisma.AtLeast<{
@@ -42267,6 +38481,7 @@ export namespace Prisma {
     authorAccount?: CommentAuthorOrderByWithRelationInput
     parent?: CommentOrderByWithRelationInput
     replies?: CommentOrderByRelationAggregateInput
+    _relevance?: CommentOrderByRelevanceInput
   }
 
   export type CommentWhereUniqueInput = Prisma.AtLeast<{
@@ -42363,6 +38578,7 @@ export namespace Prisma {
     payload?: SortOrder
     durationMs?: SortOrderInput | SortOrder
     createdAt?: SortOrder
+    _relevance?: PipelineEventOrderByRelevanceInput
   }
 
   export type PipelineEventWhereUniqueInput = Prisma.AtLeast<{
@@ -42445,6 +38661,7 @@ export namespace Prisma {
     finishedAt?: SortOrderInput | SortOrder
     durationMs?: SortOrderInput | SortOrder
     error?: SortOrderInput | SortOrder
+    _relevance?: PipelineRunOrderByRelevanceInput
   }
 
   export type PipelineRunWhereUniqueInput = Prisma.AtLeast<{
@@ -42535,6 +38752,7 @@ export namespace Prisma {
     ipHash?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     actor?: AuthorOrderByWithRelationInput
+    _relevance?: AuditLogOrderByRelevanceInput
   }
 
   export type AuditLogWhereUniqueInput = Prisma.AtLeast<{
@@ -42799,7 +39017,7 @@ export namespace Prisma {
     slug: string
     name: string
     description?: string
-    aliases?: FranchiseCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: string | null
     logoUrl?: string | null
     audienceAffinityIndex?: number
@@ -42818,7 +39036,7 @@ export namespace Prisma {
     slug: string
     name: string
     description?: string
-    aliases?: FranchiseCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: string | null
     logoUrl?: string | null
     primaryCategoryId: string
@@ -42837,7 +39055,7 @@ export namespace Prisma {
     slug?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
-    aliases?: FranchiseUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     audienceAffinityIndex?: FloatFieldUpdateOperationsInput | number
@@ -42856,7 +39074,7 @@ export namespace Prisma {
     slug?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
-    aliases?: FranchiseUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     primaryCategoryId?: StringFieldUpdateOperationsInput | string
@@ -42875,7 +39093,7 @@ export namespace Prisma {
     slug: string
     name: string
     description?: string
-    aliases?: FranchiseCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: string | null
     logoUrl?: string | null
     primaryCategoryId: string
@@ -42890,7 +39108,7 @@ export namespace Prisma {
     slug?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
-    aliases?: FranchiseUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     audienceAffinityIndex?: FloatFieldUpdateOperationsInput | number
@@ -42904,7 +39122,7 @@ export namespace Prisma {
     slug?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
-    aliases?: FranchiseUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     primaryCategoryId?: StringFieldUpdateOperationsInput | string
@@ -42983,7 +39201,7 @@ export namespace Prisma {
     avatarUrl?: string | null
     role?: string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorCreateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: string
     passwordHash?: string | null
     isActive?: boolean
@@ -43004,7 +39222,7 @@ export namespace Prisma {
     avatarUrl?: string | null
     role?: string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorCreateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: string
     passwordHash?: string | null
     isActive?: boolean
@@ -43025,7 +39243,7 @@ export namespace Prisma {
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
     role?: StringFieldUpdateOperationsInput | string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorUpdateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: StringFieldUpdateOperationsInput | string
     passwordHash?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -43046,7 +39264,7 @@ export namespace Prisma {
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
     role?: StringFieldUpdateOperationsInput | string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorUpdateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: StringFieldUpdateOperationsInput | string
     passwordHash?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -43067,7 +39285,7 @@ export namespace Prisma {
     avatarUrl?: string | null
     role?: string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorCreateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: string
     passwordHash?: string | null
     isActive?: boolean
@@ -43085,7 +39303,7 @@ export namespace Prisma {
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
     role?: StringFieldUpdateOperationsInput | string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorUpdateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: StringFieldUpdateOperationsInput | string
     passwordHash?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -43103,7 +39321,7 @@ export namespace Prisma {
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
     role?: StringFieldUpdateOperationsInput | string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorUpdateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: StringFieldUpdateOperationsInput | string
     passwordHash?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -43184,7 +39402,7 @@ export namespace Prisma {
   export type TopicCreateInput = {
     id?: string
     query: string
-    aliases?: TopicCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title: string
     summary?: string
     sourceUrl?: string | null
@@ -43197,7 +39415,7 @@ export namespace Prisma {
     seoOpportunity?: number
     confidence?: number
     termType?: string
-    emotionalTriggers?: TopicCreateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: boolean
     scoreSummary?: string
     weightsVersion?: string
@@ -43224,7 +39442,7 @@ export namespace Prisma {
   export type TopicUncheckedCreateInput = {
     id?: string
     query: string
-    aliases?: TopicCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title: string
     summary?: string
     categoryId?: string | null
@@ -43238,7 +39456,7 @@ export namespace Prisma {
     seoOpportunity?: number
     confidence?: number
     termType?: string
-    emotionalTriggers?: TopicCreateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: boolean
     scoreSummary?: string
     weightsVersion?: string
@@ -43264,7 +39482,7 @@ export namespace Prisma {
   export type TopicUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     query?: StringFieldUpdateOperationsInput | string
-    aliases?: TopicUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
     summary?: StringFieldUpdateOperationsInput | string
     sourceUrl?: NullableStringFieldUpdateOperationsInput | string | null
@@ -43277,7 +39495,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFieldUpdateOperationsInput | number
     confidence?: FloatFieldUpdateOperationsInput | number
     termType?: StringFieldUpdateOperationsInput | string
-    emotionalTriggers?: TopicUpdateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: BoolFieldUpdateOperationsInput | boolean
     scoreSummary?: StringFieldUpdateOperationsInput | string
     weightsVersion?: StringFieldUpdateOperationsInput | string
@@ -43304,7 +39522,7 @@ export namespace Prisma {
   export type TopicUncheckedUpdateInput = {
     id?: StringFieldUpdateOperationsInput | string
     query?: StringFieldUpdateOperationsInput | string
-    aliases?: TopicUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
     summary?: StringFieldUpdateOperationsInput | string
     categoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -43318,7 +39536,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFieldUpdateOperationsInput | number
     confidence?: FloatFieldUpdateOperationsInput | number
     termType?: StringFieldUpdateOperationsInput | string
-    emotionalTriggers?: TopicUpdateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: BoolFieldUpdateOperationsInput | boolean
     scoreSummary?: StringFieldUpdateOperationsInput | string
     weightsVersion?: StringFieldUpdateOperationsInput | string
@@ -43344,7 +39562,7 @@ export namespace Prisma {
   export type TopicCreateManyInput = {
     id?: string
     query: string
-    aliases?: TopicCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title: string
     summary?: string
     categoryId?: string | null
@@ -43358,7 +39576,7 @@ export namespace Prisma {
     seoOpportunity?: number
     confidence?: number
     termType?: string
-    emotionalTriggers?: TopicCreateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: boolean
     scoreSummary?: string
     weightsVersion?: string
@@ -43380,7 +39598,7 @@ export namespace Prisma {
   export type TopicUpdateManyMutationInput = {
     id?: StringFieldUpdateOperationsInput | string
     query?: StringFieldUpdateOperationsInput | string
-    aliases?: TopicUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
     summary?: StringFieldUpdateOperationsInput | string
     sourceUrl?: NullableStringFieldUpdateOperationsInput | string | null
@@ -43393,7 +39611,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFieldUpdateOperationsInput | number
     confidence?: FloatFieldUpdateOperationsInput | number
     termType?: StringFieldUpdateOperationsInput | string
-    emotionalTriggers?: TopicUpdateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: BoolFieldUpdateOperationsInput | boolean
     scoreSummary?: StringFieldUpdateOperationsInput | string
     weightsVersion?: StringFieldUpdateOperationsInput | string
@@ -43415,7 +39633,7 @@ export namespace Prisma {
   export type TopicUncheckedUpdateManyInput = {
     id?: StringFieldUpdateOperationsInput | string
     query?: StringFieldUpdateOperationsInput | string
-    aliases?: TopicUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
     summary?: StringFieldUpdateOperationsInput | string
     categoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -43429,7 +39647,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFieldUpdateOperationsInput | number
     confidence?: FloatFieldUpdateOperationsInput | number
     termType?: StringFieldUpdateOperationsInput | string
-    emotionalTriggers?: TopicUpdateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: BoolFieldUpdateOperationsInput | boolean
     scoreSummary?: StringFieldUpdateOperationsInput | string
     weightsVersion?: StringFieldUpdateOperationsInput | string
@@ -43811,7 +40029,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -43866,7 +40084,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -43913,7 +40131,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -43968,7 +40186,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -44019,7 +40237,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -44060,7 +40278,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -44105,7 +40323,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -44585,7 +40803,7 @@ export namespace Prisma {
     confirmedAt?: Date | string | null
     unsubscribeTokenHash?: string | null
     unsubscribedAt?: Date | string | null
-    preferredCategories?: SubscriberCreatepreferredCategoriesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
     signupIpHash?: string | null
     signupUserAgent?: string | null
     signupSource?: string
@@ -44606,7 +40824,7 @@ export namespace Prisma {
     confirmedAt?: Date | string | null
     unsubscribeTokenHash?: string | null
     unsubscribedAt?: Date | string | null
-    preferredCategories?: SubscriberCreatepreferredCategoriesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
     signupIpHash?: string | null
     signupUserAgent?: string | null
     signupSource?: string
@@ -44627,7 +40845,7 @@ export namespace Prisma {
     confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     unsubscribeTokenHash?: NullableStringFieldUpdateOperationsInput | string | null
     unsubscribedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    preferredCategories?: SubscriberUpdatepreferredCategoriesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
     signupIpHash?: NullableStringFieldUpdateOperationsInput | string | null
     signupUserAgent?: NullableStringFieldUpdateOperationsInput | string | null
     signupSource?: StringFieldUpdateOperationsInput | string
@@ -44648,7 +40866,7 @@ export namespace Prisma {
     confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     unsubscribeTokenHash?: NullableStringFieldUpdateOperationsInput | string | null
     unsubscribedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    preferredCategories?: SubscriberUpdatepreferredCategoriesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
     signupIpHash?: NullableStringFieldUpdateOperationsInput | string | null
     signupUserAgent?: NullableStringFieldUpdateOperationsInput | string | null
     signupSource?: StringFieldUpdateOperationsInput | string
@@ -44669,7 +40887,7 @@ export namespace Prisma {
     confirmedAt?: Date | string | null
     unsubscribeTokenHash?: string | null
     unsubscribedAt?: Date | string | null
-    preferredCategories?: SubscriberCreatepreferredCategoriesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
     signupIpHash?: string | null
     signupUserAgent?: string | null
     signupSource?: string
@@ -44690,7 +40908,7 @@ export namespace Prisma {
     confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     unsubscribeTokenHash?: NullableStringFieldUpdateOperationsInput | string | null
     unsubscribedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    preferredCategories?: SubscriberUpdatepreferredCategoriesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
     signupIpHash?: NullableStringFieldUpdateOperationsInput | string | null
     signupUserAgent?: NullableStringFieldUpdateOperationsInput | string | null
     signupSource?: StringFieldUpdateOperationsInput | string
@@ -44711,7 +40929,7 @@ export namespace Prisma {
     confirmedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     unsubscribeTokenHash?: NullableStringFieldUpdateOperationsInput | string | null
     unsubscribedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
-    preferredCategories?: SubscriberUpdatepreferredCategoriesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
     signupIpHash?: NullableStringFieldUpdateOperationsInput | string | null
     signupUserAgent?: NullableStringFieldUpdateOperationsInput | string | null
     signupSource?: StringFieldUpdateOperationsInput | string
@@ -44729,8 +40947,8 @@ export namespace Prisma {
     p256dh: string
     auth: string
     userAgent?: string | null
-    preferredCategories?: PushSubscriptionCreatepreferredCategoriesInput | string[]
-    preferredFranchises?: PushSubscriptionCreatepreferredFranchisesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
+    preferredFranchises?: JsonNullValueInput | InputJsonValue
     minScoreThreshold?: number
     isActive?: boolean
     lastFailureAt?: Date | string | null
@@ -44748,8 +40966,8 @@ export namespace Prisma {
     p256dh: string
     auth: string
     userAgent?: string | null
-    preferredCategories?: PushSubscriptionCreatepreferredCategoriesInput | string[]
-    preferredFranchises?: PushSubscriptionCreatepreferredFranchisesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
+    preferredFranchises?: JsonNullValueInput | InputJsonValue
     minScoreThreshold?: number
     isActive?: boolean
     lastFailureAt?: Date | string | null
@@ -44767,8 +40985,8 @@ export namespace Prisma {
     p256dh?: StringFieldUpdateOperationsInput | string
     auth?: StringFieldUpdateOperationsInput | string
     userAgent?: NullableStringFieldUpdateOperationsInput | string | null
-    preferredCategories?: PushSubscriptionUpdatepreferredCategoriesInput | string[]
-    preferredFranchises?: PushSubscriptionUpdatepreferredFranchisesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
+    preferredFranchises?: JsonNullValueInput | InputJsonValue
     minScoreThreshold?: IntFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     lastFailureAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -44786,8 +41004,8 @@ export namespace Prisma {
     p256dh?: StringFieldUpdateOperationsInput | string
     auth?: StringFieldUpdateOperationsInput | string
     userAgent?: NullableStringFieldUpdateOperationsInput | string | null
-    preferredCategories?: PushSubscriptionUpdatepreferredCategoriesInput | string[]
-    preferredFranchises?: PushSubscriptionUpdatepreferredFranchisesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
+    preferredFranchises?: JsonNullValueInput | InputJsonValue
     minScoreThreshold?: IntFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     lastFailureAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -44805,8 +41023,8 @@ export namespace Prisma {
     p256dh: string
     auth: string
     userAgent?: string | null
-    preferredCategories?: PushSubscriptionCreatepreferredCategoriesInput | string[]
-    preferredFranchises?: PushSubscriptionCreatepreferredFranchisesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
+    preferredFranchises?: JsonNullValueInput | InputJsonValue
     minScoreThreshold?: number
     isActive?: boolean
     lastFailureAt?: Date | string | null
@@ -44823,8 +41041,8 @@ export namespace Prisma {
     p256dh?: StringFieldUpdateOperationsInput | string
     auth?: StringFieldUpdateOperationsInput | string
     userAgent?: NullableStringFieldUpdateOperationsInput | string | null
-    preferredCategories?: PushSubscriptionUpdatepreferredCategoriesInput | string[]
-    preferredFranchises?: PushSubscriptionUpdatepreferredFranchisesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
+    preferredFranchises?: JsonNullValueInput | InputJsonValue
     minScoreThreshold?: IntFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     lastFailureAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -44841,8 +41059,8 @@ export namespace Prisma {
     p256dh?: StringFieldUpdateOperationsInput | string
     auth?: StringFieldUpdateOperationsInput | string
     userAgent?: NullableStringFieldUpdateOperationsInput | string | null
-    preferredCategories?: PushSubscriptionUpdatepreferredCategoriesInput | string[]
-    preferredFranchises?: PushSubscriptionUpdatepreferredFranchisesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
+    preferredFranchises?: JsonNullValueInput | InputJsonValue
     minScoreThreshold?: IntFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     lastFailureAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -45712,8 +41930,8 @@ export namespace Prisma {
 
   export type StringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
-    in?: string[] | ListStringFieldRefInput<$PrismaModel>
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel>
+    in?: string[]
+    notIn?: string[]
     lt?: string | StringFieldRefInput<$PrismaModel>
     lte?: string | StringFieldRefInput<$PrismaModel>
     gt?: string | StringFieldRefInput<$PrismaModel>
@@ -45721,14 +41939,14 @@ export namespace Prisma {
     contains?: string | StringFieldRefInput<$PrismaModel>
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
-    mode?: QueryMode
+    search?: string
     not?: NestedStringFilter<$PrismaModel> | string
   }
 
   export type IntFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    in?: number[]
+    notIn?: number[]
     lt?: number | IntFieldRefInput<$PrismaModel>
     lte?: number | IntFieldRefInput<$PrismaModel>
     gt?: number | IntFieldRefInput<$PrismaModel>
@@ -45738,8 +41956,8 @@ export namespace Prisma {
 
   export type FloatFilter<$PrismaModel = never> = {
     equals?: number | FloatFieldRefInput<$PrismaModel>
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    in?: number[]
+    notIn?: number[]
     lt?: number | FloatFieldRefInput<$PrismaModel>
     lte?: number | FloatFieldRefInput<$PrismaModel>
     gt?: number | FloatFieldRefInput<$PrismaModel>
@@ -45749,8 +41967,8 @@ export namespace Prisma {
 
   export type StringNullableFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    in?: string[] | null
+    notIn?: string[] | null
     lt?: string | StringFieldRefInput<$PrismaModel>
     lte?: string | StringFieldRefInput<$PrismaModel>
     gt?: string | StringFieldRefInput<$PrismaModel>
@@ -45758,14 +41976,14 @@ export namespace Prisma {
     contains?: string | StringFieldRefInput<$PrismaModel>
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
-    mode?: QueryMode
+    search?: string
     not?: NestedStringNullableFilter<$PrismaModel> | string | null
   }
 
   export type DateTimeFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[]
+    notIn?: Date[] | string[]
     lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
@@ -45816,6 +42034,12 @@ export namespace Prisma {
 
   export type SubcategoryOrderByRelationAggregateInput = {
     _count?: SortOrder
+  }
+
+  export type CategoryOrderByRelevanceInput = {
+    fields: CategoryOrderByRelevanceFieldEnum | CategoryOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type CategoryCountOrderByAggregateInput = {
@@ -45880,8 +42104,8 @@ export namespace Prisma {
 
   export type StringWithAggregatesFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
-    in?: string[] | ListStringFieldRefInput<$PrismaModel>
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel>
+    in?: string[]
+    notIn?: string[]
     lt?: string | StringFieldRefInput<$PrismaModel>
     lte?: string | StringFieldRefInput<$PrismaModel>
     gt?: string | StringFieldRefInput<$PrismaModel>
@@ -45889,7 +42113,7 @@ export namespace Prisma {
     contains?: string | StringFieldRefInput<$PrismaModel>
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
-    mode?: QueryMode
+    search?: string
     not?: NestedStringWithAggregatesFilter<$PrismaModel> | string
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedStringFilter<$PrismaModel>
@@ -45898,8 +42122,8 @@ export namespace Prisma {
 
   export type IntWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    in?: number[]
+    notIn?: number[]
     lt?: number | IntFieldRefInput<$PrismaModel>
     lte?: number | IntFieldRefInput<$PrismaModel>
     gt?: number | IntFieldRefInput<$PrismaModel>
@@ -45914,8 +42138,8 @@ export namespace Prisma {
 
   export type FloatWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | FloatFieldRefInput<$PrismaModel>
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    in?: number[]
+    notIn?: number[]
     lt?: number | FloatFieldRefInput<$PrismaModel>
     lte?: number | FloatFieldRefInput<$PrismaModel>
     gt?: number | FloatFieldRefInput<$PrismaModel>
@@ -45930,8 +42154,8 @@ export namespace Prisma {
 
   export type StringNullableWithAggregatesFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    in?: string[] | null
+    notIn?: string[] | null
     lt?: string | StringFieldRefInput<$PrismaModel>
     lte?: string | StringFieldRefInput<$PrismaModel>
     gt?: string | StringFieldRefInput<$PrismaModel>
@@ -45939,7 +42163,7 @@ export namespace Prisma {
     contains?: string | StringFieldRefInput<$PrismaModel>
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
-    mode?: QueryMode
+    search?: string
     not?: NestedStringNullableWithAggregatesFilter<$PrismaModel> | string | null
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedStringNullableFilter<$PrismaModel>
@@ -45948,8 +42172,8 @@ export namespace Prisma {
 
   export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[]
+    notIn?: Date[] | string[]
     lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
@@ -45963,6 +42187,12 @@ export namespace Prisma {
   export type CategoryScalarRelationFilter = {
     is?: CategoryWhereInput
     isNot?: CategoryWhereInput
+  }
+
+  export type SubcategoryOrderByRelevanceInput = {
+    fields: SubcategoryOrderByRelevanceFieldEnum | SubcategoryOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type SubcategoryCategoryIdSlugCompoundUniqueInput = {
@@ -46010,13 +42240,28 @@ export namespace Prisma {
   export type SubcategorySumOrderByAggregateInput = {
     affiliateWeight?: SortOrder
   }
+  export type JsonFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonFilterBase<$PrismaModel>>, 'path'>>
 
-  export type StringNullableListFilter<$PrismaModel = never> = {
-    equals?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    has?: string | StringFieldRefInput<$PrismaModel> | null
-    hasEvery?: string[] | ListStringFieldRefInput<$PrismaModel>
-    hasSome?: string[] | ListStringFieldRefInput<$PrismaModel>
-    isEmpty?: boolean
+  export type JsonFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue
+    lte?: InputJsonValue
+    gt?: InputJsonValue
+    gte?: InputJsonValue
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
   export type ArticleFranchiseListRelationFilter = {
@@ -46057,6 +42302,12 @@ export namespace Prisma {
 
   export type FranchiseFollowOrderByRelationAggregateInput = {
     _count?: SortOrder
+  }
+
+  export type FranchiseOrderByRelevanceInput = {
+    fields: FranchiseOrderByRelevanceFieldEnum | FranchiseOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type FranchiseCountOrderByAggregateInput = {
@@ -46111,6 +42362,32 @@ export namespace Prisma {
     audienceAffinityIndex?: SortOrder
     followerCount?: SortOrder
   }
+  export type JsonWithAggregatesFilter<$PrismaModel = never> =
+    | PatchUndefined<
+        Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
+        Required<JsonWithAggregatesFilterBase<$PrismaModel>>
+      >
+    | OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
+
+  export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
+    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    path?: string
+    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
+    string_contains?: string | StringFieldRefInput<$PrismaModel>
+    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
+    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
+    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
+    lt?: InputJsonValue
+    lte?: InputJsonValue
+    gt?: InputJsonValue
+    gte?: InputJsonValue
+    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedJsonFilter<$PrismaModel>
+    _max?: NestedJsonFilter<$PrismaModel>
+  }
 
   export type ArticleTagListRelationFilter = {
     every?: ArticleTagWhereInput
@@ -46120,6 +42397,12 @@ export namespace Prisma {
 
   export type ArticleTagOrderByRelationAggregateInput = {
     _count?: SortOrder
+  }
+
+  export type TagOrderByRelevanceInput = {
+    fields: TagOrderByRelevanceFieldEnum | TagOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type TagCountOrderByAggregateInput = {
@@ -46145,29 +42428,6 @@ export namespace Prisma {
     kind?: SortOrder
     createdAt?: SortOrder
   }
-  export type JsonFilter<$PrismaModel = never> =
-    | PatchUndefined<
-        Either<Required<JsonFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonFilterBase<$PrismaModel>>, 'path'>>,
-        Required<JsonFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<JsonFilterBase<$PrismaModel>>, 'path'>>
-
-  export type JsonFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
-    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-  }
 
   export type BoolFilter<$PrismaModel = never> = {
     equals?: boolean | BooleanFieldRefInput<$PrismaModel>
@@ -46176,8 +42436,8 @@ export namespace Prisma {
 
   export type DateTimeNullableFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | null
+    notIn?: Date[] | string[] | null
     lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
@@ -46203,6 +42463,12 @@ export namespace Prisma {
 
   export type StaffSessionOrderByRelationAggregateInput = {
     _count?: SortOrder
+  }
+
+  export type AuthorOrderByRelevanceInput = {
+    fields: AuthorOrderByRelevanceFieldEnum | AuthorOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type AuthorCountOrderByAggregateInput = {
@@ -46254,32 +42520,6 @@ export namespace Prisma {
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
-  export type JsonWithAggregatesFilter<$PrismaModel = never> =
-    | PatchUndefined<
-        Either<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, Exclude<keyof Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>,
-        Required<JsonWithAggregatesFilterBase<$PrismaModel>>
-      >
-    | OptionalFlat<Omit<Required<JsonWithAggregatesFilterBase<$PrismaModel>>, 'path'>>
-
-  export type JsonWithAggregatesFilterBase<$PrismaModel = never> = {
-    equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
-    mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
-    string_contains?: string | StringFieldRefInput<$PrismaModel>
-    string_starts_with?: string | StringFieldRefInput<$PrismaModel>
-    string_ends_with?: string | StringFieldRefInput<$PrismaModel>
-    array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedJsonFilter<$PrismaModel>
-    _max?: NestedJsonFilter<$PrismaModel>
-  }
 
   export type BoolWithAggregatesFilter<$PrismaModel = never> = {
     equals?: boolean | BooleanFieldRefInput<$PrismaModel>
@@ -46291,8 +42531,8 @@ export namespace Prisma {
 
   export type DateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | null
+    notIn?: Date[] | string[] | null
     lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
@@ -46306,6 +42546,12 @@ export namespace Prisma {
   export type AuthorScalarRelationFilter = {
     is?: AuthorWhereInput
     isNot?: AuthorWhereInput
+  }
+
+  export type StaffSessionOrderByRelevanceInput = {
+    fields: StaffSessionOrderByRelevanceFieldEnum | StaffSessionOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type StaffSessionCountOrderByAggregateInput = {
@@ -46340,8 +42586,8 @@ export namespace Prisma {
 
   export type FloatNullableFilter<$PrismaModel = never> = {
     equals?: number | FloatFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | null
+    notIn?: number[] | null
     lt?: number | FloatFieldRefInput<$PrismaModel>
     lte?: number | FloatFieldRefInput<$PrismaModel>
     gt?: number | FloatFieldRefInput<$PrismaModel>
@@ -46372,6 +42618,12 @@ export namespace Prisma {
 
   export type SignalReadingOrderByRelationAggregateInput = {
     _count?: SortOrder
+  }
+
+  export type TopicOrderByRelevanceInput = {
+    fields: TopicOrderByRelevanceFieldEnum | TopicOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type TopicCountOrderByAggregateInput = {
@@ -46496,8 +42748,8 @@ export namespace Prisma {
 
   export type FloatNullableWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | FloatFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | null
+    notIn?: number[] | null
     lt?: number | FloatFieldRefInput<$PrismaModel>
     lte?: number | FloatFieldRefInput<$PrismaModel>
     gt?: number | FloatFieldRefInput<$PrismaModel>
@@ -46520,6 +42772,12 @@ export namespace Prisma {
     isNot?: FranchiseWhereInput
   }
 
+  export type TopicFranchiseOrderByRelevanceInput = {
+    fields: TopicFranchiseOrderByRelevanceFieldEnum | TopicFranchiseOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
   export type TopicFranchiseTopicIdFranchiseIdCompoundUniqueInput = {
     topicId: string
     franchiseId: string
@@ -46538,6 +42796,12 @@ export namespace Prisma {
   export type TopicFranchiseMinOrderByAggregateInput = {
     topicId?: SortOrder
     franchiseId?: SortOrder
+  }
+
+  export type ScoreSnapshotOrderByRelevanceInput = {
+    fields: ScoreSnapshotOrderByRelevanceFieldEnum | ScoreSnapshotOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type ScoreSnapshotCountOrderByAggregateInput = {
@@ -46597,7 +42861,7 @@ export namespace Prisma {
 
   export type JsonNullableFilterBase<$PrismaModel = never> = {
     equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
+    path?: string
     mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
     string_contains?: string | StringFieldRefInput<$PrismaModel>
     string_starts_with?: string | StringFieldRefInput<$PrismaModel>
@@ -46605,11 +42869,17 @@ export namespace Prisma {
     array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
     array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
     array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lt?: InputJsonValue
+    lte?: InputJsonValue
+    gt?: InputJsonValue
+    gte?: InputJsonValue
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type SignalReadingOrderByRelevanceInput = {
+    fields: SignalReadingOrderByRelevanceFieldEnum | SignalReadingOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type SignalReadingCountOrderByAggregateInput = {
@@ -46667,7 +42937,7 @@ export namespace Prisma {
 
   export type JsonNullableWithAggregatesFilterBase<$PrismaModel = never> = {
     equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
+    path?: string
     mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
     string_contains?: string | StringFieldRefInput<$PrismaModel>
     string_starts_with?: string | StringFieldRefInput<$PrismaModel>
@@ -46675,14 +42945,20 @@ export namespace Prisma {
     array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
     array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
     array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lt?: InputJsonValue
+    lte?: InputJsonValue
+    gt?: InputJsonValue
+    gte?: InputJsonValue
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedJsonNullableFilter<$PrismaModel>
     _max?: NestedJsonNullableFilter<$PrismaModel>
+  }
+
+  export type ConnectorHealthOrderByRelevanceInput = {
+    fields: ConnectorHealthOrderByRelevanceFieldEnum | ConnectorHealthOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type ConnectorHealthCountOrderByAggregateInput = {
@@ -46757,8 +43033,8 @@ export namespace Prisma {
 
   export type IntNullableFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    in?: number[] | null
+    notIn?: number[] | null
     lt?: number | IntFieldRefInput<$PrismaModel>
     lte?: number | IntFieldRefInput<$PrismaModel>
     gt?: number | IntFieldRefInput<$PrismaModel>
@@ -46814,6 +43090,12 @@ export namespace Prisma {
 
   export type CommentOrderByRelationAggregateInput = {
     _count?: SortOrder
+  }
+
+  export type ArticleOrderByRelevanceInput = {
+    fields: ArticleOrderByRelevanceFieldEnum | ArticleOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type ArticleCountOrderByAggregateInput = {
@@ -46975,8 +43257,8 @@ export namespace Prisma {
 
   export type IntNullableWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    in?: number[] | null
+    notIn?: number[] | null
     lt?: number | IntFieldRefInput<$PrismaModel>
     lte?: number | IntFieldRefInput<$PrismaModel>
     gt?: number | IntFieldRefInput<$PrismaModel>
@@ -46992,6 +43274,12 @@ export namespace Prisma {
   export type ArticleScalarRelationFilter = {
     is?: ArticleWhereInput
     isNot?: ArticleWhereInput
+  }
+
+  export type ArticleFranchiseOrderByRelevanceInput = {
+    fields: ArticleFranchiseOrderByRelevanceFieldEnum | ArticleFranchiseOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type ArticleFranchiseArticleIdFranchiseIdCompoundUniqueInput = {
@@ -47019,6 +43307,12 @@ export namespace Prisma {
     isNot?: TagWhereInput
   }
 
+  export type ArticleTagOrderByRelevanceInput = {
+    fields: ArticleTagOrderByRelevanceFieldEnum | ArticleTagOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
   export type ArticleTagArticleIdTagIdCompoundUniqueInput = {
     articleId: string
     tagId: string
@@ -47037,6 +43331,12 @@ export namespace Prisma {
   export type ArticleTagMinOrderByAggregateInput = {
     articleId?: SortOrder
     tagId?: SortOrder
+  }
+
+  export type LiveUpdateOrderByRelevanceInput = {
+    fields: LiveUpdateOrderByRelevanceFieldEnum | LiveUpdateOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type LiveUpdateCountOrderByAggregateInput = {
@@ -47064,6 +43364,12 @@ export namespace Prisma {
     isHighlight?: SortOrder
     authorName?: SortOrder
     createdAt?: SortOrder
+  }
+
+  export type AffiliateOfferOrderByRelevanceInput = {
+    fields: AffiliateOfferOrderByRelevanceFieldEnum | AffiliateOfferOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type AffiliateOfferCountOrderByAggregateInput = {
@@ -47145,6 +43451,12 @@ export namespace Prisma {
     isNot?: AffiliateOfferWhereInput
   }
 
+  export type ArticleAffiliateOfferOrderByRelevanceInput = {
+    fields: ArticleAffiliateOfferOrderByRelevanceFieldEnum | ArticleAffiliateOfferOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
   export type ArticleAffiliateOfferArticleIdOfferIdCompoundUniqueInput = {
     articleId: string
     offerId: string
@@ -47193,6 +43505,12 @@ export namespace Prisma {
     isNot?: FranchiseWhereInput | null
   }
 
+  export type ReleaseEventOrderByRelevanceInput = {
+    fields: ReleaseEventOrderByRelevanceFieldEnum | ReleaseEventOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
   export type ReleaseEventCountOrderByAggregateInput = {
     id?: SortOrder
     title?: SortOrder
@@ -47233,6 +43551,12 @@ export namespace Prisma {
     region?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
+  }
+
+  export type SubscriberOrderByRelevanceInput = {
+    fields: SubscriberOrderByRelevanceFieldEnum | SubscriberOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type SubscriberCountOrderByAggregateInput = {
@@ -47318,6 +43642,12 @@ export namespace Prisma {
     _count?: SortOrder
   }
 
+  export type PushSubscriptionOrderByRelevanceInput = {
+    fields: PushSubscriptionOrderByRelevanceFieldEnum | PushSubscriptionOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
   export type PushSubscriptionCountOrderByAggregateInput = {
     id?: SortOrder
     endpoint?: SortOrder
@@ -47380,6 +43710,12 @@ export namespace Prisma {
     failureCount?: SortOrder
     notificationsSent?: SortOrder
     notificationsClicked?: SortOrder
+  }
+
+  export type PushNotificationOrderByRelevanceInput = {
+    fields: PushNotificationOrderByRelevanceFieldEnum | PushNotificationOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type PushNotificationCountOrderByAggregateInput = {
@@ -47463,6 +43799,12 @@ export namespace Prisma {
     isNot?: PushSubscriptionWhereInput
   }
 
+  export type PushDeliveryOrderByRelevanceInput = {
+    fields: PushDeliveryOrderByRelevanceFieldEnum | PushDeliveryOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
   export type PushDeliveryNotificationIdSubscriptionIdCompoundUniqueInput = {
     notificationId: string
     subscriptionId: string
@@ -47501,6 +43843,12 @@ export namespace Prisma {
   export type CommentAuthorNullableScalarRelationFilter = {
     is?: CommentAuthorWhereInput | null
     isNot?: CommentAuthorWhereInput | null
+  }
+
+  export type FranchiseFollowOrderByRelevanceInput = {
+    fields: FranchiseFollowOrderByRelevanceFieldEnum | FranchiseFollowOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type FranchiseFollowFranchiseIdVisitorIdCompoundUniqueInput = {
@@ -47545,6 +43893,12 @@ export namespace Prisma {
 
   export type CommentSessionOrderByRelationAggregateInput = {
     _count?: SortOrder
+  }
+
+  export type CommentAuthorOrderByRelevanceInput = {
+    fields: CommentAuthorOrderByRelevanceFieldEnum | CommentAuthorOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type CommentAuthorProviderProviderAccountHashCompoundUniqueInput = {
@@ -47610,6 +43964,12 @@ export namespace Prisma {
     isNot?: CommentAuthorWhereInput
   }
 
+  export type CommentSessionOrderByRelevanceInput = {
+    fields: CommentSessionOrderByRelevanceFieldEnum | CommentSessionOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
   export type CommentSessionCountOrderByAggregateInput = {
     id?: SortOrder
     tokenHash?: SortOrder
@@ -47643,6 +44003,12 @@ export namespace Prisma {
   export type CommentNullableScalarRelationFilter = {
     is?: CommentWhereInput | null
     isNot?: CommentWhereInput | null
+  }
+
+  export type CommentOrderByRelevanceInput = {
+    fields: CommentOrderByRelevanceFieldEnum | CommentOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type CommentCountOrderByAggregateInput = {
@@ -47707,6 +44073,12 @@ export namespace Prisma {
     upvotes?: SortOrder
   }
 
+  export type PipelineEventOrderByRelevanceInput = {
+    fields: PipelineEventOrderByRelevanceFieldEnum | PipelineEventOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
+  }
+
   export type PipelineEventCountOrderByAggregateInput = {
     id?: SortOrder
     eventType?: SortOrder
@@ -47747,6 +44119,12 @@ export namespace Prisma {
 
   export type PipelineEventSumOrderByAggregateInput = {
     durationMs?: SortOrder
+  }
+
+  export type PipelineRunOrderByRelevanceInput = {
+    fields: PipelineRunOrderByRelevanceFieldEnum | PipelineRunOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type PipelineRunCountOrderByAggregateInput = {
@@ -47820,6 +44198,12 @@ export namespace Prisma {
   export type AuthorNullableScalarRelationFilter = {
     is?: AuthorWhereInput | null
     isNot?: AuthorWhereInput | null
+  }
+
+  export type AuditLogOrderByRelevanceInput = {
+    fields: AuditLogOrderByRelevanceFieldEnum | AuditLogOrderByRelevanceFieldEnum[]
+    sort: SortOrder
+    search: string
   }
 
   export type AuditLogCountOrderByAggregateInput = {
@@ -48109,10 +44493,6 @@ export namespace Prisma {
     deleteMany?: ArticleScalarWhereInput | ArticleScalarWhereInput[]
   }
 
-  export type FranchiseCreatealiasesInput = {
-    set: string[]
-  }
-
   export type CategoryCreateNestedOneWithoutFranchisesInput = {
     create?: XOR<CategoryCreateWithoutFranchisesInput, CategoryUncheckedCreateWithoutFranchisesInput>
     connectOrCreate?: CategoryCreateOrConnectWithoutFranchisesInput
@@ -48173,11 +44553,6 @@ export namespace Prisma {
     connectOrCreate?: FranchiseFollowCreateOrConnectWithoutFranchiseInput | FranchiseFollowCreateOrConnectWithoutFranchiseInput[]
     createMany?: FranchiseFollowCreateManyFranchiseInputEnvelope
     connect?: FranchiseFollowWhereUniqueInput | FranchiseFollowWhereUniqueInput[]
-  }
-
-  export type FranchiseUpdatealiasesInput = {
-    set?: string[]
-    push?: string | string[]
   }
 
   export type CategoryUpdateOneRequiredWithoutFranchisesNestedInput = {
@@ -48342,10 +44717,6 @@ export namespace Prisma {
     deleteMany?: ArticleTagScalarWhereInput | ArticleTagScalarWhereInput[]
   }
 
-  export type AuthorCreateexpertiseAreasInput = {
-    set: string[]
-  }
-
   export type ArticleCreateNestedManyWithoutAuthorInput = {
     create?: XOR<ArticleCreateWithoutAuthorInput, ArticleUncheckedCreateWithoutAuthorInput> | ArticleCreateWithoutAuthorInput[] | ArticleUncheckedCreateWithoutAuthorInput[]
     connectOrCreate?: ArticleCreateOrConnectWithoutAuthorInput | ArticleCreateOrConnectWithoutAuthorInput[]
@@ -48386,11 +44757,6 @@ export namespace Prisma {
     connectOrCreate?: StaffSessionCreateOrConnectWithoutAuthorInput | StaffSessionCreateOrConnectWithoutAuthorInput[]
     createMany?: StaffSessionCreateManyAuthorInputEnvelope
     connect?: StaffSessionWhereUniqueInput | StaffSessionWhereUniqueInput[]
-  }
-
-  export type AuthorUpdateexpertiseAreasInput = {
-    set?: string[]
-    push?: string | string[]
   }
 
   export type BoolFieldUpdateOperationsInput = {
@@ -48499,14 +44865,6 @@ export namespace Prisma {
     update?: XOR<XOR<AuthorUpdateToOneWithWhereWithoutStaffSessionsInput, AuthorUpdateWithoutStaffSessionsInput>, AuthorUncheckedUpdateWithoutStaffSessionsInput>
   }
 
-  export type TopicCreatealiasesInput = {
-    set: string[]
-  }
-
-  export type TopicCreateemotionalTriggersInput = {
-    set: string[]
-  }
-
   export type CategoryCreateNestedOneWithoutTopicsInput = {
     create?: XOR<CategoryCreateWithoutTopicsInput, CategoryUncheckedCreateWithoutTopicsInput>
     connectOrCreate?: CategoryCreateOrConnectWithoutTopicsInput
@@ -48567,16 +44925,6 @@ export namespace Prisma {
     connectOrCreate?: SignalReadingCreateOrConnectWithoutTopicInput | SignalReadingCreateOrConnectWithoutTopicInput[]
     createMany?: SignalReadingCreateManyTopicInputEnvelope
     connect?: SignalReadingWhereUniqueInput | SignalReadingWhereUniqueInput[]
-  }
-
-  export type TopicUpdatealiasesInput = {
-    set?: string[]
-    push?: string | string[]
-  }
-
-  export type TopicUpdateemotionalTriggersInput = {
-    set?: string[]
-    push?: string | string[]
   }
 
   export type NullableFloatFieldUpdateOperationsInput = {
@@ -48765,10 +45113,6 @@ export namespace Prisma {
     update?: XOR<XOR<TopicUpdateToOneWithWhereWithoutSignalReadingsInput, TopicUpdateWithoutSignalReadingsInput>, TopicUncheckedUpdateWithoutSignalReadingsInput>
   }
 
-  export type ArticleCreatetldrInput = {
-    set: string[]
-  }
-
   export type CategoryCreateNestedOneWithoutArticlesInput = {
     create?: XOR<CategoryCreateWithoutArticlesInput, CategoryUncheckedCreateWithoutArticlesInput>
     connectOrCreate?: CategoryCreateOrConnectWithoutArticlesInput
@@ -48883,11 +45227,6 @@ export namespace Prisma {
     decrement?: number
     multiply?: number
     divide?: number
-  }
-
-  export type ArticleUpdatetldrInput = {
-    set?: string[]
-    push?: string | string[]
   }
 
   export type CategoryUpdateOneRequiredWithoutArticlesNestedInput = {
@@ -49250,23 +45589,6 @@ export namespace Prisma {
     update?: XOR<XOR<FranchiseUpdateToOneWithWhereWithoutReleasesInput, FranchiseUpdateWithoutReleasesInput>, FranchiseUncheckedUpdateWithoutReleasesInput>
   }
 
-  export type SubscriberCreatepreferredCategoriesInput = {
-    set: string[]
-  }
-
-  export type SubscriberUpdatepreferredCategoriesInput = {
-    set?: string[]
-    push?: string | string[]
-  }
-
-  export type PushSubscriptionCreatepreferredCategoriesInput = {
-    set: string[]
-  }
-
-  export type PushSubscriptionCreatepreferredFranchisesInput = {
-    set: string[]
-  }
-
   export type PushDeliveryCreateNestedManyWithoutSubscriptionInput = {
     create?: XOR<PushDeliveryCreateWithoutSubscriptionInput, PushDeliveryUncheckedCreateWithoutSubscriptionInput> | PushDeliveryCreateWithoutSubscriptionInput[] | PushDeliveryUncheckedCreateWithoutSubscriptionInput[]
     connectOrCreate?: PushDeliveryCreateOrConnectWithoutSubscriptionInput | PushDeliveryCreateOrConnectWithoutSubscriptionInput[]
@@ -49279,16 +45601,6 @@ export namespace Prisma {
     connectOrCreate?: PushDeliveryCreateOrConnectWithoutSubscriptionInput | PushDeliveryCreateOrConnectWithoutSubscriptionInput[]
     createMany?: PushDeliveryCreateManySubscriptionInputEnvelope
     connect?: PushDeliveryWhereUniqueInput | PushDeliveryWhereUniqueInput[]
-  }
-
-  export type PushSubscriptionUpdatepreferredCategoriesInput = {
-    set?: string[]
-    push?: string | string[]
-  }
-
-  export type PushSubscriptionUpdatepreferredFranchisesInput = {
-    set?: string[]
-    push?: string | string[]
   }
 
   export type PushDeliveryUpdateManyWithoutSubscriptionNestedInput = {
@@ -49679,8 +45991,8 @@ export namespace Prisma {
 
   export type NestedStringFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
-    in?: string[] | ListStringFieldRefInput<$PrismaModel>
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel>
+    in?: string[]
+    notIn?: string[]
     lt?: string | StringFieldRefInput<$PrismaModel>
     lte?: string | StringFieldRefInput<$PrismaModel>
     gt?: string | StringFieldRefInput<$PrismaModel>
@@ -49688,13 +46000,14 @@ export namespace Prisma {
     contains?: string | StringFieldRefInput<$PrismaModel>
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
+    search?: string
     not?: NestedStringFilter<$PrismaModel> | string
   }
 
   export type NestedIntFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    in?: number[]
+    notIn?: number[]
     lt?: number | IntFieldRefInput<$PrismaModel>
     lte?: number | IntFieldRefInput<$PrismaModel>
     gt?: number | IntFieldRefInput<$PrismaModel>
@@ -49704,8 +46017,8 @@ export namespace Prisma {
 
   export type NestedFloatFilter<$PrismaModel = never> = {
     equals?: number | FloatFieldRefInput<$PrismaModel>
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    in?: number[]
+    notIn?: number[]
     lt?: number | FloatFieldRefInput<$PrismaModel>
     lte?: number | FloatFieldRefInput<$PrismaModel>
     gt?: number | FloatFieldRefInput<$PrismaModel>
@@ -49715,8 +46028,8 @@ export namespace Prisma {
 
   export type NestedStringNullableFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    in?: string[] | null
+    notIn?: string[] | null
     lt?: string | StringFieldRefInput<$PrismaModel>
     lte?: string | StringFieldRefInput<$PrismaModel>
     gt?: string | StringFieldRefInput<$PrismaModel>
@@ -49724,13 +46037,14 @@ export namespace Prisma {
     contains?: string | StringFieldRefInput<$PrismaModel>
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
+    search?: string
     not?: NestedStringNullableFilter<$PrismaModel> | string | null
   }
 
   export type NestedDateTimeFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[]
+    notIn?: Date[] | string[]
     lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
@@ -49740,8 +46054,8 @@ export namespace Prisma {
 
   export type NestedStringWithAggregatesFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel>
-    in?: string[] | ListStringFieldRefInput<$PrismaModel>
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel>
+    in?: string[]
+    notIn?: string[]
     lt?: string | StringFieldRefInput<$PrismaModel>
     lte?: string | StringFieldRefInput<$PrismaModel>
     gt?: string | StringFieldRefInput<$PrismaModel>
@@ -49749,6 +46063,7 @@ export namespace Prisma {
     contains?: string | StringFieldRefInput<$PrismaModel>
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
+    search?: string
     not?: NestedStringWithAggregatesFilter<$PrismaModel> | string
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedStringFilter<$PrismaModel>
@@ -49757,8 +46072,8 @@ export namespace Prisma {
 
   export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[] | ListIntFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel>
+    in?: number[]
+    notIn?: number[]
     lt?: number | IntFieldRefInput<$PrismaModel>
     lte?: number | IntFieldRefInput<$PrismaModel>
     gt?: number | IntFieldRefInput<$PrismaModel>
@@ -49773,8 +46088,8 @@ export namespace Prisma {
 
   export type NestedFloatWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | FloatFieldRefInput<$PrismaModel>
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel>
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel>
+    in?: number[]
+    notIn?: number[]
     lt?: number | FloatFieldRefInput<$PrismaModel>
     lte?: number | FloatFieldRefInput<$PrismaModel>
     gt?: number | FloatFieldRefInput<$PrismaModel>
@@ -49789,8 +46104,8 @@ export namespace Prisma {
 
   export type NestedStringNullableWithAggregatesFilter<$PrismaModel = never> = {
     equals?: string | StringFieldRefInput<$PrismaModel> | null
-    in?: string[] | ListStringFieldRefInput<$PrismaModel> | null
-    notIn?: string[] | ListStringFieldRefInput<$PrismaModel> | null
+    in?: string[] | null
+    notIn?: string[] | null
     lt?: string | StringFieldRefInput<$PrismaModel>
     lte?: string | StringFieldRefInput<$PrismaModel>
     gt?: string | StringFieldRefInput<$PrismaModel>
@@ -49798,6 +46113,7 @@ export namespace Prisma {
     contains?: string | StringFieldRefInput<$PrismaModel>
     startsWith?: string | StringFieldRefInput<$PrismaModel>
     endsWith?: string | StringFieldRefInput<$PrismaModel>
+    search?: string
     not?: NestedStringNullableWithAggregatesFilter<$PrismaModel> | string | null
     _count?: NestedIntNullableFilter<$PrismaModel>
     _min?: NestedStringNullableFilter<$PrismaModel>
@@ -49806,8 +46122,8 @@ export namespace Prisma {
 
   export type NestedIntNullableFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    in?: number[] | null
+    notIn?: number[] | null
     lt?: number | IntFieldRefInput<$PrismaModel>
     lte?: number | IntFieldRefInput<$PrismaModel>
     gt?: number | IntFieldRefInput<$PrismaModel>
@@ -49817,8 +46133,8 @@ export namespace Prisma {
 
   export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[]
+    notIn?: Date[] | string[]
     lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
@@ -49827,22 +46143,6 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedDateTimeFilter<$PrismaModel>
     _max?: NestedDateTimeFilter<$PrismaModel>
-  }
-
-  export type NestedBoolFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolFilter<$PrismaModel> | boolean
-  }
-
-  export type NestedDateTimeNullableFilter<$PrismaModel = never> = {
-    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
-    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
   }
   export type NestedJsonFilter<$PrismaModel = never> =
     | PatchUndefined<
@@ -49853,7 +46153,7 @@ export namespace Prisma {
 
   export type NestedJsonFilterBase<$PrismaModel = never> = {
     equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
+    path?: string
     mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
     string_contains?: string | StringFieldRefInput<$PrismaModel>
     string_starts_with?: string | StringFieldRefInput<$PrismaModel>
@@ -49861,11 +46161,27 @@ export namespace Prisma {
     array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
     array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
     array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lt?: InputJsonValue
+    lte?: InputJsonValue
+    gt?: InputJsonValue
+    gte?: InputJsonValue
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
+  }
+
+  export type NestedBoolFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolFilter<$PrismaModel> | boolean
+  }
+
+  export type NestedDateTimeNullableFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | null
+    notIn?: Date[] | string[] | null
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
   }
 
   export type NestedBoolWithAggregatesFilter<$PrismaModel = never> = {
@@ -49878,8 +46194,8 @@ export namespace Prisma {
 
   export type NestedDateTimeNullableWithAggregatesFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel> | null
-    in?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
-    notIn?: Date[] | string[] | ListDateTimeFieldRefInput<$PrismaModel> | null
+    in?: Date[] | string[] | null
+    notIn?: Date[] | string[] | null
     lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
@@ -49892,8 +46208,8 @@ export namespace Prisma {
 
   export type NestedFloatNullableFilter<$PrismaModel = never> = {
     equals?: number | FloatFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | null
+    notIn?: number[] | null
     lt?: number | FloatFieldRefInput<$PrismaModel>
     lte?: number | FloatFieldRefInput<$PrismaModel>
     gt?: number | FloatFieldRefInput<$PrismaModel>
@@ -49903,8 +46219,8 @@ export namespace Prisma {
 
   export type NestedFloatNullableWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | FloatFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListFloatFieldRefInput<$PrismaModel> | null
+    in?: number[] | null
+    notIn?: number[] | null
     lt?: number | FloatFieldRefInput<$PrismaModel>
     lte?: number | FloatFieldRefInput<$PrismaModel>
     gt?: number | FloatFieldRefInput<$PrismaModel>
@@ -49925,7 +46241,7 @@ export namespace Prisma {
 
   export type NestedJsonNullableFilterBase<$PrismaModel = never> = {
     equals?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
-    path?: string[]
+    path?: string
     mode?: QueryMode | EnumQueryModeFieldRefInput<$PrismaModel>
     string_contains?: string | StringFieldRefInput<$PrismaModel>
     string_starts_with?: string | StringFieldRefInput<$PrismaModel>
@@ -49933,17 +46249,17 @@ export namespace Prisma {
     array_starts_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
     array_ends_with?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
     array_contains?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | null
-    lt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    lte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gt?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
-    gte?: InputJsonValue | JsonFieldRefInput<$PrismaModel>
+    lt?: InputJsonValue
+    lte?: InputJsonValue
+    gt?: InputJsonValue
+    gte?: InputJsonValue
     not?: InputJsonValue | JsonFieldRefInput<$PrismaModel> | JsonNullValueFilter
   }
 
   export type NestedIntNullableWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel> | null
-    in?: number[] | ListIntFieldRefInput<$PrismaModel> | null
-    notIn?: number[] | ListIntFieldRefInput<$PrismaModel> | null
+    in?: number[] | null
+    notIn?: number[] | null
     lt?: number | IntFieldRefInput<$PrismaModel>
     lte?: number | IntFieldRefInput<$PrismaModel>
     gt?: number | IntFieldRefInput<$PrismaModel>
@@ -49979,7 +46295,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -50032,7 +46348,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -50069,7 +46385,7 @@ export namespace Prisma {
   export type TopicCreateWithoutCategoryInput = {
     id?: string
     query: string
-    aliases?: TopicCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title: string
     summary?: string
     sourceUrl?: string | null
@@ -50082,7 +46398,7 @@ export namespace Prisma {
     seoOpportunity?: number
     confidence?: number
     termType?: string
-    emotionalTriggers?: TopicCreateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: boolean
     scoreSummary?: string
     weightsVersion?: string
@@ -50108,7 +46424,7 @@ export namespace Prisma {
   export type TopicUncheckedCreateWithoutCategoryInput = {
     id?: string
     query: string
-    aliases?: TopicCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title: string
     summary?: string
     sourceUrl?: string | null
@@ -50121,7 +46437,7 @@ export namespace Prisma {
     seoOpportunity?: number
     confidence?: number
     termType?: string
-    emotionalTriggers?: TopicCreateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: boolean
     scoreSummary?: string
     weightsVersion?: string
@@ -50159,7 +46475,7 @@ export namespace Prisma {
     slug: string
     name: string
     description?: string
-    aliases?: FranchiseCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: string | null
     logoUrl?: string | null
     audienceAffinityIndex?: number
@@ -50177,7 +46493,7 @@ export namespace Prisma {
     slug: string
     name: string
     description?: string
-    aliases?: FranchiseCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: string | null
     logoUrl?: string | null
     audienceAffinityIndex?: number
@@ -50278,7 +46594,7 @@ export namespace Prisma {
     isLive?: BoolFilter<"Article"> | boolean
     updatesCount?: IntFilter<"Article"> | number
     hasSpoiler?: BoolFilter<"Article"> | boolean
-    tldr?: StringNullableListFilter<"Article">
+    tldr?: JsonFilter<"Article">
     reviewData?: JsonNullableFilter<"Article">
     scoreAtPublish?: FloatNullableFilter<"Article"> | number | null
     currentScore?: FloatFilter<"Article"> | number
@@ -50318,7 +46634,7 @@ export namespace Prisma {
     NOT?: TopicScalarWhereInput | TopicScalarWhereInput[]
     id?: StringFilter<"Topic"> | string
     query?: StringFilter<"Topic"> | string
-    aliases?: StringNullableListFilter<"Topic">
+    aliases?: JsonFilter<"Topic">
     title?: StringFilter<"Topic"> | string
     summary?: StringFilter<"Topic"> | string
     categoryId?: StringNullableFilter<"Topic"> | string | null
@@ -50332,7 +46648,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFilter<"Topic"> | number
     confidence?: FloatFilter<"Topic"> | number
     termType?: StringFilter<"Topic"> | string
-    emotionalTriggers?: StringNullableListFilter<"Topic">
+    emotionalTriggers?: JsonFilter<"Topic">
     requiresHumanReview?: BoolFilter<"Topic"> | boolean
     scoreSummary?: StringFilter<"Topic"> | string
     weightsVersion?: StringFilter<"Topic"> | string
@@ -50375,7 +46691,7 @@ export namespace Prisma {
     slug?: StringFilter<"Franchise"> | string
     name?: StringFilter<"Franchise"> | string
     description?: StringFilter<"Franchise"> | string
-    aliases?: StringNullableListFilter<"Franchise">
+    aliases?: JsonFilter<"Franchise">
     heroImageUrl?: StringNullableFilter<"Franchise"> | string | null
     logoUrl?: StringNullableFilter<"Franchise"> | string | null
     primaryCategoryId?: StringFilter<"Franchise"> | string
@@ -50481,7 +46797,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -50534,7 +46850,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -50994,7 +47310,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -51047,7 +47363,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -51229,7 +47545,7 @@ export namespace Prisma {
     avatarUrl?: string | null
     role?: string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorCreateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: string
     passwordHash?: string | null
     isActive?: boolean
@@ -51249,7 +47565,7 @@ export namespace Prisma {
     avatarUrl?: string | null
     role?: string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorCreateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: string
     passwordHash?: string | null
     isActive?: boolean
@@ -51285,7 +47601,7 @@ export namespace Prisma {
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
     role?: StringFieldUpdateOperationsInput | string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorUpdateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: StringFieldUpdateOperationsInput | string
     passwordHash?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -51305,7 +47621,7 @@ export namespace Prisma {
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
     role?: StringFieldUpdateOperationsInput | string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorUpdateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: StringFieldUpdateOperationsInput | string
     passwordHash?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -51400,7 +47716,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -51453,7 +47769,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -51703,7 +48019,7 @@ export namespace Prisma {
   export type TopicCreateWithoutFranchisesInput = {
     id?: string
     query: string
-    aliases?: TopicCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title: string
     summary?: string
     sourceUrl?: string | null
@@ -51716,7 +48032,7 @@ export namespace Prisma {
     seoOpportunity?: number
     confidence?: number
     termType?: string
-    emotionalTriggers?: TopicCreateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: boolean
     scoreSummary?: string
     weightsVersion?: string
@@ -51742,7 +48058,7 @@ export namespace Prisma {
   export type TopicUncheckedCreateWithoutFranchisesInput = {
     id?: string
     query: string
-    aliases?: TopicCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title: string
     summary?: string
     categoryId?: string | null
@@ -51756,7 +48072,7 @@ export namespace Prisma {
     seoOpportunity?: number
     confidence?: number
     termType?: string
-    emotionalTriggers?: TopicCreateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: boolean
     scoreSummary?: string
     weightsVersion?: string
@@ -51788,7 +48104,7 @@ export namespace Prisma {
     slug: string
     name: string
     description?: string
-    aliases?: FranchiseCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: string | null
     logoUrl?: string | null
     audienceAffinityIndex?: number
@@ -51806,7 +48122,7 @@ export namespace Prisma {
     slug: string
     name: string
     description?: string
-    aliases?: FranchiseCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: string | null
     logoUrl?: string | null
     primaryCategoryId: string
@@ -51838,7 +48154,7 @@ export namespace Prisma {
   export type TopicUpdateWithoutFranchisesInput = {
     id?: StringFieldUpdateOperationsInput | string
     query?: StringFieldUpdateOperationsInput | string
-    aliases?: TopicUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
     summary?: StringFieldUpdateOperationsInput | string
     sourceUrl?: NullableStringFieldUpdateOperationsInput | string | null
@@ -51851,7 +48167,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFieldUpdateOperationsInput | number
     confidence?: FloatFieldUpdateOperationsInput | number
     termType?: StringFieldUpdateOperationsInput | string
-    emotionalTriggers?: TopicUpdateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: BoolFieldUpdateOperationsInput | boolean
     scoreSummary?: StringFieldUpdateOperationsInput | string
     weightsVersion?: StringFieldUpdateOperationsInput | string
@@ -51877,7 +48193,7 @@ export namespace Prisma {
   export type TopicUncheckedUpdateWithoutFranchisesInput = {
     id?: StringFieldUpdateOperationsInput | string
     query?: StringFieldUpdateOperationsInput | string
-    aliases?: TopicUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
     summary?: StringFieldUpdateOperationsInput | string
     categoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -51891,7 +48207,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFieldUpdateOperationsInput | number
     confidence?: FloatFieldUpdateOperationsInput | number
     termType?: StringFieldUpdateOperationsInput | string
-    emotionalTriggers?: TopicUpdateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: BoolFieldUpdateOperationsInput | boolean
     scoreSummary?: StringFieldUpdateOperationsInput | string
     weightsVersion?: StringFieldUpdateOperationsInput | string
@@ -51929,7 +48245,7 @@ export namespace Prisma {
     slug?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
-    aliases?: FranchiseUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     audienceAffinityIndex?: FloatFieldUpdateOperationsInput | number
@@ -51947,7 +48263,7 @@ export namespace Prisma {
     slug?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
-    aliases?: FranchiseUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     primaryCategoryId?: StringFieldUpdateOperationsInput | string
@@ -51963,7 +48279,7 @@ export namespace Prisma {
   export type TopicCreateWithoutScoreSnapshotsInput = {
     id?: string
     query: string
-    aliases?: TopicCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title: string
     summary?: string
     sourceUrl?: string | null
@@ -51976,7 +48292,7 @@ export namespace Prisma {
     seoOpportunity?: number
     confidence?: number
     termType?: string
-    emotionalTriggers?: TopicCreateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: boolean
     scoreSummary?: string
     weightsVersion?: string
@@ -52002,7 +48318,7 @@ export namespace Prisma {
   export type TopicUncheckedCreateWithoutScoreSnapshotsInput = {
     id?: string
     query: string
-    aliases?: TopicCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title: string
     summary?: string
     categoryId?: string | null
@@ -52016,7 +48332,7 @@ export namespace Prisma {
     seoOpportunity?: number
     confidence?: number
     termType?: string
-    emotionalTriggers?: TopicCreateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: boolean
     scoreSummary?: string
     weightsVersion?: string
@@ -52057,7 +48373,7 @@ export namespace Prisma {
   export type TopicUpdateWithoutScoreSnapshotsInput = {
     id?: StringFieldUpdateOperationsInput | string
     query?: StringFieldUpdateOperationsInput | string
-    aliases?: TopicUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
     summary?: StringFieldUpdateOperationsInput | string
     sourceUrl?: NullableStringFieldUpdateOperationsInput | string | null
@@ -52070,7 +48386,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFieldUpdateOperationsInput | number
     confidence?: FloatFieldUpdateOperationsInput | number
     termType?: StringFieldUpdateOperationsInput | string
-    emotionalTriggers?: TopicUpdateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: BoolFieldUpdateOperationsInput | boolean
     scoreSummary?: StringFieldUpdateOperationsInput | string
     weightsVersion?: StringFieldUpdateOperationsInput | string
@@ -52096,7 +48412,7 @@ export namespace Prisma {
   export type TopicUncheckedUpdateWithoutScoreSnapshotsInput = {
     id?: StringFieldUpdateOperationsInput | string
     query?: StringFieldUpdateOperationsInput | string
-    aliases?: TopicUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
     summary?: StringFieldUpdateOperationsInput | string
     categoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -52110,7 +48426,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFieldUpdateOperationsInput | number
     confidence?: FloatFieldUpdateOperationsInput | number
     termType?: StringFieldUpdateOperationsInput | string
-    emotionalTriggers?: TopicUpdateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: BoolFieldUpdateOperationsInput | boolean
     scoreSummary?: StringFieldUpdateOperationsInput | string
     weightsVersion?: StringFieldUpdateOperationsInput | string
@@ -52135,7 +48451,7 @@ export namespace Prisma {
   export type TopicCreateWithoutSignalReadingsInput = {
     id?: string
     query: string
-    aliases?: TopicCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title: string
     summary?: string
     sourceUrl?: string | null
@@ -52148,7 +48464,7 @@ export namespace Prisma {
     seoOpportunity?: number
     confidence?: number
     termType?: string
-    emotionalTriggers?: TopicCreateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: boolean
     scoreSummary?: string
     weightsVersion?: string
@@ -52174,7 +48490,7 @@ export namespace Prisma {
   export type TopicUncheckedCreateWithoutSignalReadingsInput = {
     id?: string
     query: string
-    aliases?: TopicCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title: string
     summary?: string
     categoryId?: string | null
@@ -52188,7 +48504,7 @@ export namespace Prisma {
     seoOpportunity?: number
     confidence?: number
     termType?: string
-    emotionalTriggers?: TopicCreateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: boolean
     scoreSummary?: string
     weightsVersion?: string
@@ -52229,7 +48545,7 @@ export namespace Prisma {
   export type TopicUpdateWithoutSignalReadingsInput = {
     id?: StringFieldUpdateOperationsInput | string
     query?: StringFieldUpdateOperationsInput | string
-    aliases?: TopicUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
     summary?: StringFieldUpdateOperationsInput | string
     sourceUrl?: NullableStringFieldUpdateOperationsInput | string | null
@@ -52242,7 +48558,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFieldUpdateOperationsInput | number
     confidence?: FloatFieldUpdateOperationsInput | number
     termType?: StringFieldUpdateOperationsInput | string
-    emotionalTriggers?: TopicUpdateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: BoolFieldUpdateOperationsInput | boolean
     scoreSummary?: StringFieldUpdateOperationsInput | string
     weightsVersion?: StringFieldUpdateOperationsInput | string
@@ -52268,7 +48584,7 @@ export namespace Prisma {
   export type TopicUncheckedUpdateWithoutSignalReadingsInput = {
     id?: StringFieldUpdateOperationsInput | string
     query?: StringFieldUpdateOperationsInput | string
-    aliases?: TopicUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
     summary?: StringFieldUpdateOperationsInput | string
     categoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -52282,7 +48598,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFieldUpdateOperationsInput | number
     confidence?: FloatFieldUpdateOperationsInput | number
     termType?: StringFieldUpdateOperationsInput | string
-    emotionalTriggers?: TopicUpdateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: BoolFieldUpdateOperationsInput | boolean
     scoreSummary?: StringFieldUpdateOperationsInput | string
     weightsVersion?: StringFieldUpdateOperationsInput | string
@@ -52419,7 +48735,7 @@ export namespace Prisma {
     avatarUrl?: string | null
     role?: string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorCreateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: string
     passwordHash?: string | null
     isActive?: boolean
@@ -52439,7 +48755,7 @@ export namespace Prisma {
     avatarUrl?: string | null
     role?: string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorCreateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: string
     passwordHash?: string | null
     isActive?: boolean
@@ -52458,7 +48774,7 @@ export namespace Prisma {
   export type TopicCreateWithoutArticlesInput = {
     id?: string
     query: string
-    aliases?: TopicCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title: string
     summary?: string
     sourceUrl?: string | null
@@ -52471,7 +48787,7 @@ export namespace Prisma {
     seoOpportunity?: number
     confidence?: number
     termType?: string
-    emotionalTriggers?: TopicCreateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: boolean
     scoreSummary?: string
     weightsVersion?: string
@@ -52497,7 +48813,7 @@ export namespace Prisma {
   export type TopicUncheckedCreateWithoutArticlesInput = {
     id?: string
     query: string
-    aliases?: TopicCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title: string
     summary?: string
     categoryId?: string | null
@@ -52511,7 +48827,7 @@ export namespace Prisma {
     seoOpportunity?: number
     confidence?: number
     termType?: string
-    emotionalTriggers?: TopicCreateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: boolean
     scoreSummary?: string
     weightsVersion?: string
@@ -52820,7 +49136,7 @@ export namespace Prisma {
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
     role?: StringFieldUpdateOperationsInput | string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorUpdateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: StringFieldUpdateOperationsInput | string
     passwordHash?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -52840,7 +49156,7 @@ export namespace Prisma {
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
     role?: StringFieldUpdateOperationsInput | string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorUpdateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: StringFieldUpdateOperationsInput | string
     passwordHash?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -52865,7 +49181,7 @@ export namespace Prisma {
   export type TopicUpdateWithoutArticlesInput = {
     id?: StringFieldUpdateOperationsInput | string
     query?: StringFieldUpdateOperationsInput | string
-    aliases?: TopicUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
     summary?: StringFieldUpdateOperationsInput | string
     sourceUrl?: NullableStringFieldUpdateOperationsInput | string | null
@@ -52878,7 +49194,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFieldUpdateOperationsInput | number
     confidence?: FloatFieldUpdateOperationsInput | number
     termType?: StringFieldUpdateOperationsInput | string
-    emotionalTriggers?: TopicUpdateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: BoolFieldUpdateOperationsInput | boolean
     scoreSummary?: StringFieldUpdateOperationsInput | string
     weightsVersion?: StringFieldUpdateOperationsInput | string
@@ -52904,7 +49220,7 @@ export namespace Prisma {
   export type TopicUncheckedUpdateWithoutArticlesInput = {
     id?: StringFieldUpdateOperationsInput | string
     query?: StringFieldUpdateOperationsInput | string
-    aliases?: TopicUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
     summary?: StringFieldUpdateOperationsInput | string
     categoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -52918,7 +49234,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFieldUpdateOperationsInput | number
     confidence?: FloatFieldUpdateOperationsInput | number
     termType?: StringFieldUpdateOperationsInput | string
-    emotionalTriggers?: TopicUpdateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: BoolFieldUpdateOperationsInput | boolean
     scoreSummary?: StringFieldUpdateOperationsInput | string
     weightsVersion?: StringFieldUpdateOperationsInput | string
@@ -53095,7 +49411,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -53149,7 +49465,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -53182,7 +49498,7 @@ export namespace Prisma {
     slug: string
     name: string
     description?: string
-    aliases?: FranchiseCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: string | null
     logoUrl?: string | null
     audienceAffinityIndex?: number
@@ -53200,7 +49516,7 @@ export namespace Prisma {
     slug: string
     name: string
     description?: string
-    aliases?: FranchiseCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: string | null
     logoUrl?: string | null
     primaryCategoryId: string
@@ -53252,7 +49568,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -53306,7 +49622,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -53345,7 +49661,7 @@ export namespace Prisma {
     slug?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
-    aliases?: FranchiseUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     audienceAffinityIndex?: FloatFieldUpdateOperationsInput | number
@@ -53363,7 +49679,7 @@ export namespace Prisma {
     slug?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
-    aliases?: FranchiseUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     primaryCategoryId?: StringFieldUpdateOperationsInput | string
@@ -53399,7 +49715,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -53453,7 +49769,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -53536,7 +49852,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -53590,7 +49906,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -53663,7 +49979,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -53717,7 +50033,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -53779,7 +50095,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -53833,7 +50149,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -53923,7 +50239,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -53977,7 +50293,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -54088,7 +50404,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -54142,7 +50458,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -54225,7 +50541,7 @@ export namespace Prisma {
     slug: string
     name: string
     description?: string
-    aliases?: FranchiseCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: string | null
     logoUrl?: string | null
     audienceAffinityIndex?: number
@@ -54243,7 +50559,7 @@ export namespace Prisma {
     slug: string
     name: string
     description?: string
-    aliases?: FranchiseCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: string | null
     logoUrl?: string | null
     primaryCategoryId: string
@@ -54277,7 +50593,7 @@ export namespace Prisma {
     slug?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
-    aliases?: FranchiseUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     audienceAffinityIndex?: FloatFieldUpdateOperationsInput | number
@@ -54295,7 +50611,7 @@ export namespace Prisma {
     slug?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
-    aliases?: FranchiseUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     primaryCategoryId?: StringFieldUpdateOperationsInput | string
@@ -54388,7 +50704,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -54442,7 +50758,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -54532,7 +50848,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -54586,7 +50902,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -54674,8 +50990,8 @@ export namespace Prisma {
     p256dh: string
     auth: string
     userAgent?: string | null
-    preferredCategories?: PushSubscriptionCreatepreferredCategoriesInput | string[]
-    preferredFranchises?: PushSubscriptionCreatepreferredFranchisesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
+    preferredFranchises?: JsonNullValueInput | InputJsonValue
     minScoreThreshold?: number
     isActive?: boolean
     lastFailureAt?: Date | string | null
@@ -54692,8 +51008,8 @@ export namespace Prisma {
     p256dh: string
     auth: string
     userAgent?: string | null
-    preferredCategories?: PushSubscriptionCreatepreferredCategoriesInput | string[]
-    preferredFranchises?: PushSubscriptionCreatepreferredFranchisesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
+    preferredFranchises?: JsonNullValueInput | InputJsonValue
     minScoreThreshold?: number
     isActive?: boolean
     lastFailureAt?: Date | string | null
@@ -54775,8 +51091,8 @@ export namespace Prisma {
     p256dh?: StringFieldUpdateOperationsInput | string
     auth?: StringFieldUpdateOperationsInput | string
     userAgent?: NullableStringFieldUpdateOperationsInput | string | null
-    preferredCategories?: PushSubscriptionUpdatepreferredCategoriesInput | string[]
-    preferredFranchises?: PushSubscriptionUpdatepreferredFranchisesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
+    preferredFranchises?: JsonNullValueInput | InputJsonValue
     minScoreThreshold?: IntFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     lastFailureAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -54793,8 +51109,8 @@ export namespace Prisma {
     p256dh?: StringFieldUpdateOperationsInput | string
     auth?: StringFieldUpdateOperationsInput | string
     userAgent?: NullableStringFieldUpdateOperationsInput | string | null
-    preferredCategories?: PushSubscriptionUpdatepreferredCategoriesInput | string[]
-    preferredFranchises?: PushSubscriptionUpdatepreferredFranchisesInput | string[]
+    preferredCategories?: JsonNullValueInput | InputJsonValue
+    preferredFranchises?: JsonNullValueInput | InputJsonValue
     minScoreThreshold?: IntFieldUpdateOperationsInput | number
     isActive?: BoolFieldUpdateOperationsInput | boolean
     lastFailureAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
@@ -54810,7 +51126,7 @@ export namespace Prisma {
     slug: string
     name: string
     description?: string
-    aliases?: FranchiseCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: string | null
     logoUrl?: string | null
     audienceAffinityIndex?: number
@@ -54828,7 +51144,7 @@ export namespace Prisma {
     slug: string
     name: string
     description?: string
-    aliases?: FranchiseCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: string | null
     logoUrl?: string | null
     primaryCategoryId: string
@@ -54901,7 +51217,7 @@ export namespace Prisma {
     slug?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
-    aliases?: FranchiseUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     audienceAffinityIndex?: FloatFieldUpdateOperationsInput | number
@@ -54919,7 +51235,7 @@ export namespace Prisma {
     slug?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
-    aliases?: FranchiseUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     primaryCategoryId?: StringFieldUpdateOperationsInput | string
@@ -55243,7 +51559,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -55297,7 +51613,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -55485,7 +51801,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -55539,7 +51855,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -55679,7 +51995,7 @@ export namespace Prisma {
     avatarUrl?: string | null
     role?: string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorCreateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: string
     passwordHash?: string | null
     isActive?: boolean
@@ -55699,7 +52015,7 @@ export namespace Prisma {
     avatarUrl?: string | null
     role?: string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorCreateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: string
     passwordHash?: string | null
     isActive?: boolean
@@ -55735,7 +52051,7 @@ export namespace Prisma {
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
     role?: StringFieldUpdateOperationsInput | string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorUpdateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: StringFieldUpdateOperationsInput | string
     passwordHash?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -55755,7 +52071,7 @@ export namespace Prisma {
     avatarUrl?: NullableStringFieldUpdateOperationsInput | string | null
     role?: StringFieldUpdateOperationsInput | string
     socialLinks?: JsonNullValueInput | InputJsonValue
-    expertiseAreas?: AuthorUpdateexpertiseAreasInput | string[]
+    expertiseAreas?: JsonNullValueInput | InputJsonValue
     systemRole?: StringFieldUpdateOperationsInput | string
     passwordHash?: NullableStringFieldUpdateOperationsInput | string | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
@@ -55792,7 +52108,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -55813,7 +52129,7 @@ export namespace Prisma {
   export type TopicCreateManyCategoryInput = {
     id?: string
     query: string
-    aliases?: TopicCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title: string
     summary?: string
     sourceUrl?: string | null
@@ -55826,7 +52142,7 @@ export namespace Prisma {
     seoOpportunity?: number
     confidence?: number
     termType?: string
-    emotionalTriggers?: TopicCreateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: boolean
     scoreSummary?: string
     weightsVersion?: string
@@ -55850,7 +52166,7 @@ export namespace Prisma {
     slug: string
     name: string
     description?: string
-    aliases?: FranchiseCreatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: string | null
     logoUrl?: string | null
     audienceAffinityIndex?: number
@@ -55892,7 +52208,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -55945,7 +52261,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -55995,7 +52311,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -56016,7 +52332,7 @@ export namespace Prisma {
   export type TopicUpdateWithoutCategoryInput = {
     id?: StringFieldUpdateOperationsInput | string
     query?: StringFieldUpdateOperationsInput | string
-    aliases?: TopicUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
     summary?: StringFieldUpdateOperationsInput | string
     sourceUrl?: NullableStringFieldUpdateOperationsInput | string | null
@@ -56029,7 +52345,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFieldUpdateOperationsInput | number
     confidence?: FloatFieldUpdateOperationsInput | number
     termType?: StringFieldUpdateOperationsInput | string
-    emotionalTriggers?: TopicUpdateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: BoolFieldUpdateOperationsInput | boolean
     scoreSummary?: StringFieldUpdateOperationsInput | string
     weightsVersion?: StringFieldUpdateOperationsInput | string
@@ -56055,7 +52371,7 @@ export namespace Prisma {
   export type TopicUncheckedUpdateWithoutCategoryInput = {
     id?: StringFieldUpdateOperationsInput | string
     query?: StringFieldUpdateOperationsInput | string
-    aliases?: TopicUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
     summary?: StringFieldUpdateOperationsInput | string
     sourceUrl?: NullableStringFieldUpdateOperationsInput | string | null
@@ -56068,7 +52384,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFieldUpdateOperationsInput | number
     confidence?: FloatFieldUpdateOperationsInput | number
     termType?: StringFieldUpdateOperationsInput | string
-    emotionalTriggers?: TopicUpdateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: BoolFieldUpdateOperationsInput | boolean
     scoreSummary?: StringFieldUpdateOperationsInput | string
     weightsVersion?: StringFieldUpdateOperationsInput | string
@@ -56094,7 +52410,7 @@ export namespace Prisma {
   export type TopicUncheckedUpdateManyWithoutCategoryInput = {
     id?: StringFieldUpdateOperationsInput | string
     query?: StringFieldUpdateOperationsInput | string
-    aliases?: TopicUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     title?: StringFieldUpdateOperationsInput | string
     summary?: StringFieldUpdateOperationsInput | string
     sourceUrl?: NullableStringFieldUpdateOperationsInput | string | null
@@ -56107,7 +52423,7 @@ export namespace Prisma {
     seoOpportunity?: FloatFieldUpdateOperationsInput | number
     confidence?: FloatFieldUpdateOperationsInput | number
     termType?: StringFieldUpdateOperationsInput | string
-    emotionalTriggers?: TopicUpdateemotionalTriggersInput | string[]
+    emotionalTriggers?: JsonNullValueInput | InputJsonValue
     requiresHumanReview?: BoolFieldUpdateOperationsInput | boolean
     scoreSummary?: StringFieldUpdateOperationsInput | string
     weightsVersion?: StringFieldUpdateOperationsInput | string
@@ -56131,7 +52447,7 @@ export namespace Prisma {
     slug?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
-    aliases?: FranchiseUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     audienceAffinityIndex?: FloatFieldUpdateOperationsInput | number
@@ -56149,7 +52465,7 @@ export namespace Prisma {
     slug?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
-    aliases?: FranchiseUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     audienceAffinityIndex?: FloatFieldUpdateOperationsInput | number
@@ -56167,7 +52483,7 @@ export namespace Prisma {
     slug?: StringFieldUpdateOperationsInput | string
     name?: StringFieldUpdateOperationsInput | string
     description?: StringFieldUpdateOperationsInput | string
-    aliases?: FranchiseUpdatealiasesInput | string[]
+    aliases?: JsonNullValueInput | InputJsonValue
     heroImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     logoUrl?: NullableStringFieldUpdateOperationsInput | string | null
     audienceAffinityIndex?: FloatFieldUpdateOperationsInput | number
@@ -56234,7 +52550,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -56275,7 +52591,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -56328,7 +52644,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -56378,7 +52694,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -56550,7 +52866,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -56612,7 +52928,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -56665,7 +52981,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -56715,7 +53031,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -56826,7 +53142,7 @@ export namespace Prisma {
     isLive?: boolean
     updatesCount?: number
     hasSpoiler?: boolean
-    tldr?: ArticleCreatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: number | null
     currentScore?: number
@@ -56903,7 +53219,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -56956,7 +53272,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number
@@ -57006,7 +53322,7 @@ export namespace Prisma {
     isLive?: BoolFieldUpdateOperationsInput | boolean
     updatesCount?: IntFieldUpdateOperationsInput | number
     hasSpoiler?: BoolFieldUpdateOperationsInput | boolean
-    tldr?: ArticleUpdatetldrInput | string[]
+    tldr?: JsonNullValueInput | InputJsonValue
     reviewData?: NullableJsonNullValueInput | InputJsonValue
     scoreAtPublish?: NullableFloatFieldUpdateOperationsInput | number | null
     currentScore?: FloatFieldUpdateOperationsInput | number

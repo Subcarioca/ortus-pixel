@@ -568,20 +568,300 @@ exports.Prisma.NullableJsonNullValueInput = {
   JsonNull: Prisma.JsonNull
 };
 
-exports.Prisma.QueryMode = {
-  default: 'default',
-  insensitive: 'insensitive'
-};
-
 exports.Prisma.NullsOrder = {
   first: 'first',
   last: 'last'
+};
+
+exports.Prisma.CategoryOrderByRelevanceFieldEnum = {
+  id: 'id',
+  slug: 'slug',
+  name: 'name',
+  shortName: 'shortName',
+  description: 'description',
+  accentColor: 'accentColor',
+  seoTitle: 'seoTitle',
+  seoDescription: 'seoDescription'
+};
+
+exports.Prisma.SubcategoryOrderByRelevanceFieldEnum = {
+  id: 'id',
+  slug: 'slug',
+  name: 'name',
+  description: 'description',
+  categoryId: 'categoryId'
 };
 
 exports.Prisma.JsonNullValueFilter = {
   DbNull: Prisma.DbNull,
   JsonNull: Prisma.JsonNull,
   AnyNull: Prisma.AnyNull
+};
+
+exports.Prisma.QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
+};
+
+exports.Prisma.FranchiseOrderByRelevanceFieldEnum = {
+  id: 'id',
+  slug: 'slug',
+  name: 'name',
+  description: 'description',
+  heroImageUrl: 'heroImageUrl',
+  logoUrl: 'logoUrl',
+  primaryCategoryId: 'primaryCategoryId'
+};
+
+exports.Prisma.TagOrderByRelevanceFieldEnum = {
+  id: 'id',
+  slug: 'slug',
+  name: 'name',
+  kind: 'kind'
+};
+
+exports.Prisma.AuthorOrderByRelevanceFieldEnum = {
+  id: 'id',
+  slug: 'slug',
+  name: 'name',
+  email: 'email',
+  bio: 'bio',
+  avatarUrl: 'avatarUrl',
+  role: 'role',
+  systemRole: 'systemRole',
+  passwordHash: 'passwordHash'
+};
+
+exports.Prisma.StaffSessionOrderByRelevanceFieldEnum = {
+  id: 'id',
+  tokenHash: 'tokenHash',
+  authorId: 'authorId',
+  userAgent: 'userAgent',
+  ipHash: 'ipHash'
+};
+
+exports.Prisma.TopicOrderByRelevanceFieldEnum = {
+  id: 'id',
+  query: 'query',
+  title: 'title',
+  summary: 'summary',
+  categoryId: 'categoryId',
+  sourceUrl: 'sourceUrl',
+  sourceName: 'sourceName',
+  sourceTier: 'sourceTier',
+  dedupeHash: 'dedupeHash',
+  currentBand: 'currentBand',
+  termType: 'termType',
+  scoreSummary: 'scoreSummary',
+  weightsVersion: 'weightsVersion',
+  manualOverrideReason: 'manualOverrideReason',
+  manualOverrideById: 'manualOverrideById',
+  status: 'status',
+  claimedById: 'claimedById'
+};
+
+exports.Prisma.TopicFranchiseOrderByRelevanceFieldEnum = {
+  topicId: 'topicId',
+  franchiseId: 'franchiseId'
+};
+
+exports.Prisma.ScoreSnapshotOrderByRelevanceFieldEnum = {
+  id: 'id',
+  topicId: 'topicId',
+  band: 'band',
+  weightsVersion: 'weightsVersion'
+};
+
+exports.Prisma.SignalReadingOrderByRelevanceFieldEnum = {
+  id: 'id',
+  topicId: 'topicId',
+  connectorId: 'connectorId',
+  dimension: 'dimension',
+  rawValue: 'rawValue',
+  explanation: 'explanation'
+};
+
+exports.Prisma.ConnectorHealthOrderByRelevanceFieldEnum = {
+  id: 'id',
+  connectorId: 'connectorId',
+  circuitState: 'circuitState',
+  lastError: 'lastError'
+};
+
+exports.Prisma.ArticleOrderByRelevanceFieldEnum = {
+  id: 'id',
+  slug: 'slug',
+  title: 'title',
+  excerpt: 'excerpt',
+  content: 'content',
+  status: 'status',
+  categoryId: 'categoryId',
+  subcategoryId: 'subcategoryId',
+  authorId: 'authorId',
+  topicId: 'topicId',
+  coverImageUrl: 'coverImageUrl',
+  coverImageAlt: 'coverImageAlt',
+  videoUrl: 'videoUrl',
+  videoThumbnailUrl: 'videoThumbnailUrl',
+  seoTitle: 'seoTitle',
+  seoDescription: 'seoDescription',
+  canonicalUrl: 'canonicalUrl',
+  format: 'format',
+  currentBand: 'currentBand'
+};
+
+exports.Prisma.ArticleFranchiseOrderByRelevanceFieldEnum = {
+  articleId: 'articleId',
+  franchiseId: 'franchiseId'
+};
+
+exports.Prisma.ArticleTagOrderByRelevanceFieldEnum = {
+  articleId: 'articleId',
+  tagId: 'tagId'
+};
+
+exports.Prisma.LiveUpdateOrderByRelevanceFieldEnum = {
+  id: 'id',
+  articleId: 'articleId',
+  content: 'content',
+  authorName: 'authorName'
+};
+
+exports.Prisma.AffiliateOfferOrderByRelevanceFieldEnum = {
+  id: 'id',
+  productName: 'productName',
+  retailerName: 'retailerName',
+  brand: 'brand',
+  currency: 'currency',
+  offerUrl: 'offerUrl',
+  programCategory: 'programCategory',
+  network: 'network',
+  externalId: 'externalId',
+  imageUrl: 'imageUrl',
+  availability: 'availability',
+  disclosureKind: 'disclosureKind',
+  createdById: 'createdById'
+};
+
+exports.Prisma.ArticleAffiliateOfferOrderByRelevanceFieldEnum = {
+  articleId: 'articleId',
+  offerId: 'offerId',
+  label: 'label',
+  addedById: 'addedById'
+};
+
+exports.Prisma.ReleaseEventOrderByRelevanceFieldEnum = {
+  id: 'id',
+  title: 'title',
+  slug: 'slug',
+  franchiseId: 'franchiseId',
+  kind: 'kind',
+  platform: 'platform',
+  region: 'region'
+};
+
+exports.Prisma.SubscriberOrderByRelevanceFieldEnum = {
+  id: 'id',
+  email: 'email',
+  status: 'status',
+  confirmationTokenHash: 'confirmationTokenHash',
+  unsubscribeTokenHash: 'unsubscribeTokenHash',
+  signupIpHash: 'signupIpHash',
+  signupUserAgent: 'signupUserAgent',
+  signupSource: 'signupSource'
+};
+
+exports.Prisma.PushSubscriptionOrderByRelevanceFieldEnum = {
+  id: 'id',
+  endpoint: 'endpoint',
+  p256dh: 'p256dh',
+  auth: 'auth',
+  userAgent: 'userAgent'
+};
+
+exports.Prisma.PushNotificationOrderByRelevanceFieldEnum = {
+  id: 'id',
+  articleId: 'articleId',
+  title: 'title',
+  body: 'body',
+  iconUrl: 'iconUrl',
+  url: 'url',
+  trigger: 'trigger',
+  approvedById: 'approvedById',
+  status: 'status'
+};
+
+exports.Prisma.PushDeliveryOrderByRelevanceFieldEnum = {
+  id: 'id',
+  notificationId: 'notificationId',
+  subscriptionId: 'subscriptionId',
+  status: 'status',
+  error: 'error'
+};
+
+exports.Prisma.FranchiseFollowOrderByRelevanceFieldEnum = {
+  id: 'id',
+  franchiseId: 'franchiseId',
+  visitorId: 'visitorId',
+  commentAuthorId: 'commentAuthorId'
+};
+
+exports.Prisma.CommentAuthorOrderByRelevanceFieldEnum = {
+  id: 'id',
+  provider: 'provider',
+  providerAccountHash: 'providerAccountHash',
+  displayName: 'displayName',
+  avatarUrl: 'avatarUrl',
+  emailHash: 'emailHash',
+  blockReason: 'blockReason'
+};
+
+exports.Prisma.CommentSessionOrderByRelevanceFieldEnum = {
+  id: 'id',
+  tokenHash: 'tokenHash',
+  authorId: 'authorId',
+  userAgent: 'userAgent',
+  ipHash: 'ipHash'
+};
+
+exports.Prisma.CommentOrderByRelevanceFieldEnum = {
+  id: 'id',
+  articleId: 'articleId',
+  authorAccountId: 'authorAccountId',
+  authorName: 'authorName',
+  authorEmailHash: 'authorEmailHash',
+  content: 'content',
+  status: 'status',
+  moderatedBy: 'moderatedBy',
+  moderationNote: 'moderationNote',
+  parentId: 'parentId',
+  ipHash: 'ipHash'
+};
+
+exports.Prisma.PipelineEventOrderByRelevanceFieldEnum = {
+  id: 'id',
+  eventType: 'eventType',
+  topicId: 'topicId',
+  articleId: 'articleId',
+  connectorId: 'connectorId',
+  actorId: 'actorId'
+};
+
+exports.Prisma.PipelineRunOrderByRelevanceFieldEnum = {
+  id: 'id',
+  stage: 'stage',
+  status: 'status',
+  error: 'error'
+};
+
+exports.Prisma.AuditLogOrderByRelevanceFieldEnum = {
+  id: 'id',
+  actorId: 'actorId',
+  action: 'action',
+  entityType: 'entityType',
+  entityId: 'entityId',
+  reason: 'reason',
+  ipHash: 'ipHash'
 };
 
 

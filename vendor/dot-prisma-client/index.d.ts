@@ -16048,6 +16048,7 @@ export namespace Prisma {
     title: string | null
     excerpt: string | null
     content: string | null
+    contentOrigin: string | null
     status: string | null
     categoryId: string | null
     subcategoryId: string | null
@@ -16091,6 +16092,7 @@ export namespace Prisma {
     title: string | null
     excerpt: string | null
     content: string | null
+    contentOrigin: string | null
     status: string | null
     categoryId: string | null
     subcategoryId: string | null
@@ -16135,6 +16137,7 @@ export namespace Prisma {
     excerpt: number
     content: number
     blocks: number
+    contentOrigin: number
     status: number
     categoryId: number
     subcategoryId: number
@@ -16210,6 +16213,7 @@ export namespace Prisma {
     title?: true
     excerpt?: true
     content?: true
+    contentOrigin?: true
     status?: true
     categoryId?: true
     subcategoryId?: true
@@ -16253,6 +16257,7 @@ export namespace Prisma {
     title?: true
     excerpt?: true
     content?: true
+    contentOrigin?: true
     status?: true
     categoryId?: true
     subcategoryId?: true
@@ -16297,6 +16302,7 @@ export namespace Prisma {
     excerpt?: true
     content?: true
     blocks?: true
+    contentOrigin?: true
     status?: true
     categoryId?: true
     subcategoryId?: true
@@ -16430,6 +16436,7 @@ export namespace Prisma {
     excerpt: string
     content: string
     blocks: JsonValue | null
+    contentOrigin: string
     status: string
     categoryId: string
     subcategoryId: string | null
@@ -16495,6 +16502,7 @@ export namespace Prisma {
     excerpt?: boolean
     content?: boolean
     blocks?: boolean
+    contentOrigin?: boolean
     status?: boolean
     categoryId?: boolean
     subcategoryId?: boolean
@@ -16554,6 +16562,7 @@ export namespace Prisma {
     excerpt?: boolean
     content?: boolean
     blocks?: boolean
+    contentOrigin?: boolean
     status?: boolean
     categoryId?: boolean
     subcategoryId?: boolean
@@ -16593,7 +16602,7 @@ export namespace Prisma {
     hasAffiliateLinks?: boolean
   }
 
-  export type ArticleOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "slug" | "title" | "excerpt" | "content" | "blocks" | "status" | "categoryId" | "subcategoryId" | "authorId" | "topicId" | "coverImageUrl" | "coverImageAlt" | "videoUrl" | "videoThumbnailUrl" | "videoDurationSeconds" | "seoTitle" | "seoDescription" | "canonicalUrl" | "noIndex" | "isBreaking" | "readingMinutes" | "format" | "isLive" | "updatesCount" | "hasSpoiler" | "contentSensitivity" | "tldr" | "reviewData" | "scoreAtPublish" | "currentScore" | "currentBand" | "scoreDelta1h" | "scoreUpdatedAt" | "viewCount" | "pageviews24h" | "avgTimeOnPageSeconds" | "scrollDepthAvg" | "shareCount" | "publishedAt" | "createdAt" | "updatedAt" | "hasAffiliateLinks", ExtArgs["result"]["article"]>
+  export type ArticleOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "slug" | "title" | "excerpt" | "content" | "blocks" | "contentOrigin" | "status" | "categoryId" | "subcategoryId" | "authorId" | "topicId" | "coverImageUrl" | "coverImageAlt" | "videoUrl" | "videoThumbnailUrl" | "videoDurationSeconds" | "seoTitle" | "seoDescription" | "canonicalUrl" | "noIndex" | "isBreaking" | "readingMinutes" | "format" | "isLive" | "updatesCount" | "hasSpoiler" | "contentSensitivity" | "tldr" | "reviewData" | "scoreAtPublish" | "currentScore" | "currentBand" | "scoreDelta1h" | "scoreUpdatedAt" | "viewCount" | "pageviews24h" | "avgTimeOnPageSeconds" | "scrollDepthAvg" | "shareCount" | "publishedAt" | "createdAt" | "updatedAt" | "hasAffiliateLinks", ExtArgs["result"]["article"]>
   export type ArticleInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     category?: boolean | CategoryDefaultArgs<ExtArgs>
     subcategory?: boolean | Article$subcategoryArgs<ExtArgs>
@@ -16676,6 +16685,30 @@ export namespace Prisma {
        * bloco desconhecido — banco é fronteira, e fronteira se trata com desconfiança.
        */
       blocks: Prisma.JsonValue | null
+      /**
+       * DE ONDE VEIO O TEXTO INICIAL: 'human' | 'ai-assisted'.
+       * Vocabulário fechado em packages/core/src/content-origin.ts.
+       * 
+       * Gravado uma vez, na CRIAÇÃO, e nunca reescrito pela edição — a pergunta que
+       * ele responde é sobre a procedência do rascunho, e essa não muda depois de o
+       * redator reescrever por cima. É por isso que ele fica fora do
+       * `parseArticleInput` (que é a validação do FORMULÁRIO, chamada também na
+       * edição) e é lido diretamente pela rota de criação.
+       * 
+       * NÃO É TRAVA DE PUBLICAÇÃO, de propósito: a trava é humana e anterior (a
+       * sugestão nasce como rascunho e alguém precisa clicar em publicar). Um campo
+       * que bloqueasse seria contornado deixando de marcá-lo, e aí ele deixaria de
+       * valer também como registro. Ver o cabeçalho de `content-origin.ts`.
+       * 
+       * `VarChar(16)`: vocabulário curto e fechado, mesmo critério de
+       * `contentSensitivity`. Sem índice pelo mesmo motivo dela — nenhuma listagem
+       * filtra por este campo hoje; a auditoria que o consulta é rara e pode varrer.
+       * 
+       * ⚠ COLUNA NOVA: exige `npm run db:push` (e, em banco novo, o
+       * `npm run db:fulltext` de sempre depois). O `@default("human")` é o que faz a
+       * coluna nascer correta nas linhas que já existem.
+       */
+      contentOrigin: string
       /**
        * 'suggested' | 'claimed' | 'draft' | 'in-review' | 'published' | 'archived'
        */
@@ -17203,6 +17236,7 @@ export namespace Prisma {
     readonly excerpt: FieldRef<"Article", 'String'>
     readonly content: FieldRef<"Article", 'String'>
     readonly blocks: FieldRef<"Article", 'Json'>
+    readonly contentOrigin: FieldRef<"Article", 'String'>
     readonly status: FieldRef<"Article", 'String'>
     readonly categoryId: FieldRef<"Article", 'String'>
     readonly subcategoryId: FieldRef<"Article", 'String'>
@@ -36459,6 +36493,7 @@ export namespace Prisma {
     excerpt: 'excerpt',
     content: 'content',
     blocks: 'blocks',
+    contentOrigin: 'contentOrigin',
     status: 'status',
     categoryId: 'categoryId',
     subcategoryId: 'subcategoryId',
@@ -36984,6 +37019,7 @@ export namespace Prisma {
     title: 'title',
     excerpt: 'excerpt',
     content: 'content',
+    contentOrigin: 'contentOrigin',
     status: 'status',
     categoryId: 'categoryId',
     subcategoryId: 'subcategoryId',
@@ -38357,6 +38393,7 @@ export namespace Prisma {
     excerpt?: StringFilter<"Article"> | string
     content?: StringFilter<"Article"> | string
     blocks?: JsonNullableFilter<"Article">
+    contentOrigin?: StringFilter<"Article"> | string
     status?: StringFilter<"Article"> | string
     categoryId?: StringFilter<"Article"> | string
     subcategoryId?: StringNullableFilter<"Article"> | string | null
@@ -38413,6 +38450,7 @@ export namespace Prisma {
     excerpt?: SortOrder
     content?: SortOrder
     blocks?: SortOrderInput | SortOrder
+    contentOrigin?: SortOrder
     status?: SortOrder
     categoryId?: SortOrder
     subcategoryId?: SortOrderInput | SortOrder
@@ -38473,6 +38511,7 @@ export namespace Prisma {
     excerpt?: StringFilter<"Article"> | string
     content?: StringFilter<"Article"> | string
     blocks?: JsonNullableFilter<"Article">
+    contentOrigin?: StringFilter<"Article"> | string
     status?: StringFilter<"Article"> | string
     categoryId?: StringFilter<"Article"> | string
     subcategoryId?: StringNullableFilter<"Article"> | string | null
@@ -38529,6 +38568,7 @@ export namespace Prisma {
     excerpt?: SortOrder
     content?: SortOrder
     blocks?: SortOrderInput | SortOrder
+    contentOrigin?: SortOrder
     status?: SortOrder
     categoryId?: SortOrder
     subcategoryId?: SortOrderInput | SortOrder
@@ -38583,6 +38623,7 @@ export namespace Prisma {
     excerpt?: StringWithAggregatesFilter<"Article"> | string
     content?: StringWithAggregatesFilter<"Article"> | string
     blocks?: JsonNullableWithAggregatesFilter<"Article">
+    contentOrigin?: StringWithAggregatesFilter<"Article"> | string
     status?: StringWithAggregatesFilter<"Article"> | string
     categoryId?: StringWithAggregatesFilter<"Article"> | string
     subcategoryId?: StringNullableWithAggregatesFilter<"Article"> | string | null
@@ -41368,6 +41409,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     coverImageUrl?: string | null
     coverImageAlt?: string | null
@@ -41420,6 +41462,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     categoryId: string
     subcategoryId?: string | null
@@ -41472,6 +41515,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     coverImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     coverImageAlt?: NullableStringFieldUpdateOperationsInput | string | null
@@ -41524,6 +41568,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     categoryId?: StringFieldUpdateOperationsInput | string
     subcategoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -41576,6 +41621,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     categoryId: string
     subcategoryId?: string | null
@@ -41622,6 +41668,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     coverImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     coverImageAlt?: NullableStringFieldUpdateOperationsInput | string | null
@@ -41664,6 +41711,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     categoryId?: StringFieldUpdateOperationsInput | string
     subcategoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -44549,6 +44597,7 @@ export namespace Prisma {
     excerpt?: SortOrder
     content?: SortOrder
     blocks?: SortOrder
+    contentOrigin?: SortOrder
     status?: SortOrder
     categoryId?: SortOrder
     subcategoryId?: SortOrder
@@ -44608,6 +44657,7 @@ export namespace Prisma {
     title?: SortOrder
     excerpt?: SortOrder
     content?: SortOrder
+    contentOrigin?: SortOrder
     status?: SortOrder
     categoryId?: SortOrder
     subcategoryId?: SortOrder
@@ -44651,6 +44701,7 @@ export namespace Prisma {
     title?: SortOrder
     excerpt?: SortOrder
     content?: SortOrder
+    contentOrigin?: SortOrder
     status?: SortOrder
     categoryId?: SortOrder
     subcategoryId?: SortOrder
@@ -47762,6 +47813,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     coverImageUrl?: string | null
     coverImageAlt?: string | null
@@ -47813,6 +47865,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     subcategoryId?: string | null
     authorId: string
@@ -48067,6 +48120,7 @@ export namespace Prisma {
     excerpt?: StringFilter<"Article"> | string
     content?: StringFilter<"Article"> | string
     blocks?: JsonNullableFilter<"Article">
+    contentOrigin?: StringFilter<"Article"> | string
     status?: StringFilter<"Article"> | string
     categoryId?: StringFilter<"Article"> | string
     subcategoryId?: StringNullableFilter<"Article"> | string | null
@@ -48279,6 +48333,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     coverImageUrl?: string | null
     coverImageAlt?: string | null
@@ -48330,6 +48385,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     categoryId: string
     authorId: string
@@ -48794,6 +48850,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     coverImageUrl?: string | null
     coverImageAlt?: string | null
@@ -48845,6 +48902,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     categoryId: string
     subcategoryId?: string | null
@@ -49202,6 +49260,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     coverImageUrl?: string | null
     coverImageAlt?: string | null
@@ -49253,6 +49312,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     categoryId: string
     subcategoryId?: string | null
@@ -50963,6 +51023,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     coverImageUrl?: string | null
     coverImageAlt?: string | null
@@ -51014,6 +51075,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     categoryId: string
     subcategoryId?: string | null
@@ -51122,6 +51184,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     coverImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     coverImageAlt?: NullableStringFieldUpdateOperationsInput | string | null
@@ -51173,6 +51236,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     categoryId?: StringFieldUpdateOperationsInput | string
     subcategoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -51271,6 +51335,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     coverImageUrl?: string | null
     coverImageAlt?: string | null
@@ -51322,6 +51387,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     categoryId: string
     subcategoryId?: string | null
@@ -51410,6 +51476,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     coverImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     coverImageAlt?: NullableStringFieldUpdateOperationsInput | string | null
@@ -51461,6 +51528,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     categoryId?: StringFieldUpdateOperationsInput | string
     subcategoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -51539,6 +51607,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     coverImageUrl?: string | null
     coverImageAlt?: string | null
@@ -51590,6 +51659,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     categoryId: string
     subcategoryId?: string | null
@@ -51657,6 +51727,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     coverImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     coverImageAlt?: NullableStringFieldUpdateOperationsInput | string | null
@@ -51708,6 +51779,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     categoryId?: StringFieldUpdateOperationsInput | string
     subcategoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -51803,6 +51875,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     coverImageUrl?: string | null
     coverImageAlt?: string | null
@@ -51854,6 +51927,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     categoryId: string
     subcategoryId?: string | null
@@ -51970,6 +52044,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     coverImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     coverImageAlt?: NullableStringFieldUpdateOperationsInput | string | null
@@ -52021,6 +52096,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     categoryId?: StringFieldUpdateOperationsInput | string
     subcategoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -52272,6 +52348,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     coverImageUrl?: string | null
     coverImageAlt?: string | null
@@ -52323,6 +52400,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     categoryId: string
     subcategoryId?: string | null
@@ -52418,6 +52496,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     coverImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     coverImageAlt?: NullableStringFieldUpdateOperationsInput | string | null
@@ -52469,6 +52548,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     categoryId?: StringFieldUpdateOperationsInput | string
     subcategoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -53131,6 +53211,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     coverImageUrl?: string | null
     coverImageAlt?: string | null
@@ -53182,6 +53263,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     categoryId: string
     subcategoryId?: string | null
@@ -53375,6 +53457,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     coverImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     coverImageAlt?: NullableStringFieldUpdateOperationsInput | string | null
@@ -53426,6 +53509,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     categoryId?: StringFieldUpdateOperationsInput | string
     subcategoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -53681,6 +53765,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     subcategoryId?: string | null
     authorId: string
@@ -53789,6 +53874,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     coverImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     coverImageAlt?: NullableStringFieldUpdateOperationsInput | string | null
@@ -53840,6 +53926,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     subcategoryId?: NullableStringFieldUpdateOperationsInput | string | null
     authorId?: StringFieldUpdateOperationsInput | string
@@ -53891,6 +53978,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     subcategoryId?: NullableStringFieldUpdateOperationsInput | string | null
     authorId?: StringFieldUpdateOperationsInput | string
@@ -54143,6 +54231,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     categoryId: string
     authorId: string
@@ -54188,6 +54277,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     coverImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     coverImageAlt?: NullableStringFieldUpdateOperationsInput | string | null
@@ -54239,6 +54329,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     categoryId?: StringFieldUpdateOperationsInput | string
     authorId?: StringFieldUpdateOperationsInput | string
@@ -54290,6 +54381,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     categoryId?: StringFieldUpdateOperationsInput | string
     authorId?: StringFieldUpdateOperationsInput | string
@@ -54463,6 +54555,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     categoryId: string
     subcategoryId?: string | null
@@ -54529,6 +54622,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     coverImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     coverImageAlt?: NullableStringFieldUpdateOperationsInput | string | null
@@ -54580,6 +54674,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     categoryId?: StringFieldUpdateOperationsInput | string
     subcategoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -54631,6 +54726,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     categoryId?: StringFieldUpdateOperationsInput | string
     subcategoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -54743,6 +54839,7 @@ export namespace Prisma {
     excerpt?: string
     content?: string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: string
     status?: string
     categoryId: string
     subcategoryId?: string | null
@@ -54824,6 +54921,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     coverImageUrl?: NullableStringFieldUpdateOperationsInput | string | null
     coverImageAlt?: NullableStringFieldUpdateOperationsInput | string | null
@@ -54875,6 +54973,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     categoryId?: StringFieldUpdateOperationsInput | string
     subcategoryId?: NullableStringFieldUpdateOperationsInput | string | null
@@ -54926,6 +55025,7 @@ export namespace Prisma {
     excerpt?: StringFieldUpdateOperationsInput | string
     content?: StringFieldUpdateOperationsInput | string
     blocks?: NullableJsonNullValueInput | InputJsonValue
+    contentOrigin?: StringFieldUpdateOperationsInput | string
     status?: StringFieldUpdateOperationsInput | string
     categoryId?: StringFieldUpdateOperationsInput | string
     subcategoryId?: NullableStringFieldUpdateOperationsInput | string | null

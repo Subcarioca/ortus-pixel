@@ -198,11 +198,34 @@ export async function POST(
             // assunto, publicada, sem nenhum aviso.
             //
             // O `updateMany` com a condição no `where` resolve isso em uma
-            // operação atômica: no Postgres, o segundo UPDATE espera o primeiro
-            // terminar e então reavalia o filtro contra a linha já atualizada,
-            // encontrando zero registros. Um `findUnique` seguido de `update`
-            // teria uma janela entre ler e escrever — que é exatamente onde as
-            // duas requisições simultâneas passavam.
+            // operação atômica: o segundo UPDATE espera o primeiro terminar e
+            // então reavalia o filtro contra a linha já atualizada, encontrando
+            // zero registros. Um `findUnique` seguido de `update` teria uma
+            // janela entre ler e escrever — que é exatamente onde as duas
+            // requisições simultâneas passavam.
+            //
+            // ESTA GARANTIA NÃO É DO POSTGRES — foi conferida também para o
+            // MySQL/MariaDB na migração de banco, e vale nos dois. A versão
+            // anterior deste comentário dizia "no Postgres, ...", o que dava a
+            // entender que a troca de banco a colocaria em risco. Não coloca, e
+            // os dois motivos são específicos o bastante para valer o registro:
+            //
+            //   1. NÍVEL DE ISOLAMENTO. O padrão do InnoDB é REPEATABLE READ, e
+            //      não READ COMMITTED como no Postgres. Isso NÃO afeta este
+            //      trecho: `UPDATE` é leitura CORRENTE (locking read), não
+            //      leitura de snapshot. Ao destravar, o InnoDB relê a versão
+            //      mais recente já comitada e reaplica o `WHERE` — exatamente o
+            //      mesmo comportamento que o Postgres tem aqui.
+            //
+            //   2. GAP LOCKS. A preocupação legítima com REPEATABLE READ é que
+            //      o InnoDB trava intervalos, e não só linhas — o que muda o
+            //      perfil de deadlock. Também não se aplica aqui: o `where` casa
+            //      a CHAVE PRIMÁRIA com um valor exato, e esse é justamente o
+            //      caso documentado em que o InnoDB trava só o registro
+            //      encontrado, sem o intervalo anterior.
+            //
+            // O que continua valendo, e é o que de fato acontece na disputa: o
+            // segundo pedido recebe `count === 0` e devolve 'already-covered'.
             const claimed = await tx.topic.updateMany({
               where: { id, status: { not: 'published' } },
               data: { status: 'published' },

@@ -20,6 +20,7 @@
 
 import { NextResponse } from 'next/server';
 
+import { isCategorySlug } from '@subcarioca/core';
 import { prisma } from '@subcarioca/db';
 
 import { checkRateLimit, getClientIp } from '@/server/security';
@@ -38,7 +39,21 @@ function parseSubscription(input: unknown): {
   const endpoint = sub.endpoint;
   const keys = sub.keys as Record<string, unknown> | undefined;
 
-  if (typeof endpoint !== 'string' || endpoint.length === 0 || endpoint.length > 1000) {
+  // 512 e não 1000: este número TEM que ser o mesmo de
+  // `PushSubscription.endpoint @db.VarChar(512)` no schema.
+  //
+  // POR QUE 512 E NÃO O CONTRÁRIO (subir a coluna para 1000): a coluna é
+  // `@unique`, ou seja, precisa caber num índice do InnoDB, cujo teto é 3.072
+  // bytes. Com `utf8mb4` (4 bytes/caractere), 1000 caracteres dariam 4.000 —
+  // não cabe. 512 dá 2.048 e cabe com folga. Logo, quem cede é o validador.
+  //
+  // E CEDER IMPORTA: o servidor não está em `sql_mode` estrito, então um
+  // endpoint entre 513 e 1000 caracteres passaria pela validação e seria
+  // TRUNCADO em silêncio no banco. O efeito seria pior do que uma recusa —
+  // guardaríamos um endpoint inválido, o push falharia para sempre naquele
+  // aparelho, e o `upsert` por endpoint criaria uma linha nova a cada visita.
+  // Recusar na porta é honesto; truncar é uma inscrição que finge existir.
+  if (typeof endpoint !== 'string' || endpoint.length === 0 || endpoint.length > 512) {
     return null;
   }
 
@@ -70,10 +85,15 @@ function parseSubscription(input: unknown): {
   );
   if (!hostAllowed) return null;
 
+  // 191 para `p256dh` porque é o tamanho da coluna (o padrão do conector MySQL
+  // do Prisma), e validador e coluna precisam concordar — mesmo raciocínio do
+  // `endpoint` acima. Não aperta nada na prática: uma chave pública P-256 em
+  // base64url tem 88 caracteres, então 191 é o dobro da folga necessária.
+  // `auth` (16 bytes → 24 caracteres) já era mais estrito que a coluna: fica.
   if (
     typeof keys?.p256dh !== 'string' ||
     typeof keys?.auth !== 'string' ||
-    keys.p256dh.length > 200 ||
+    keys.p256dh.length > 191 ||
     keys.auth.length > 100
   ) {
     return null;
@@ -111,11 +131,32 @@ export async function POST(request: Request) {
       );
     }
 
-    // Segmentação opcional. Validamos contra listas fechadas em vez de aceitar
-    // qualquer string — evita poluir o banco e travar consultas futuras.
+    // Segmentação opcional, validada contra a LISTA FECHADA de editorias.
+    //
+    // ⚠ O `.filter(isCategorySlug)` é a linha que faz o comentário ser verdade.
+    // Antes, este bloco dizia "validamos contra listas fechadas" mas só conferia
+    // `typeof === 'string'` — ou seja, qualquer texto entrava. A auditoria de
+    // segurança pegou; o registro fica porque comentário que promete mais do que
+    // o código entrega é pior que comentário nenhum: ele desliga a desconfiança
+    // de quem lê depois.
+    //
+    // O QUE ISSO FECHA, concretamente. Esta rota é PÚBLICA e não autenticada.
+    // Sem a lista fechada, qualquer um podia gravar dez strings arbitrárias — e
+    // arbitrariamente grandes, porque `preferredCategories` é coluna `Json`
+    // (LONGTEXT), sem limite de tamanho por item. Essas strings são lidas
+    // depois por `push-sender.ts`, num `findMany` SEM `take`, que carrega todos
+    // os inscritos elegíveis na memória de uma vez. Um punhado de inscrições
+    // forjadas com listas enormes vira consumo de memória do processo web no
+    // momento do disparo — amplificação a partir de uma rota anônima.
+    // Com a lista fechada, o pior caso por linha passa a ser 10 slugs curtos.
+    //
+    // `.slice(0, 10)` continua: são 6 editorias hoje, então 10 já é teto
+    // generoso, e ele protege contra um payload com o mesmo slug repetido mil
+    // vezes (que passaria em `isCategorySlug` sem problema nenhum).
     const categories = Array.isArray(payload?.preferredCategories)
       ? (payload.preferredCategories as unknown[])
           .filter((c): c is string => typeof c === 'string')
+          .filter(isCategorySlug)
           .slice(0, 10)
       : [];
 

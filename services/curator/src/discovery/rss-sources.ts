@@ -245,9 +245,30 @@ function parseFeedItems(xml: string, source: NewsSource): DiscoveredItem[] {
       extractTag(block, 'description') ?? extractTag(block, 'summary') ?? '';
 
     items.push({
-      title: stripHtml(title),
+      // ⚠ O CORTE EM 250 NÃO É COSMÉTICO — ele protege uma coluna do banco.
+      //
+      // Este título vai parar em `Topic.title`, que é `@db.VarChar(255)`. O
+      // valor vem do feed RSS de um TERCEIRO: não temos controle nenhum sobre o
+      // tamanho, e manchete de 300 caracteres existe. Sem o corte, e como o
+      // servidor MySQL não está em `sql_mode` estrito, o título seria TRUNCADO
+      // em silêncio na gravação — dentro do `$transaction` do curator, num
+      // processo de fundo, sem erro em lugar nenhum.
+      //
+      // 250 e não 255: a margem de 5 existe porque o truncamento do MySQL conta
+      // em CARACTERES para `VARCHAR`, mas quem grava é o Prisma e quem lê o
+      // limite é este arquivo — deixar exatamente no limite é convidar um
+      // off-by-one que só aparece na manchete mais longa do ano.
+      //
+      // POR QUE AQUI E NÃO EM `curate.ts`: esta é a FRONTEIRA por onde o dado
+      // externo entra no sistema. `curate.ts` já corta `query` em 200, mas isso
+      // é um segundo cinto; se o corte só existisse lá, qualquer caminho novo
+      // que consumisse `DiscoveredItem` herdaria o bug de novo. Dado hostil se
+      // trata na porta.
+      title: stripHtml(title).slice(0, 250),
       // Limitamos o tamanho: alguns feeds mandam o artigo inteiro na descrição,
       // e não precisamos guardar 40 KB por item só para gerar um resumo.
+      // (`Topic.summary` é `@db.Text`, então aqui o motivo é econômico, não de
+      // integridade — ao contrário do título acima.)
       summary: stripHtml(summary).slice(0, 500),
       url: link,
       publishedAt,

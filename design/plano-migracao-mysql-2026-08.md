@@ -677,7 +677,7 @@ Com o site em hospedagem compartilhada (§2.1), o leque é este — e ele é cur
 | R9 | Rollback tardio | Baixa | **Alto** | Neon viva por 7 dias. Aprovar a busca antes do corte. |
 | R10 | Hostname do hPanel não conecta (nas máquinas de dev) | **Alta** (aconteceu no cariocatech) | Baixo | Usar o IP. Já documentado (6.3.2). |
 | R11 | **Backup e site na mesma conta** | Certa se não tratada | **Crítico** | `mysqldump` diário para **fora** da Hostinger (C4). Vale desde o primeiro dia. |
-| ~~R-old~~ | ~~MySQL remoto sem TLS na internet pública~~ | — | — | **Deixou de existir** com a infraestrutura real: a conexão é `localhost`. Ver §9.3. |
+| R12 ⚠⚠ | **MySQL remoto exposto na internet pública, permanentemente** — não só durante a migração. Ver a segunda correção de §9.3: a hospedagem trocou de tipo no dia do corte e `localhost` não está mais disponível nem para o app em produção. | **Certa** (é o estado atual) | Alto | TLS (`accept_invalid_certs`) mitiga escuta passiva; senha forte mitiga força bruta. Nenhum dos dois substitui rede fechada. Perguntar ao suporte da Hostinger se existe faixa de IP fixa da infraestrutura deles para restringir o `%` — pendência aberta, registrada para o Cyber. |
 
 ---
 
@@ -727,6 +727,35 @@ O dono pediu para não se distanciar do que existe. Aqui está, sem maquiagem, o
 > O caminho de **desenvolvimento e de migração de dados** — máquina de quem
 > desenvolve → MySQL Remoto da Hostinger — **atravessa a internet pública**. Ele
 > é obrigatório para rodar `db push`, `db:seed` e o script de migração da seção 6
+>
+> ### ⚠⚠ Segunda correção (2026-08-14, no dia do corte) — `localhost` também deixou de valer para PRODUÇÃO
+>
+> No dia do corte, a Hostinger re-detectou o framework do app e trocou
+> silenciosamente o tipo de hospedagem do Ortus Pixel — de "outro" (com
+> `entry_file: server.js` explícito, o mecanismo que este documento inteiro
+> presumia) para o mesmo produto de "preset por framework" que o `cariocatech`
+> usa. Sob esse produto, **não existe `localhost` para o banco — nem para o
+> app em produção**. Confirmado ao vivo: com `DATABASE_URL` em `localhost`,
+> `/api/health` respondia `{"db":"down"}`; trocando para o IP público
+> (`193.203.175.220`) com `?sslaccept=accept_invalid_certs`, o site voltou.
+>
+> **Consequência prática, permanente:** o "MySQL Remoto" do
+> `u754239208_ortuspixel` precisa ficar aberto para `%` (qualquer host) **o
+> tempo todo**, não só durante a migração — é assim que o próprio app em
+> produção alcança o banco. R11 (backup fora da conta) e o item 1 de §9.3.1
+> (que recomendava fechar o MySQL Remoto "depois de usar") **não se aplicam
+> mais** ao Ortus Pixel: não há um "depois de usar" a fechar. O risco de banco
+> de produção exposto na internet pública, mitigado só por senha, agora é
+> permanente para os dois projetos da conta — não só para o `cariocatech`.
+>
+> A causa raiz da troca de tipo de hospedagem não foi identificada com
+> certeza (possivelmente um novo push com `package.json` estruturalmente
+> diferente disparou uma nova detecção automática). Fica registrado como
+> risco operacional novo: **um push futuro pode repetir isso**, e o sintoma
+> (`Cannot find module '.../hbuilds/current/nodejs/server.js'`, 503 em tudo)
+> não aponta na direção óbvia. Se acontecer de novo, o conserto é: no hPanel,
+> trocar "Configuração predefinida" de volta para **Express** (não "Next.js"),
+> o que expõe um campo "Arquivo de entrada" a preencher com `server.js`.
 > (a lição do cariocatech, §6.3.2, é sobre exatamente esse caminho). E é
 > justamente por ele que passa, uma única vez, **o acervo inteiro do site**:
 > matérias, comentários, e-mails de assinantes e os `passwordHash` da redação.

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8" shape-rendering="crispEdges">
+  <style>
+    .o { fill: #A81729; }
+    @media (prefers-color-scheme: dark) { .o { fill: #CA414F; } }
+  </style>
+  <path class="o" d="M2 0H6V1H2ZM1 1H7V2H1ZM0 2H2V3H0ZM6 2H8V3H6ZM0 3H2V4H0ZM6 3H8V4H6ZM0 4H2V5H0ZM6 4H8V5H6ZM0 5H2V6H0ZM6 5H8V6H6ZM1 6H7V7H1ZM2 7H6V8H2Z"/>
+</svg>

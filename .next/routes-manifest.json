@@ -217,6 +217,12 @@
       "namedRegex": "^/ads\\.txt(?:/)?$"
     },
     {
+      "page": "/apple-icon.png",
+      "regex": "^/apple\\-icon\\.png(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/apple\\-icon\\.png(?:/)?$"
+    },
+    {
       "page": "/busca",
       "regex": "^/busca(?:/)?$",
       "routeKeys": {},
@@ -227,6 +233,18 @@
       "regex": "^/em\\-alta(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/em\\-alta(?:/)?$"
+    },
+    {
+      "page": "/favicon.ico",
+      "regex": "^/favicon\\.ico(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/favicon\\.ico(?:/)?$"
+    },
+    {
+      "page": "/icon.svg",
+      "regex": "^/icon\\.svg(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/icon\\.svg(?:/)?$"
     },
     {
       "page": "/metodologia",

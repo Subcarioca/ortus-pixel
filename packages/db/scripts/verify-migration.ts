@@ -33,7 +33,7 @@
  */
 
 import { PrismaClient as ClientOrigem } from '../../../node_modules/.prisma/client-postgres';
-import { PrismaClient as ClientDestino, Prisma } from '@prisma/client';
+import { PrismaClient as ClientDestino, Prisma as PrismaDestino } from '@prisma/client';
 
 const origem = new ClientOrigem();
 const destino = new ClientDestino();
@@ -43,10 +43,29 @@ let conferidas = 0;
 class Divergencia extends Error {}
 
 /** Compara dois valores e aborta se diferirem. */
+/**
+ * Normaliza para Number antes de comparar. Não é só `bigint`: `SUM()` no MySQL
+ * chega como objeto `Decimal` (do `decimal.js` que o Prisma usa por baixo),
+ * nunca `bigint` nem `number` puro — `typeof` dá `"object"`. Um objeto nunca é
+ * `===` a um primitivo, então a checagem antiga FALHAVA SEMPRE nessa
+ * comparação especificamente, e sempre pelo mesmo motivo: tipo, não valor.
+ * `Number(x)` funciona igual para `bigint`, `Decimal` (que implementa
+ * `valueOf`/`toString`) e `number` — por isso normalizamos os dois lados por
+ * ele, em vez de checar `typeof` caso a caso.
+ */
+function paraNumero(valor: unknown): unknown {
+  if (typeof valor === 'bigint') return Number(valor);
+  if (typeof valor === 'object' && valor !== null && 'toString' in valor) {
+    const n = Number(valor.toString());
+    if (!Number.isNaN(n)) return n;
+  }
+  return valor;
+}
+
 function conferir(rotulo: string, na_origem: unknown, no_destino: unknown, detalhe?: string) {
   conferidas += 1;
-  const a = typeof na_origem === 'bigint' ? Number(na_origem) : na_origem;
-  const b = typeof no_destino === 'bigint' ? Number(no_destino) : no_destino;
+  const a = paraNumero(na_origem);
+  const b = paraNumero(no_destino);
 
   if (a !== b) {
     throw new Divergencia(
@@ -67,7 +86,7 @@ async function contagens() {
   // A lista vem do `dmmf`, não de uma constante escrita à mão: uma constante
   // teria o mesmo problema que o script existe para detectar — alguém acrescenta
   // um model e esquece de incluí-lo na verificação.
-  const models = Prisma.dmmf.datamodel.models.map((m) => m.name);
+  const models = PrismaDestino.dmmf.datamodel.models.map((m) => m.name);
 
   for (const model of models) {
     // O nome do model no client é camelCase ("pushSubscription" para
@@ -113,11 +132,20 @@ async function integridade() {
     'DIVERGIU = truncamento. Falta @db.Text/@db.MediumText em alguma coluna.',
   );
 
-  conferir(
-    'Artigos com blocks preenchido',
-    await origem.article.count({ where: { NOT: { blocks: Prisma.DbNull } } }),
-    await destino.article.count({ where: { NOT: { blocks: Prisma.DbNull } } }),
-  );
+  // SQL cru dos dois lados, e não o filtro tipado do Prisma: a distinção
+  // `Prisma.DbNull` (SQL NULL) vs `Prisma.JsonNull` (JSON "null") só existe no
+  // Postgres, e a forma certa de expressá-la (`{ blocks: { not: DbNull } }`,
+  // não `{ NOT: { blocks: DbNull } }`) é fácil de errar — foi como este script
+  // quebrou na primeira versão. `IS NOT NULL` em SQL puro é a MESMA pergunta
+  // nos dois motores, sem nenhuma dessas armadilhas de tipagem.
+  const blocksOrigem =
+    (await origem.$queryRaw<{ n: bigint }[]>`SELECT COUNT(*) AS n FROM "Article" WHERE "blocks" IS NOT NULL`)[0]
+      ?.n ?? 0n;
+  const blocksDestino =
+    (await destino.$queryRawUnsafe<{ n: unknown }[]>(
+      'SELECT COUNT(*) AS n FROM `Article` WHERE `blocks` IS NOT NULL',
+    ))[0]?.n ?? 0;
+  conferir('Artigos com blocks preenchido', blocksOrigem, blocksDestino);
 
   for (const status of ['pending', 'approved', 'rejected', 'spam']) {
     conferir(

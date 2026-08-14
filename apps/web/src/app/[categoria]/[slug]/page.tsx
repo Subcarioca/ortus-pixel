@@ -494,18 +494,38 @@ export default async function ArticlePage({
           )}
 
           {/* ---------- 10.7: índice ----------
-              UMA CÓPIA SÓ, para todos os tamanhos de tela, logo antes do texto
-              — que é onde o leitor decide se vai ler tudo ou pular para uma
-              seção.
+              UM ÚNICO ELEMENTO NO HTML, EM DOIS LUGARES NA TELA.
 
-              Antes eram duas: esta (mobile) e uma caixa FIXA na barra lateral
-              do desktop, que acompanhava a rolagem ao lado do texto. A caixa
-              fixa saiu junto com a barra lateral: um índice grudado na tela
-              durante a leitura é exatamente o "elemento concorrendo por
-              atenção" que esta página passou a não ter. Como bônus, some o
-              risco de duas listas idênticas serem anunciadas duas vezes por um
-              leitor de tela. */}
-          <ArticleToc entries={toc} />
+              Este é o ponto mais fácil de errar desta página, então vale ser
+              explícito: NÃO existem duas cópias do índice. Existe uma, aqui, e
+              é o CSS que decide onde ela aparece:
+
+                até 1479px  → em fluxo, exatamente onde está no HTML: logo
+                              antes do texto, que é onde o leitor decide se lê
+                              tudo ou pula para uma seção;
+                a partir de 1480px → o trilho vira `position: absolute` na
+                              margem direita da página e o índice passa a
+                              acompanhar a rolagem.
+
+              Duas cópias (uma "mobile" e uma "desktop", escondidas por
+              `display:none`) seriam mais simples de escrever e piores de usar:
+              um leitor de tela anuncia AS DUAS, porque `display:none` some da
+              tela mas a lista continua no documento na outra media query — e o
+              leitor ouve o mesmo sumário duas vezes seguidas. Foi assim que
+              esta página funcionou até o redesenho.
+
+              A posição do trilho é calculada para nunca encostar na imagem mais
+              larga possível — a conta está em ortuspixel.css §19.2. */}
+          {/* A guarda é do TRILHO, não do índice: `ArticleToc` já devolve
+              `null` sem entradas, mas o trilho é um elemento posicionado —
+              vazio, ele seria uma caixa absoluta invisível de 9rem pendurada na
+              margem da página. Nada quebraria, e é exatamente por isso que
+              alguém demoraria meses para descobrir. */}
+          {toc.length > 0 && (
+            <div className="article-toc-rail">
+              <ArticleToc entries={toc} sticky />
+            </div>
+          )}
 
           {/* ---------- 11: corpo ---------- */}
           {(() => {

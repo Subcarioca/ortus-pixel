@@ -16,20 +16,22 @@
  * NÃO é sticky por conta própria: a variante fixa (`.toc--sticky`) é aplicada
  * por quem renderiza.
  *
- * ⚠ DESDE O REDESENHO DE 2026-08, NINGUÉM PASSA `sticky` — e isso é
- * intencional, não esquecimento. A página de matéria perdeu a barra lateral
- * (ver app/[categoria]/[slug]/page.tsx): um índice grudado na tela ao lado do
- * texto era um dos elementos que competiam com a leitura, que é justamente o
- * que o redesenho foi feito para eliminar. A propriedade continua existindo
- * porque a variante fixa segue válida para qualquer superfície que volte a ter
- * coluna lateral — uma página de guia longo, por exemplo.
+ * ⚠ `sticky` NÃO SIGNIFICA "grude agora". Significa "este índice está dentro de
+ * um trilho que pode grudar". Quem decide se a grudada acontece é o CSS, e ele
+ * só a liga a partir de 1480px de largura — abaixo disso o mesmo elemento
+ * continua em fluxo, dentro da coluna de texto (ver ortuspixel.css §19.2). Essa
+ * divisão existe para que o HTML tenha UM índice só: duas cópias alternadas por
+ * `display:none` fariam um leitor de tela anunciar o sumário duas vezes.
+ *
+ * A regra vale para o modificador porque ele é inerte fora do trilho: fora de
+ * `.article-toc-rail`, `.toc--sticky` não casa com regra nenhuma.
  */
 
 import type { TocEntry } from '@subcarioca/core';
 
 interface ArticleTocProps {
   entries: TocEntry[];
-  /** `true` onde houver coluna lateral para o índice acompanhar a rolagem. */
+  /** `true` quando o índice está dentro de um trilho que acompanha a rolagem. */
   sticky?: boolean;
 }
 

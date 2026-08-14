@@ -1899,17 +1899,11 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
 .fmt--gallery::before { width: 9px; height: 9px; border: 1.5px solid currentColor; border-radius: 2px; }
 .fmt--list::before    { width: 9px; height: 9px; border-top: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; }
 
-/* ÍNDICE FIXO — só no desktop.
-   Num celular, um índice grudado no topo come um terço da tela de leitura.
-   `max-height` com rolagem porque um guia de 15 seções ultrapassaria a viewport
-   e as últimas entradas ficariam inalcançáveis. */
+/* Recuo dos h3 dentro do índice. A variante FIXA (`.toc--sticky`) mudou de
+   lugar: ela agora vive na seção 19.2, junto do trilho que a posiciona, para
+   que o ponto de corte da grudada e o ponto de corte do trilho sejam
+   literalmente a mesma linha de código. */
 .toc__sub { margin-left: var(--s-4); }
-@media (min-width: 1024px) {
-  .toc--sticky {
-    position: sticky; top: calc(var(--header-h) + 16px);
-    max-height: calc(100vh - var(--header-h) - 48px); overflow-y: auto;
-  }
-}
 
 /* --------------------------------------------------------------------------
    18.2 EDITOR DE BLOCOS (/admin) — ferramenta interna, sem protótipo
@@ -2126,3 +2120,119 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
    `nowrap` impede que "Ortus Pixel" quebre em duas linhas dentro do rodapé de
    4 colunas, onde a coluna pode ficar estreita. */
 .logo__word { white-space: nowrap; }
+
+/* --------------------------------------------------------------------------
+   19.2 O ÍNDICE "NESTE TEXTO" NA MARGEM DIREITA, ACOMPANHANDO A ROLAGEM
+   --------------------------------------------------------------------------
+   Pedido do dono do produto: "o bloco 'Neste texto' deve ficar à direita e
+   seguir o scroll da página, deve sempre se ajustar para não tomar espaço do
+   texto e nem da imagem."
+
+   O PROBLEMA GEOMÉTRICO, EM NÚMEROS — porque ele é o que decide tudo aqui.
+
+   Na coluna centrada, três coisas partem do MESMO eixo (o centro da página):
+
+     texto             44rem → ocupa centro ± 352px
+     imagem 'larga'    54rem → ocupa centro ± 432px
+     imagem 'borda-a-borda' e capa
+                       68rem → ocupa centro ± 544px
+
+   Ou seja: qualquer coisa que fique a mais de 544px do centro NUNCA encosta em
+   nada, em nenhuma das três larguras. Menos que isso, e o índice fatalmente
+   passa por cima de uma imagem grande enquanto o leitor rola — ou obriga a
+   imagem a encolher, que é exatamente o que o pedido anterior proíbe.
+
+   Daí a regra: o trilho começa em `centro + 544px + 24px de respiro` = 568px.
+   Como o índice e as imagens são ancorados no mesmo eixo, esse respiro de 24px
+   é CONSTANTE em qualquer resolução — ele não diminui quando a janela diminui,
+   porque os dois se movem juntos. A colisão não é evitada por tentativa e erro:
+   ela é impossível por construção.
+
+   E O "SE AJUSTAR" DO PEDIDO É LITERAL: a largura do índice é calculada a
+   partir do que sobra da tela depois da imagem mais larga —
+   `(100vw - 68rem) / 2` é a margem morta à direita, menos 3,5rem de folga para
+   a barra de rolagem e para o índice não colar na borda. Ele nasce com 9rem
+   numa tela de 1480px e cresce até 15rem numa de 1920px, sozinho.
+
+   POR QUE 1480px É O PONTO DE CORTE, e por que ele não podia ser menor:
+   abaixo disso a margem morta não comporta um índice legível (numa tela de
+   1366px sobram 139px de cada lado da imagem de 1088px, e um índice de 83px é
+   uma coluna de uma palavra por linha). Nessas telas o índice volta ao lugar
+   onde está hoje — em fluxo, logo antes do texto —, que é a forma de ele "não
+   tomar espaço da imagem" quando não há espaço nenhum a tomar. Nielsen #8: um
+   índice ilegível espremido na borda é pior que um índice bem posto no fluxo.
+
+   NADA DISTO CUSTA JAVASCRIPT. `position: sticky` é CSS, e esta é a página mais
+   cacheada e mais acessada do site — resolver "seguir a rolagem" com um
+   ouvinte de scroll aqui seria trocar zero JS por JS em toda matéria.
+   -------------------------------------------------------------------------- */
+
+/* ESTADO PADRÃO (celular, tablet e desktop abaixo de 1480px): o trilho é um
+   contêiner transparente, e o índice dentro dele é exatamente o bloco em fluxo
+   de sempre. Não há nada a desfazer no ponto de corte — só a acrescentar. */
+.article-toc-rail { margin-block: var(--s-5); }
+.article-toc-rail > .toc { margin: 0; }
+
+@media (min-width: 1480px) {
+  /* O eixo do trilho é o `.article`: é ele que está centrado na página, e é o
+     mesmo elemento a partir do qual as imagens calculam a sangria. Ancorar o
+     índice em qualquer outro ancestral faria os dois se moverem por réguas
+     diferentes — que é como colisões de layout nascem. */
+  .article { position: relative; }
+
+  .article-toc-rail {
+    position: absolute;
+    /* `top`/`bottom` em vez de `height: 100%`: assim o trilho tem a altura do
+       artigo sem depender de a altura do pai ser definida, e o índice grudado
+       desgruda naturalmente quando o texto acaba — ele não invade a área de
+       relacionadas e comentários. */
+    top: 0;
+    bottom: 0;
+    left: calc(50% + 34rem + 1.5rem);
+    width: clamp(9rem, (100vw - 68rem) / 2 - 3.5rem, 15rem);
+    margin-block: 0;
+  }
+
+  /* A GRUDADA, que antes valia a partir de 1024px e vivia na seção 18.
+     Ela só pode existir onde existe o trilho: em fluxo, dentro da coluna de
+     texto, um bloco `sticky` de largura inteira ficaria pendurado no topo da
+     tela cobrindo o próprio texto que o leitor está lendo. */
+  .article-toc-rail > .toc--sticky {
+    position: sticky;
+    top: calc(var(--header-h) + var(--s-4));
+    /* Um guia de 15 seções ultrapassaria a altura da janela e as últimas
+       entradas ficariam inalcançáveis. `contain` impede que a rolagem do índice
+       "vaze" para a página quando ele chega ao fim (scroll chaining). */
+    max-height: calc(100vh - var(--header-h) - var(--s-6));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  /* NO TRILHO, O ÍNDICE DEIXA DE SER UM CARTÃO.
+     Duas razões, e a primeira é aritmética: na menor tela em que o trilho
+     aparece ele tem 9rem (144px), e o cartão gasta 32px em recuo mais 17px na
+     numeração da lista — sobrariam 95px de texto, ou seja uma palavra por
+     linha. Sem a moldura sobram 130px, que é a medida de um sumário de
+     documentação de verdade.
+
+     A segunda é de hierarquia: um cartão com fundo e borda flutuando ao lado da
+     matéria vira um segundo bloco de conteúdo disputando o olhar — o problema
+     que o redesenho inteiro existe para resolver. Um filete e uma lista leem
+     como MOBILIÁRIO DA PÁGINA, que é o que um índice é. Em fluxo, abaixo de
+     1480px, o cartão continua sendo cartão: lá ele está dentro do texto e
+     precisa se separar dele. */
+  .article-toc-rail > .toc {
+    background: none;
+    border: 0;
+    border-left: 2px solid var(--line);
+    border-radius: 0;
+    padding: var(--s-1) 0 var(--s-1) var(--s-3);
+  }
+  /* Sem marcador: a numeração custa 17px de recuo e o índice não é uma
+     enumeração — é uma lista de destinos. O `<ol>` continua sendo `<ol>` no
+     HTML porque a ORDEM é real (é a ordem do texto), e um leitor de tela
+     continua anunciando "item 2 de 6". */
+  .article-toc-rail > .toc ol { list-style: none; padding-left: 0; gap: var(--s-3); }
+  .article-toc-rail > .toc a { line-height: 1.3; display: block; }
+  .article-toc-rail > .toc .toc__sub { margin-left: var(--s-2); }
+}

@@ -102,13 +102,23 @@
         </ul>
       </section>
 
-      <nav class="toc" aria-labelledby="toc-titulo">
-        <h2 class="toc__label" id="toc-titulo">Neste texto</h2>
-        <ol>
-          <li><a href="#o-comunicado">O comunicado</a></li>
-          <li><a href="#o-que-muda">O que muda para quem pré-comprou</a></li>
-        </ol>
-      </nav>
+      <!--
+        (6) O ÍNDICE. Um elemento só, dois lugares na tela:
+        até 1479px ele fica aqui mesmo, em fluxo, antes do texto;
+        a partir de 1480px o trilho vira absoluto na margem direita e o índice
+        acompanha a rolagem. Estreite a janela para ver os dois estados.
+      -->
+      <div class="article-toc-rail">
+        <nav class="toc toc--sticky" aria-labelledby="toc-titulo">
+          <h2 class="toc__label" id="toc-titulo">Neste texto</h2>
+          <ol>
+            <li><a href="#o-comunicado">O comunicado</a></li>
+            <li><a href="#o-que-muda">O que muda para quem pré-comprou</a></li>
+            <li class="toc__sub"><a href="#reembolso">Reembolso e edição física</a></li>
+            <li><a href="#mercado">A reação do mercado</a></li>
+          </ol>
+        </nav>
+      </div>
 
       <div class="prose">
         <p>A Rockstar Games confirmou nesta quinta-feira que <b>GTA VI</b> será lançado em 26 de novembro de 2026, seis meses depois da data anunciada no ano passado. O comunicado foi enviado a investidores antes da abertura do mercado.</p>
@@ -130,6 +140,12 @@
           <p>"Preferimos atrasar seis meses a lançar um jogo que a gente mesmo não jogaria."</p>
           <cite class="quote__source">Executivo da Rockstar, em comunicado</cite>
         </blockquote>
+        <h3 id="reembolso">Reembolso e edição física</h3>
+        <p>As lojas digitais mantêm a política de sempre: reembolso integral até o lançamento, sem justificativa. Na edição física, o prazo de envio é recalculado automaticamente e o cliente recebe um aviso por e-mail com a nova data estimada de entrega.</p>
+        <p>Quem comprou pela loja da própria publicadora tem, além disso, a opção de trocar a reserva por crédito — uma alternativa que não existia nos dois adiamentos anteriores e que foi anunciada no mesmo comunicado.</p>
+        <h2 id="mercado">A reação do mercado</h2>
+        <p>A ação da Take-Two abriu em queda de 7% e fechou o dia com perda de 4,2%, recuperando parte do terreno depois que a empresa reafirmou a projeção de receita do ano fiscal. Analistas ouvidos pela imprensa especializada trataram o movimento como reação de curto prazo.</p>
+        <p>O histórico ajuda a explicar a recuperação: nos dois adiamentos anteriores, a ação voltou ao patamar anterior em menos de duas semanas. O mercado, ao que parece, já embutiu no preço a ideia de que este é um jogo que sai quando ficar pronto.</p>
       </div>
 
       <aside class="readmore">

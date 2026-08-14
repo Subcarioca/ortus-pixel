@@ -1856,3 +1856,73 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
 @media (max-width: 479px) {
   .just-out__list li { grid-template-columns: 1fr; gap: 2px; }
 }
+
+/* ==========================================================================
+   ==========================================================================
+   19. PÁGINA DE MATÉRIA EM FOCO  (redesign 2026-08)
+   ==========================================================================
+   ==========================================================================
+
+   Pedido do dono do produto, textual: "quando se abre uma matéria, a página da
+   matéria não tem uma formatação muito agradável. Centralize a matéria no meio
+   da página, ela deve ser o foco da página."
+
+   O DIAGNÓSTICO, antes da solução. A página usava `.layout-2col`
+   (`minmax(0,1fr) 320px`) e o `.article` de 44rem morava dentro da coluna
+   flexível de ~864px — ou seja, o texto ficava ENCOSTADO À ESQUERDA dessa
+   coluna, com 160px de vazio à direita dele e só depois a barra lateral. Havia
+   três problemas somados:
+
+     1. a matéria não estava centrada em coisa nenhuma (nem na página, nem na
+        própria coluna);
+     2. o vazio à direita do texto lia como "faltou alguma coisa aqui";
+     3. índice fixo + convite de push + anúncio grudado na rolagem ficavam ao
+        lado do texto DURANTE a leitura, competindo com ela.
+
+   A SOLUÇÃO tem duas partes, e a segunda é tão importante quanto a primeira:
+   centrar a coluna (`margin-inline: auto`) e ESVAZIAR os arredores dela. Uma
+   coluna centrada com três caixas piscando ao lado continuaria não sendo o foco
+   da página. Ver a nota de layout em app/[categoria]/[slug]/page.tsx.
+
+   Heurísticas de Nielsen: #8 (design estético e minimalista — cada elemento a
+   mais na tela compete com os que importam) e #6 (reconhecimento em vez de
+   memorização: o índice continua existindo, agora no ponto do fluxo em que ele
+   é útil, e não fixo na periferia).
+   -------------------------------------------------------------------------- */
+
+/* O contêiner da página de matéria. `padding-block` porque `.container` sozinho
+   não tem respiro vertical: a manchete nascia colada na borda inferior do
+   header, e "colado no topo" é a leitura visual de "isto é um cabeçalho", não
+   de "isto é o conteúdo principal". */
+.article-page { padding-block: var(--s-5) var(--s-7); }
+@media (min-width: 768px) { .article-page { padding-block: var(--s-6) var(--s-8); } }
+
+/* O centro da página. A largura continua vindo do design (`.article`, 44rem);
+   o que muda é a margem automática dos dois lados. `min-width: 0` protege a
+   coluna de filhos que não sabem encolher (tabela larga, bloco de código). */
+.article-page > .article { margin-inline: auto; min-width: 0; }
+
+/* Fecho de leitura: um filete curto e centrado marca o fim do texto antes de a
+   página abrir para o "depois da leitura". Sem ele, a área de relacionadas
+   começava sem aviso e o leitor não percebia que a matéria havia acabado
+   (Nielsen #1 — visibilidade do estado do sistema, aplicada à leitura). */
+.article-extras {
+  margin-top: var(--s-7);
+  padding-top: var(--s-6);
+  border-top: 1px solid var(--line-soft);
+  display: grid;
+  gap: var(--s-6);
+}
+.article-extras__main { display: grid; gap: var(--s-5); min-width: 0; }
+
+/* A grade de duas colunas volta SÓ AQUI, e só a partir de 1024px — a mesma
+   largura em que a barra lateral já existia antes. Abaixo disso tudo empilha,
+   na ordem em que está no HTML (conteúdo primeiro, push e anúncio depois), que
+   é também a ordem em que um leitor de tela percorre. */
+@media (min-width: 1024px) {
+  .article-extras {
+    grid-template-columns: minmax(0, 1fr) 320px;
+    gap: var(--s-7);
+    align-items: start;
+  }
+}

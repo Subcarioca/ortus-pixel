@@ -2,7 +2,6 @@ import Link from 'next/link';
 
 import { routes, type CategoryDefinition } from '@subcarioca/core';
 
-import { PixelO } from './pixel-o';
 import { SearchForm } from './search-form';
 
 /**
@@ -24,18 +23,28 @@ import { SearchForm } from './search-form';
  * RE-SKIN 2026-08 — A MARCA INVERTEU O VERMELHO (pedido do dono do produto):
  *
  *    antes:  O.<b>Pixel</b>     → "O" em texto comum, "Pixel" em carmim
- *    agora:  [▣].<b>Pixel</b>   → "O" em PIXEL ART vermelho, "Pixel" em preto
+ *    agora:  ●.<b>Pixel</b>     → "O" é um símbolo vermelho, "Pixel" em preto
  *
- *    O "O" de Ortus virou o único elemento colorido da marca, e virou também a
- *    coisa que dá nome ao site: um pixel. Ver components/pixel-o.tsx (o
- *    desenho) e lib/brand-mark.ts (a grade 8×8, compartilhada com o favicon).
+ *    O "O" de Ortus virou o único elemento colorido da marca. O `<b>` continua
+ *    ali, mas com o papel trocado: `.logo--px b` pinta o texto de `--ink`.
  *
- *    O `<b>` continua ali, mas com o papel trocado: `.logo b` agora pinta o
- *    texto de `--ink`. O ponto pulsante (`.logo__dot`) SAIU — com o "O"
- *    vermelho ao lado, eram dois elementos carmim disputando o mesmo canto da
- *    tela, e o design system reserva o vermelho de marca para um acento só. O
- *    sinal de "site vivo" continua existindo no ticker e nos pontos de
- *    cobertura ao vivo, que é onde ele significa alguma coisa.
+ * AJUSTE 2026-08 (segunda rodada) — O SÍMBOLO VIROU "GRAVANDO":
+ *
+ *    O "O" passou por duas formas em dois dias, e as duas foram pedido do dono:
+ *    primeiro um "O" em pixel art (um anel de células quadradas), agora o SINAL
+ *    DE GRAVAÇÃO — o disco vermelho cheio de "algo está sendo gravado", com um
+ *    halo que pulsa devagar.
+ *
+ *    A troca faz sentido para este produto: o site cobre notícia em tempo real,
+ *    e o disco de gravação diz "estamos no ar AGORA" toda vez que a página
+ *    carrega. É a mesma ideia do ponto pulsante que existia antes do redesenho
+ *    (`.logo__dot`), agora promovida a letra da marca em vez de enfeite ao lado
+ *    dela — por isso o `.logo__dot` não voltou: seriam dois discos carmim
+ *    pulsando no mesmo canto da tela.
+ *
+ *    O símbolo é um `<span>` vazio, não um SVG: um círculo é `border-radius:
+ *    50%` e mais nada, e como elemento de CSS ele herda tamanho do wordmark e
+ *    ganha a animação de graça. Ver `.logo__rec` em ortuspixel.css §19.1.
  *  - Os links do menu deixaram de usar `.cat cat--{slug}`. `.cat` é o RÓTULO
  *    de editoria (filete colorido + caixa-alta 10px), pensado para aparecer
  *    dentro de um card, subordinado ao badge de temperatura. Aplicá-lo ao menu
@@ -57,13 +66,17 @@ export function SiteHeader({ categories }: { categories: readonly CategoryDefini
           cada trecho viraria um item de flex independente e o espaço entre
           "rtus" e "Pixel" (no rodapé) seria descartado pelo layout. Dentro do
           span, o texto volta a ser texto.
+
+          O `<span>` do símbolo é VAZIO e `aria-hidden`: ele é uma letra
+          desenhada, e quem anuncia a marca é o `aria-label` do link. Sem isso,
+          um leitor de tela leria o cabeçalho como ".Pixel".
         */}
         <Link
           href={routes.home()}
           className="logo logo--px"
           aria-label="Ortus Pixel — página inicial"
         >
-          <PixelO />
+          <span className="logo__rec" aria-hidden="true" />
           <span className="logo__word">
             .<b>Pixel</b>
           </span>

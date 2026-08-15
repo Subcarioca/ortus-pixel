@@ -5,10 +5,10 @@
  *
  *   npx tsx apps/web/scripts/gerar-marca.ts
  *
- * Lê a grade 8×8 de `src/lib/brand-mark.ts` (a MESMA que o wordmark do header
- * usa) e escreve três arquivos dentro de `src/app/`, que é onde o App Router do
- * Next procura por ícones — sem nenhuma configuração, só pela convenção de
- * nome:
+ * Desenha o SÍMBOLO DE GRAVAÇÃO da marca — o disco vermelho que ocupa o lugar
+ * do "O" de Ortus — e escreve três arquivos dentro de `src/app/`, que é onde o
+ * App Router do Next procura por ícones, sem nenhuma configuração, só pela
+ * convenção de nome:
  *
  *   icon.svg        → <link rel="icon" type="image/svg+xml">  (navegador moderno)
  *   favicon.ico     → /favicon.ico                            (legado e Windows)
@@ -21,7 +21,7 @@
  * site seria a escolha errada por dois motivos:
  *
  *   1. custo: `ImageResponse` carrega um renderizador (satori + resvg em wasm)
- *      no servidor para desenhar 40 quadrados que nunca mudam;
+ *      no servidor para desenhar um círculo que nunca muda;
  *   2. risco de build: a saída é `output: standalone` rodando atrás de PM2 na
  *      Hostinger, e o wasm do resvg é a dependência que mais costuma faltar
  *      nesse tipo de empacotamento. Um favicon não vale um build quebrado.
@@ -47,12 +47,12 @@ import {
   BRAND_ICON_BG,
   BRAND_RED_DARK,
   BRAND_RED_LIGHT,
-  PIXEL_O_SIZE,
-  pixelOPath,
+  REC_BOX,
+  REC_RADIUS,
 } from '../src/lib/brand-mark';
 
 const APP_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/app');
-const PATH_D = pixelOPath();
+const CENTER = REC_BOX / 2;
 
 /**
  * O SVG DA ABA — e o detalhe que faz diferença: ele troca de cor com o tema.
@@ -62,21 +62,26 @@ const PATH_D = pixelOPath();
  * (#CA414F) some contra a barra clara. Com a media query, o "O" fica visível
  * nos dois — é o mesmo par de valores do token `--brand` do design system.
  *
- * SEM MARGEM (`pad = 0`), e essa é a decisão que faz o ícone ser legível:
- * a área do favicon tem 16 CSS pixels. Com a grade de 8 ocupando os 16, cada
- * célula cai em exatamente 2×2 pixels de tela. Com uma margem de uma célula, a
- * grade viraria 10 unidades em 16px = 1,6px por célula, e a metade das células
- * sairia com 1px e a outra com 2px — o "O" fica visivelmente torto, com um lado
- * mais grosso que o outro. Margem é o tipo de refinamento que só funciona onde
- * há resolução para gastar.
+ * A FOLGA DE UMA UNIDADE (caixa de 16, raio 7) é o detalhe que decide se o
+ * ícone fica redondo: no tamanho em que o favicon é realmente desenhado, uma
+ * unidade do `viewBox` vale um pixel. Sem folga, o disco encosta nas quatro
+ * bordas da área do ícone, o antialiasing come o topo e a base, e o círculo
+ * sai achatado — lê como losango, não como disco.
+ *
+ * ⚠ NÃO HÁ MAIS `shape-rendering="crispEdges"` AQUI, e a ausência é
+ * deliberada: aquele modo existia para o "O" pixelado, cujas arestas retas
+ * precisavam ficar duras. Num círculo ele faz o oposto — desliga o
+ * antialiasing e devolve uma borda serrilhada. Cada forma pede um modo de
+ * rasterização, e herdar o da forma anterior é como um redesenho estraga o
+ * trabalho do anterior sem ninguém notar.
  */
 function svgIcon(): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${PIXEL_O_SIZE} ${PIXEL_O_SIZE}" shape-rendering="crispEdges">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${REC_BOX} ${REC_BOX}">
   <style>
-    .o { fill: ${BRAND_RED_LIGHT}; }
-    @media (prefers-color-scheme: dark) { .o { fill: ${BRAND_RED_DARK}; } }
+    .rec { fill: ${BRAND_RED_LIGHT}; }
+    @media (prefers-color-scheme: dark) { .rec { fill: ${BRAND_RED_DARK}; } }
   </style>
-  <path class="o" d="${PATH_D}"/>
+  <circle class="rec" cx="${CENTER}" cy="${CENTER}" r="${REC_RADIUS}"/>
 </svg>
 `;
 }
@@ -84,17 +89,19 @@ function svgIcon(): string {
 /**
  * SVG de cor fixa, para os formatos que não entendem CSS (.ico e .png).
  *
- * `pad` é medido em CÉLULAS da grade, não em pixels — é o que mantém a conta
- * "célula = número inteiro de pixels" válida em qualquer tamanho de saída.
+ * `pad` é a folga EXTRA em volta do disco, em unidades do `viewBox`. Ela existe
+ * só para o ícone do iOS, que precisa do símbolo respirando dentro do quadrado
+ * de fundo; nos demais o disco já nasce com a folga interna do próprio raio.
  */
 function svgFlat(fill: string, background: string | null, pad = 0): string {
-  const box = PIXEL_O_SIZE + pad * 2;
+  const box = REC_BOX + pad * 2;
+  const center = box / 2;
   const bg = background
     ? `<rect width="${box}" height="${box}" rx="${box / 5}" fill="${background}"/>`
     : '';
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box} ${box}" shape-rendering="crispEdges">
-  ${bg}<g transform="translate(${pad} ${pad})"><path fill="${fill}" d="${PATH_D}"/></g>
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${box} ${box}">
+  ${bg}<circle cx="${center}" cy="${center}" r="${REC_RADIUS}" fill="${fill}"/>
 </svg>
 `;
 }
@@ -146,16 +153,25 @@ async function main() {
    * 2. favicon.ico com 16, 32 e 48.
    *
    * O vermelho aqui é o do tema CLARO: um .ico não tem como responder ao tema,
-   * e ele só é servido a navegadores que não sabem ler o SVG acima. Renderizar
-   * cada tamanho a partir do vetor (em vez de reduzir o de 48) é o que mantém
-   * a aresta de cada célula exata — reduzir bitmap borra a pixel art.
+   * e ele só é servido a navegadores que não sabem ler o SVG acima.
+   *
+   * CADA TAMANHO É RASTERIZADO DIRETO DO VETOR, na densidade exata do destino
+   * (`96 dpi × tamanho / caixa`), em vez de reduzir um bitmap grande. Para um
+   * DISCO isso importa mais do que importava para a pixel art, e pelo motivo
+   * oposto: reduzir bitmap com filtro Lanczos (o padrão do sharp) produz
+   * "ringing" na borda curva — um fio mais claro e outro mais escuro em volta
+   * do círculo, que a 16px lê como sujeira. Rasterizando no tamanho final, o
+   * antialiasing é o do próprio renderizador de vetor, sem ressampleamento.
    */
   const flat = Buffer.from(svgFlat(BRAND_RED_LIGHT, null), 'utf8');
   const sizes = [16, 32, 48];
   const pngs = await Promise.all(
     sizes.map(async (size) => ({
       size,
-      data: await sharp(flat, { density: 384 }).resize(size, size).png().toBuffer(),
+      data: await sharp(flat, { density: (96 * size) / REC_BOX })
+        .resize(size, size)
+        .png()
+        .toBuffer(),
     })),
   );
   fs.writeFileSync(path.join(APP_DIR, 'favicon.ico'), buildIco(pngs));
@@ -164,16 +180,18 @@ async function main() {
    * 3. apple-icon.png (180×180), COM fundo.
    *
    * O iOS ignora transparência em ícone de tela de início e compõe sobre preto.
-   * Um "O" vermelho transparente viraria um símbolo escuro num quadrado escuro,
-   * então o fundo é declarado aqui — preto de marca, "O" carmim claro (o mesmo
-   * do tema escuro, porque é sobre fundo escuro que ele vai aparecer).
+   * Um disco vermelho transparente viraria um símbolo escuro num quadrado
+   * escuro, então o fundo é declarado aqui — preto de marca, disco no carmim
+   * claro (o mesmo do tema escuro, porque é sobre fundo escuro que ele aparece).
    *
-   * Aqui, sim, cabe margem de uma célula: são 180px para uma grade de 10, ou
-   * seja 18px por célula (inteiro), e o "O" precisa respirar dentro do quadrado
-   * de fundo — sem isso ele encostaria no canto arredondado do ícone.
+   * A folga extra de 4 unidades leva a caixa a 24 e deixa o disco ocupando 58%
+   * do quadrado. Não é estética: ícone de iOS é recortado com canto arredondado
+   * e ainda pode ganhar máscara circular em alguns contextos (relógio, widget).
+   * Um símbolo que ocupa 88% da arte, como no favicon, seria mordido pelo
+   * recorte; ~60% é a proporção que sobrevive a todos eles.
    */
-  const apple = Buffer.from(svgFlat(BRAND_RED_DARK, BRAND_ICON_BG, 1), 'utf8');
-  await sharp(apple, { density: 1440 })
+  const apple = Buffer.from(svgFlat(BRAND_RED_DARK, BRAND_ICON_BG, 4), 'utf8');
+  await sharp(apple, { density: (96 * 180) / (REC_BOX + 8) })
     .resize(180, 180)
     .png()
     .toFile(path.join(APP_DIR, 'apple-icon.png'));

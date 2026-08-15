@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { routes, type CategoryDefinition } from '@subcarioca/core';
 
 import { SITE_NAME, SITE_TAGLINE, SOCIAL_HANDLE } from '@/lib/site';
-import { PixelO } from './pixel-o';
 import { ThemeToggle } from './theme-toggle';
 
 /**
@@ -32,21 +31,27 @@ export function SiteFooter({ categories }: { categories: readonly CategoryDefini
         <div className="footer__grid">
           <div>
             {/*
-              O MESMO "O" PIXELADO DO HEADER, aqui substituindo a primeira letra
-              do nome por extenso: [▣]RTUS **PIXEL**.
+              O MESMO SÍMBOLO DE GRAVAÇÃO DO HEADER, aqui substituindo a
+              primeira letra do nome por extenso: ●RTUS **PIXEL**.
 
-              `aria-label` no link é OBRIGATÓRIO agora, e não um capricho: o
-              texto que sobrou no HTML é "rtus" + "Pixel", então sem o rótulo um
-              leitor de tela anunciaria o link do rodapé como "rtus Pixel". O
-              "O" existe visualmente para quem enxerga e precisa existir
-              textualmente para quem não enxerga (WCAG 2.4.4 e 1.1.1).
+              `aria-label` no link é OBRIGATÓRIO, e não um capricho: o texto que
+              sobrou no HTML é "rtus" + "Pixel", então sem o rótulo um leitor de
+              tela anunciaria o link do rodapé como "rtus Pixel". O "O" existe
+              visualmente para quem enxerga e precisa existir textualmente para
+              quem não enxerga (WCAG 2.4.4 e 1.1.1).
+
+              Vale o registro honesto: um disco cheio lê menos como a letra "O"
+              do que o anel pixelado que estava aqui antes, e é no rodapé — onde
+              ele encosta em "rtus" — que isso aparece mais. Foi decisão do dono
+              do produto trocar a legibilidade da letra pelo significado do
+              símbolo de gravação; o nome completo continua garantido no rótulo.
             */}
             <Link
               href={routes.home()}
               className="logo logo--px"
               aria-label="Ortus Pixel — página inicial"
             >
-              <PixelO />
+              <span className="logo__rec" aria-hidden="true" />
               <span className="logo__word">
                 rtus <b>Pixel</b>
               </span>

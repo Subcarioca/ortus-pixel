@@ -6,6 +6,11 @@ import { promisify } from 'node:util';
 import { prisma } from '@subcarioca/db';
 
 import { resolveCuratorBundle } from './curator-bundle';
+import {
+  TENTATIVAS_MAXIMAS,
+  decidirRepeticao,
+  ehPanicoDoEngineDoPrisma,
+} from './curator-retry';
 
 /**
  * =============================================================================
@@ -50,16 +55,31 @@ import { resolveCuratorBundle } from './curator-bundle';
  *      filho, o pior caso é a requisição falhar: o site nem percebe.
  *
  * -----------------------------------------------------------------------------
- * ⚠ DUAS ARMADILHAS DESTE AMBIENTE QUE CUSTAM CARO E NÃO SÃO ÓBVIAS
+ * ⚠ TRÊS ARMADILHAS DESTE AMBIENTE QUE CUSTAM CARO E NÃO SÃO ÓBVIAS
  * -----------------------------------------------------------------------------
- * As duas foram encontradas LENDO o código de produção, não em teste — e as
- * duas falhariam de um jeito que manda quem investiga para o lugar errado. Elas
- * estão documentadas em detalhe nos pontos onde são tratadas, abaixo:
+ * As duas primeiras foram encontradas LENDO o código de produção, não em teste;
+ * a terceira nos encontrou, em produção, com log capturado por SSH. As três
+ * falhariam de um jeito que manda quem investiga para o lugar errado. Estão
+ * documentadas em detalhe nos pontos onde são tratadas, abaixo:
  *
  *   (A) `PRISMA_QUERY_ENGINE_LIBRARY` herdada apontaria o curator para o engine
  *       do SITE. Ver `ambienteParaOFilho`.
  *   (B) `maxBuffer` padrão de 1 MB MATA o filho no meio do ciclo. Ver
  *       `MAX_BUFFER_BYTES`.
+ *   (C) O ISOLAMENTO EM PROCESSO FILHO — a decisão defendida logo acima — TEM UM
+ *       PREÇO NESTA HOSPEDAGEM, e ele é real: o filho carrega um SEGUNDO engine
+ *       nativo do Prisma, com suas dezenas de threads, dentro do mesmo limite de
+ *       processos da conta compartilhada. Quando não há folga, o engine morre em
+ *       pânico (`PANIC: timer has gone away`) na primeira consulta do ciclo. É
+ *       INTERMITENTE — depende do tráfego do site naquele segundo. A resposta
+ *       aqui é repetir a execução; a causa raiz, o diagnóstico completo e o que
+ *       ela NÃO resolve estão em `curator-retry.ts`.
+ *
+ * ⚠ A armadilha (C) NÃO reabre a decisão de usar processo filho. Os três
+ * argumentos a favor dela continuam de pé, e o argumento 3 (isolamento de falha)
+ * fica ainda MAIS forte com o que se aprendeu: um panic do engine Prisma mata o
+ * processo inteiro sem chance de captura — se o ciclo rodasse dentro do Next,
+ * este mesmo panic derrubaria O SITE em vez de falhar um clique.
  */
 
 const execFileAsync = promisify(execFile);
@@ -275,60 +295,165 @@ export async function runCuratorOnce(): Promise<CuratorRunResult> {
 
   // Marco temporal ANTES do spawn: é o que separa "o ciclo que eu disparei" de
   // um `PipelineRun` que já estava no banco de antes.
+  //
+  // ⚠ Ele é calculado UMA VEZ, fora do laço de tentativas, de propósito: se uma
+  // repetição o recalculasse, o marco andaria para frente e a leitura final
+  // poderia perder o `PipelineRun` da tentativa que deu certo.
   const inicio = new Date(Date.now() - FOLGA_DE_RELOGIO_MS);
   const comecou = Date.now();
 
-  try {
-    /**
-     * `process.execPath` é o MESMO binário Node que executa este servidor.
-     *
-     * É a peça que dispensa procurar interpretador. A hospedagem instala o Node
-     * em caminhos versionados (`/opt/alt/alt-nodejs20/root/usr/bin/node` e
-     * variantes), que mudam quando se troca a versão no painel — e um caminho
-     * desses escrito no código é uma bomba-relógio silenciosa. Usando o
-     * `execPath`, o filho roda sob a MESMA versão de Node já validada pelo site,
-     * seja ela qual for, hoje e depois de qualquer troca no hPanel.
-     *
-     * `execFile` (e não `exec`) porque não há shell no caminho: os argumentos
-     * vão como array direto para o `execve`. Não existe entrada de usuário
-     * nenhuma aqui — nem no caminho, nem nos argumentos —, então injeção de
-     * comando não é o risco; usar `execFile` é o que MANTÉM assim, mesmo que
-     * alguém, um dia, resolva tornar a fase do pipeline configurável pela tela.
-     */
-    const { stdout, stderr } = await execFileAsync(
-      process.execPath,
-      [lookup.bundlePath, '--once'],
-      {
-        // `cwd` na pasta do bundle: é o que o cron fazia, e é o que mantém o
-        // comportamento idêntico. O prelúdio do bundle não depende disso (ele
-        // resolve tudo a partir do `__dirname` dele, justamente porque o cron
-        // chamava de `$HOME`), mas rodar num diretório diferente do testado é
-        // uma variável a mais sem nenhum ganho.
-        cwd: lookup.cwd,
-        env: ambienteParaOFilho(),
-        timeout: tempoLimiteMs(),
-        maxBuffer: MAX_BUFFER_BYTES,
-        // O curator escreve em português com acento. Sem isto o retorno seria
-        // Buffer e o log do servidor sairia ilegível.
-        encoding: 'utf8',
-      },
-    );
+  /**
+   * ORÇAMENTO DE TEMPO — do DISPARO INTEIRO, não de cada tentativa.
+   *
+   * Esta é a escolha que faz a repetição não custar nada a quem espera: as até 3
+   * tentativas dividem entre si os mesmos 75s que uma única tentativa tinha
+   * antes. O botão continua respondendo dentro do mesmo teto, e a nota sobre o
+   * tempo limite do LiteSpeed (acima) continua valendo sem ajuste.
+   *
+   * A alternativa — dar 75s a CADA tentativa — chegaria a 225s no pior caso,
+   * muito além do proxy da hospedagem: o navegador receberia erro de gateway e
+   * ninguém saberia que houve repetição.
+   */
+  const orcamentoMs = tempoLimiteMs();
 
-    /**
-     * O stdout vai para o LOG DO SERVIDOR, e não para a tela.
-     *
-     * São dezenas de linhas técnicas (conectores, scores, avisos de circuito)
-     * que não ajudam quem está curando a fila e que, jogadas na resposta HTTP,
-     * virariam um paredão de texto no painel. Quem precisa delas é quem depura,
-     * e essa pessoa tem acesso ao log — que é onde elas ficam.
-     */
-    registrarSaida(stdout, stderr, Date.now() - comecou);
+  // Guardada para o caso de todas as tentativas falharem: é a ÚLTIMA falha que
+  // vira a resposta ao administrador.
+  let ultimaFalha: unknown;
+  let tentativasGastas = 0;
 
-    const resumo = await lerUltimoCiclo(inicio);
-    return { ok: true, resumo, message: mensagemDeSucesso(resumo) };
-  } catch (erro) {
-    return traduzirFalha(erro, Date.now() - comecou);
+  /**
+   * ⚠ O ÚNICO EFEITO COLATERAL CONHECIDO DA REPETIÇÃO, escrito antes que alguém
+   * o descubra achando que é bug novo.
+   *
+   * O panic observado em produção acontece EM `pipelineRun.create()` — antes de
+   * qualquer linha ser gravada — e nesse caso repetir não deixa rastro nenhum.
+   * Mas se um dia ele cair MAIS TARDE no ciclo, a linha de `PipelineRun` daquela
+   * tentativa fica eternamente com `status: 'running'` (o curator só a fecha no
+   * fim). A tentativa seguinte pode dar certo e o administrador vê "Busca
+   * concluída" — porém, por até 3 minutos, a trava de `cicloEmAndamento` passa a
+   * recusar novos cliques com "já tem uma busca em andamento".
+   *
+   * É o MESMO rastro que uma morte por `maxBuffer` deixaria, e a escolha aqui é
+   * a mesma: aceitar. Limpar a linha órfã exigiria este processo escrever no
+   * `PipelineRun` do outro — ou seja, o site passando a corrigir o estado do
+   * pipeline, uma responsabilidade que ele não tem e não deve ganhar por causa
+   * de um caso de canto. O custo é alguns minutos de espera; o do remédio, uma
+   * fronteira a menos entre os dois.
+   */
+
+  for (let tentativa = 1; tentativa <= TENTATIVAS_MAXIMAS; tentativa += 1) {
+    tentativasGastas = tentativa;
+
+    // O que sobra do orçamento vira o teto DESTA tentativa. `Math.max` porque um
+    // valor não-positivo em `timeout` é ignorado pelo Node (viraria "sem teto"),
+    // que é exatamente o oposto do pretendido — e a guarda de folga mínima de
+    // `decidirRepeticao` já garante que este piso nunca é atingido na prática.
+    const tetoDestaTentativaMs = Math.max(1_000, orcamentoMs - (Date.now() - comecou));
+
+    try {
+      /**
+       * `process.execPath` é o MESMO binário Node que executa este servidor.
+       *
+       * É a peça que dispensa procurar interpretador. A hospedagem instala o
+       * Node em caminhos versionados (`/opt/alt/alt-nodejs20/root/usr/bin/node`
+       * e variantes), que mudam quando se troca a versão no painel — e um
+       * caminho desses escrito no código é uma bomba-relógio silenciosa. Usando
+       * o `execPath`, o filho roda sob a MESMA versão de Node já validada pelo
+       * site, seja ela qual for, hoje e depois de qualquer troca no hPanel.
+       *
+       * `execFile` (e não `exec`) porque não há shell no caminho: os argumentos
+       * vão como array direto para o `execve`. Não existe entrada de usuário
+       * nenhuma aqui — nem no caminho, nem nos argumentos —, então injeção de
+       * comando não é o risco; usar `execFile` é o que MANTÉM assim, mesmo que
+       * alguém, um dia, resolva tornar a fase do pipeline configurável pela tela.
+       */
+      const { stdout, stderr } = await execFileAsync(
+        process.execPath,
+        [lookup.bundlePath, '--once'],
+        {
+          // `cwd` na pasta do bundle: é o que o cron fazia, e é o que mantém o
+          // comportamento idêntico. O prelúdio do bundle não depende disso (ele
+          // resolve tudo a partir do `__dirname` dele, justamente porque o cron
+          // chamava de `$HOME`), mas rodar num diretório diferente do testado é
+          // uma variável a mais sem nenhum ganho.
+          cwd: lookup.cwd,
+          env: ambienteParaOFilho(),
+          timeout: tetoDestaTentativaMs,
+          maxBuffer: MAX_BUFFER_BYTES,
+          // O curator escreve em português com acento. Sem isto o retorno seria
+          // Buffer e o log do servidor sairia ilegível.
+          encoding: 'utf8',
+        },
+      );
+
+      /**
+       * O stdout vai para o LOG DO SERVIDOR, e não para a tela.
+       *
+       * São dezenas de linhas técnicas (conectores, scores, avisos de circuito)
+       * que não ajudam quem está curando a fila e que, jogadas na resposta HTTP,
+       * virariam um paredão de texto no painel. Quem precisa delas é quem
+       * depura, e essa pessoa tem acesso ao log — que é onde elas ficam.
+       */
+      registrarSaida(stdout, stderr, Date.now() - comecou, tentativa);
+
+      const resumo = await lerUltimoCiclo(inicio);
+      return { ok: true, resumo, message: mensagemDeSucesso(resumo) };
+    } catch (erro) {
+      ultimaFalha = erro;
+      const stderrDaFalha = (erro as { stderr?: string }).stderr;
+
+      const decisao = decidirRepeticao({
+        tentativa,
+        stderr: stderrDaFalha,
+        msRestantesNoOrcamento: orcamentoMs - (Date.now() - comecou),
+      });
+
+      if (!decisao.repetir) break;
+
+      /**
+       * ⚠ O LOG DA REPETIÇÃO É O PRODUTO MAIS IMPORTANTE DESTE RAMO.
+       *
+       * Uma repetição bem-sucedida é, por definição, INVISÍVEL: o administrador
+       * vê "Busca concluída" e vai embora. Sem esta linha, o servidor estaria
+       * mascarando um problema de infraestrutura que continua piorando — e a
+       * primeira notícia dele seria o dia em que as três tentativas falharem.
+       *
+       * O prefixo é o mesmo `[curator-run]` do resto para que uma única busca no
+       * log traga a história completa do disparo, e o texto diz explicitamente
+       * "repetição" e o motivo, porque quem lê o log meses depois não tem este
+       * arquivo aberto ao lado.
+       */
+      console.warn(
+        `[curator-run] tentativa ${tentativa}/${TENTATIVAS_MAXIMAS} falhou — ` +
+          `REPETINDO em ${decisao.esperarMs}ms. Motivo: ${decisao.motivo}.`,
+      );
+      // O stderr da tentativa DESCARTADA sai aqui, e só aqui: se a próxima der
+      // certo, `traduzirFalha` nunca roda e esta é a única evidência que sobra
+      // do panic. É o que permite responder depois "com que frequência isto
+      // acontece?" sem instrumentação nova.
+      if (stderrDaFalha) {
+        console.warn(`[curator-run] stderr da tentativa ${tentativa}:\n${stderrDaFalha.slice(-4_000)}`);
+      }
+
+      await dormir(decisao.esperarMs);
+    }
   }
+
+  return traduzirFalha(ultimaFalha, Date.now() - comecou, tentativasGastas);
+}
+
+/**
+ * Pausa entre tentativas.
+ *
+ * Um `setTimeout` embrulhado em promessa, e não um laço ocupado: o processo do
+ * Next está ATENDENDO O SITE enquanto isto espera, e queimar CPU aqui degradaria
+ * as páginas de quem está lendo o portal — num servidor que, segundo o próprio
+ * diagnóstico desta falha, já está no limite de recursos.
+ */
+function dormir(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 /**
@@ -411,9 +536,20 @@ function mensagemDeSucesso(resumo: ResumoDoCiclo | null): string {
 }
 
 /** Log do servidor. Truncado: o objetivo é depurar, não arquivar. */
-function registrarSaida(stdout: string, stderr: string, decorridoMs: number): void {
+function registrarSaida(
+  stdout: string,
+  stderr: string,
+  decorridoMs: number,
+  tentativa: number,
+): void {
+  // O número da tentativa só aparece quando NÃO foi a primeira: no caso normal
+  // (a esmagadora maioria) ele seria ruído em toda linha de log, e um detalhe
+  // que aparece sempre é um detalhe que ninguém enxerga quando importa.
+  const marcaDeRepeticao =
+    tentativa > 1 ? ` (na tentativa ${tentativa}/${TENTATIVAS_MAXIMAS}, após repetição)` : '';
+
   console.log(
-    `[curator-run] ciclo manual concluído em ${(decorridoMs / 1000).toFixed(1)}s\n` +
+    `[curator-run] ciclo manual concluído em ${(decorridoMs / 1000).toFixed(1)}s${marcaDeRepeticao}\n` +
       `${stdout.slice(-8_000)}`,
   );
   // O stderr sai separado e só quando existe: o curator escreve avisos legítimos
@@ -429,7 +565,11 @@ function registrarSaida(stdout: string, stderr: string, decorridoMs: number): vo
  * técnico ou rodar um build. Um "falha ao executar o curator" genérico não
  * distingue nada disso.
  */
-function traduzirFalha(erro: unknown, decorridoMs: number): CuratorRunResult {
+function traduzirFalha(
+  erro: unknown,
+  decorridoMs: number,
+  tentativas: number,
+): CuratorRunResult {
   const e = erro as {
     killed?: boolean;
     signal?: string;
@@ -442,6 +582,7 @@ function traduzirFalha(erro: unknown, decorridoMs: number): CuratorRunResult {
   // O log do servidor recebe TUDO — inclusive o que não vai para a tela.
   console.error(
     `[curator-run] falhou após ${(decorridoMs / 1000).toFixed(1)}s ` +
+      `em ${tentativas} tentativa(s) ` +
       `(code=${String(e.code)} signal=${String(e.signal)} killed=${String(e.killed)})`,
   );
   if (e.stdout) console.error(`[curator-run] stdout:\n${e.stdout.slice(-8_000)}`);
@@ -471,6 +612,40 @@ function traduzirFalha(erro: unknown, decorridoMs: number): CuratorRunResult {
       message:
         `Não foi possível iniciar o processo do curator (${e.code}). ` +
         'É um problema de instalação no servidor, não da fila. Avise o responsável técnico.',
+    };
+  }
+
+  /**
+   * --- O ENGINE DO PRISMA ENTROU EM PÂNICO, e as repetições não salvaram -----
+   *
+   * Este ramo vem DEPOIS dos dois acima porque eles descrevem como o processo
+   * morreu (por sinal, por não ter nascido) e este descreve POR QUE — e vem
+   * ANTES do genérico porque, sem ele, esta falha se apresentaria como "encerrou
+   * com erro. Detalhe: This is a non-recoverable error...", que manda o
+   * administrador procurar defeito no curator quando o defeito é do SERVIDOR.
+   *
+   * A mensagem nomeia a causa real (limite de processos da hospedagem) porque a
+   * AÇÃO correta depende disso: não adianta clicar de novo em seguida, e quem
+   * for acionado precisa saber que o assunto é limite de recursos da conta — não
+   * pipeline, não banco, não código. Também diz quantas tentativas houve, para
+   * ninguém sugerir "tentou de novo?".
+   *
+   * 503 e não 500: o servidor está momentaneamente sem recurso para atender, o
+   * que é a definição de "serviço indisponível". A distinção não é acadêmica —
+   * é o que separa, em qualquer monitoramento futuro, "a aplicação tem um bug"
+   * de "a hospedagem está saturada".
+   */
+  if (ehPanicoDoEngineDoPrisma(e.stderr)) {
+    return {
+      ok: false,
+      status: 503,
+      message:
+        `O motor de banco de dados do curator travou em ${tentativas} tentativa(s) seguidas ` +
+        '(PANIC do Prisma). Isso NÃO é problema da fila nem das pautas: nada foi ' +
+        'alterado. É o servidor compartilhado sem folga no limite de processos no ' +
+        'momento do disparo. Espere alguns minutos e tente de novo; se estiver ' +
+        'repetindo, avise o responsável técnico — o assunto é o limite de ' +
+        'processos/threads da hospedagem.',
     };
   }
 

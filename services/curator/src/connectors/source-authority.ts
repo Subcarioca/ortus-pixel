@@ -58,14 +58,46 @@ const DOMAIN_AUTHORITY: Record<string, SourceTier> = {
   'bloomberg.com': 'tier1Press',
   'reuters.com': 'tier1Press',
 
+  // --- Imprensa tier 1 brasileira: veículos consolidados de tecnologia ---
+  //
+  // ⚠ ESTA TABELA NÃO É DOCUMENTAÇÃO — ELA DECIDE O SCORE.
+  // `curate.ts` grava `effectiveTier = source.tier === 'official' ? 'official'
+  // : classifyDomain(url).tier`, ou seja: para tudo que não é fonte oficial,
+  // quem manda é o DOMÍNIO, não o `tier` declarado no catálogo de feeds.
+  // Domínio ausente daqui cai no padrão 'aggregator' (0,3 contra 0,8 de
+  // tier1Press) — o que rebaixaria toda a imprensa brasileira que acabamos de
+  // adicionar e a faria quase nunca alcançar a faixa QUENTE. Adicionar a fonte
+  // em `rss-sources.ts` sem adicionar o domínio aqui é meio trabalho feito.
+  'tecmundo.com.br': 'tier1Press',
+  'canaltech.com.br': 'tier1Press',
+
   // --- Imprensa tier 2: portais nerd relevantes (nossos concorrentes diretos) ---
   'omelete.com.br': 'tier2Press',
   'jovemnerd.com.br': 'tier2Press',
+  // Endereço antigo do IGN Brasil. Hoje a operação publica em `br.ign.com`, que
+  // casa com a regra `ign.com` acima e portanto é classificado como tier1Press —
+  // correto para uma redação do porte da deles. A linha fica por retrocompa-
+  // tibilidade com URLs antigas que ainda circulam.
   'ign.com.br': 'tier2Press',
   'legiaodosherois.com.br': 'tier2Press',
   'einerd.com.br': 'tier2Press',
   'adrenaline.com.br': 'tier2Press',
   'theenemy.com.br': 'tier2Press',
+  // Estes dois JÁ ESTAVAM no catálogo de feeds declarados como imprensa, mas
+  // faltavam nesta tabela — então todo tópico deles era gravado como
+  // 'aggregator' (0,3 em vez de 0,6), na prática metade do peso de autoridade.
+  // Achado ao conferir o que o ciclo real gravou no banco de dev em 15/08/2026:
+  // 12 dos 74 tópicos do ciclo estavam rebaixados assim, em silêncio.
+  'cbr.com': 'tier2Press',
+  'animenewsnetwork.com': 'tier2Press',
+  'tecnoblog.net': 'tier2Press',
+  'arkade.com.br': 'tier2Press',
+  'gameblast.com.br': 'tier2Press',
+  'cinepop.com.br': 'tier2Press',
+  'jbox.com.br': 'tier2Press',
+  'intoxianime.com': 'tier2Press',
+  'animeunited.com.br': 'tier2Press',
+  'universohq.com': 'tier2Press',
 
   // --- Insiders com histórico verificável ---
   // Peso intermediário: acertam com frequência, mas exigem apuração.
@@ -160,7 +192,11 @@ export const sourceAuthorityConnector: SignalConnector = {
 
     const labels: Record<SourceTier, string> = {
       official: 'Fonte OFICIAL (estúdio/publisher) — confirmada',
-      tier1Press: 'Veículo internacional consolidado',
+      // "internacional" saiu do rótulo quando TecMundo e Canaltech entraram na
+      // faixa: o que a classificação mede é PORTE E CONSOLIDAÇÃO do veículo, e
+      // não o país dele. O rótulo aparece na fila do painel, então dizer
+      // "internacional" ao lado de uma manchete do TecMundo seria só confusão.
+      tier1Press: 'Veículo consolidado do setor',
       tier2Press: 'Portal de nicho relevante',
       credibleInsider: 'Insider com histórico de acertos — requer apuração',
       aggregator: 'Agregador ou fonte não classificada',

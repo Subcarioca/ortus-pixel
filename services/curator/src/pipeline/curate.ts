@@ -6,6 +6,7 @@
  * Fluxo completo:
  *
  *   [1] DESCOBERTA        feeds RSS -> itens candidatos
+ *   [1.5] REESCRITA pt-BR itens de fonte estrangeira -> português do Brasil
  *   [2] DEDUPLICAÇÃO      5 veículos noticiando o mesmo fato -> 1 tópico
  *   [3] TRIAGEM (barata)  conectores 'discovery' -> score preliminar
  *   [4] CORTE             só quem passa do limiar segue para o estágio caro
@@ -40,6 +41,7 @@ import { detectTriggers } from '../connectors/emotional-triggers';
 import { classifyDomain } from '../connectors/source-authority';
 import { discoverFromFeeds, type DiscoveredItem } from '../discovery/rss-sources';
 import { canonicalHash, findDuplicate } from './dedupe';
+import { isRewriteConfigured, rewriteItemsToPtBr } from './rewrite-ptbr';
 import { collectSignals } from './orchestrator';
 import { onScoreCalculated } from '../actions/dispatcher';
 import { logPipelineEvent } from '../actions/instrumentation';
@@ -67,6 +69,8 @@ export interface CurationCycleOptions {
 export interface CurationCycleResult {
   runId: string;
   discovered: number;
+  /** Itens de fonte estrangeira efetivamente reescritos para pt-BR na etapa [1.5]. */
+  rewrittenToPtBr: number;
   deduplicated: number;
   screened: number;
   enriched: number;
@@ -93,6 +97,7 @@ export async function runCurationCycle(
   const result: CurationCycleResult = {
     runId: run.id,
     discovered: 0,
+    rewrittenToPtBr: 0,
     deduplicated: 0,
     screened: 0,
     enriched: 0,
@@ -105,9 +110,45 @@ export async function runCurationCycle(
     // -------------------------------------------------------------------------
     // [1] DESCOBERTA
     // -------------------------------------------------------------------------
-    const { items, failedSources } = await discoverFromFeeds({ phase, maxAgeHours });
-    result.discovered = items.length;
-    console.log(`[curate] ${items.length} itens descobertos em feeds (fase ${phase}).`);
+    const { items: rawItems, failedSources } = await discoverFromFeeds({ phase, maxAgeHours });
+    result.discovered = rawItems.length;
+    console.log(`[curate] ${rawItems.length} itens descobertos em feeds (fase ${phase}).`);
+
+    // -------------------------------------------------------------------------
+    // [1.5] REESCRITA PARA PORTUGUÊS DO BRASIL
+    // -------------------------------------------------------------------------
+    // POR QUE AQUI, e não depois da deduplicação (onde seriam menos itens e a
+    // conta seria menor)? Porque a deduplicação compara TOKENS DO TÍTULO: com os
+    // itens em línguas diferentes, "Rockstar delays GTA VI" e "Rockstar adia GTA
+    // VI" têm interseção quase nula e viram DOIS tópicos do mesmo fato — que é
+    // exatamente o problema que a etapa [2] existe para evitar. Traduzir antes
+    // faz as duas versões colapsarem em uma, e o custo extra da ordem é pequeno
+    // porque só itens de fonte estrangeira gastam chamada.
+    //
+    // O outro motivo é de produto: é AQUI que nasce o `Topic.title` que a
+    // redação lê na fila. Reescrever depois de gravar exigiria uma segunda
+    // passada de escrita no banco e deixaria uma janela em que o painel mostra
+    // a pauta em inglês.
+    const rewrite = await rewriteItemsToPtBr(rawItems);
+    const items = rewrite.items;
+    result.rewrittenToPtBr = rewrite.rewritten;
+
+    if (isRewriteConfigured()) {
+      console.log(
+        `[curate] reescrita pt-BR: ${rewrite.rewritten} reescrito(s), ` +
+          `${rewrite.skippedPt} já em português, ${rewrite.failed} falha(s)` +
+          (rewrite.overBudget > 0 ? `, ${rewrite.overBudget} fora do teto do ciclo` : '') +
+          '.',
+      );
+    } else if (rewrite.skippedPt < rawItems.length) {
+      // Aviso ÚNICO por ciclo, e só quando existe item que precisaria dela: sem
+      // isso, "as pautas voltaram a chegar em inglês" viraria um mistério sem
+      // rastro nenhum no log.
+      console.warn(
+        `[curate] reescrita pt-BR DESLIGADA (falta GEMINI_API_KEY): ` +
+          `${rawItems.length - rewrite.skippedPt} item(ns) de fonte estrangeira seguem no idioma original.`,
+      );
+    }
 
     // -------------------------------------------------------------------------
     // [2] DEDUPLICAÇÃO E PERSISTÊNCIA DOS CANDIDATOS
@@ -305,7 +346,16 @@ async function upsertTopicFromItem(
   await logPipelineEvent({
     eventType: 'topic.discovered',
     topicId: topic.id,
-    payload: { source: item.source.name, url: item.url, tier: effectiveTier },
+    payload: {
+      source: item.source.name,
+      url: item.url,
+      tier: effectiveTier,
+      // Só existe quando a etapa [1.5] trocou o texto. É o único lugar onde o
+      // título como o veículo publicou sobrevive — sem ele, não há como
+      // auditar depois se uma manchete estranha na fila veio da fonte ou da
+      // nossa reescrita. Ver `DiscoveredItem.originalTitle`.
+      ...(item.originalTitle ? { originalTitle: item.originalTitle } : {}),
+    },
   });
 
   return topic.id;

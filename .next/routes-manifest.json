@@ -73,6 +73,14 @@
   },
   "dynamicRoutes": [
     {
+      "page": "/admin/preview/[id]",
+      "regex": "^/admin/preview/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/admin/preview/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
       "page": "/api/admin/accounts/[id]",
       "regex": "^/api/admin/accounts/([^/]+?)(?:/)?$",
       "routeKeys": {

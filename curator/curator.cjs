@@ -2697,6 +2697,100 @@ function findDuplicate(candidateTitle, candidateCategory, recentTopics) {
   return best;
 }
 
+// src/actions/instrumentation.ts
+async function logPipelineEvent(input) {
+  try {
+    await prisma.pipelineEvent.create({
+      data: {
+        eventType: input.eventType,
+        topicId: input.topicId ?? null,
+        articleId: input.articleId ?? null,
+        connectorId: input.connectorId ?? null,
+        actorId: input.actorId ?? null,
+        payload: input.payload ?? {},
+        durationMs: input.durationMs ?? null
+      }
+    });
+  } catch (error) {
+    console.error("[instrumentation] falha ao registrar evento:", error);
+  }
+}
+async function logPipelineEvents(inputs) {
+  if (inputs.length === 0) return;
+  try {
+    await prisma.pipelineEvent.createMany({
+      data: inputs.map((input) => ({
+        eventType: input.eventType,
+        topicId: input.topicId ?? null,
+        articleId: input.articleId ?? null,
+        connectorId: input.connectorId ?? null,
+        actorId: input.actorId ?? null,
+        payload: input.payload ?? {},
+        durationMs: input.durationMs ?? null
+      }))
+    });
+  } catch (error) {
+    console.error("[instrumentation] falha ao registrar lote de eventos:", error);
+  }
+}
+
+// src/pipeline/expire-topics.ts
+var TOPIC_EXPIRY_DAYS = 7;
+var MAX_EXPIRE_PER_CYCLE = 500;
+function expiryCutoff(now = /* @__PURE__ */ new Date()) {
+  return new Date(now.getTime() - TOPIC_EXPIRY_DAYS * 864e5);
+}
+async function expireStaleTopics(options = {}) {
+  const { dryRun = false, now = /* @__PURE__ */ new Date() } = options;
+  const cutoff = expiryCutoff(now);
+  try {
+    const vencidas = await prisma.topic.findMany({
+      where: {
+        // Só o que ninguém decidiu ainda. Ver a decisão 2 no cabeçalho.
+        status: { in: ["new", "assigned"] },
+        createdAt: { lt: cutoff },
+        // A trava por linha: pauta que já gerou matéria (mesmo rascunho) não é
+        // fila parada, é trabalho em andamento.
+        articles: { none: {} }
+      },
+      // Da mais velha para a mais nova: se o teto cortar, o que fica para o
+      // próximo ciclo é o menos vencido. É a mesma prioridade do corte da
+      // reescrita — quando é preciso sacrificar, sacrifica-se o mais antigo.
+      orderBy: { createdAt: "asc" },
+      take: MAX_EXPIRE_PER_CYCLE + 1,
+      select: { id: true, title: true, createdAt: true, status: true }
+    });
+    const hasMore = vencidas.length > MAX_EXPIRE_PER_CYCLE;
+    const lote = hasMore ? vencidas.slice(0, MAX_EXPIRE_PER_CYCLE) : vencidas;
+    if (lote.length === 0) return { expired: 0, hasMore: false };
+    if (dryRun) return { expired: lote.length, hasMore };
+    const ids = lote.map((topic) => topic.id);
+    const { count } = await prisma.topic.updateMany({
+      where: { id: { in: ids }, status: { in: ["new", "assigned"] } },
+      data: { status: "dismissed" }
+    });
+    await logPipelineEvents(
+      lote.map((topic) => ({
+        eventType: "topic.expired",
+        topicId: topic.id,
+        payload: {
+          reason: "stale",
+          expiryDays: TOPIC_EXPIRY_DAYS,
+          previousStatus: topic.status,
+          ageDays: Math.floor((now.getTime() - topic.createdAt.getTime()) / 864e5)
+        }
+      }))
+    );
+    return { expired: count, hasMore };
+  } catch (error) {
+    console.error(
+      "[expire-topics] falha ao expirar pautas antigas (a fila segue como est\xE1):",
+      error instanceof Error ? error.message : error
+    );
+    return { expired: 0, hasMore: false };
+  }
+}
+
 // src/pipeline/rewrite-ptbr.ts
 var API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 var DEFAULT_MODEL = "gemini-3.1-flash-lite";
@@ -2733,37 +2827,61 @@ function buildRewriteSystemPrompt() {
     "Voc\xEA \xE9 editor de texto da Ortus Pixel, um portal brasileiro de not\xEDcias de cultura pop",
     "(games, cinema, s\xE9ries, anime, quadrinhos e tecnologia).",
     "",
-    "Sua tarefa: reescrever o t\xEDtulo e o resumo de uma not\xEDcia estrangeira em PORTUGU\xCAS DO BRASIL,",
-    "do jeito que um jornalista brasileiro escreveria. N\xE3o \xE9 tradu\xE7\xE3o literal: \xE9 reescrita natural,",
-    "com a ordem das palavras e as express\xF5es que se usam aqui.",
+    "Sua tarefa: a partir do material recebido, ESCREVER COM SUAS PR\xD3PRIAS PALAVRAS, em PORTUGU\xCAS",
+    "DO BRASIL, um t\xEDtulo e um resumo que informem o MESMO FATO. Isto N\xC3O \xE9 uma tradu\xE7\xE3o: \xE9 uma",
+    "not\xEDcia curta nova, escrita do zero por um jornalista brasileiro que acabou de saber do fato.",
     "",
     "REGRAS INEGOCI\xC1VEIS:",
     "",
-    "1. N\xC3O TRADUZA NOMES PR\xD3PRIOS. Nomes de jogos, filmes, s\xE9ries, personagens, est\xFAdios, empresas,",
-    '   consoles e pessoas ficam como est\xE3o ("Dead Space", "Silksong", "Rockstar", "Xbox Game Pass").',
+    "1. PAR\xC1FRASE GENU\xCDNA \u2014 ESTA \xC9 A REGRA MAIS IMPORTANTE. O texto de origem \xE9 protegido por",
+    "   direito autoral, e traduzi-lo n\xE3o muda isso: tradu\xE7\xE3o \xE9 obra derivada e continua sendo",
+    "   c\xF3pia. O fato \xE9 livre; a forma de cont\xE1-lo, n\xE3o. Ent\xE3o:",
+    "     - REESTRUTURE as frases. N\xE3o mantenha a mesma sequ\xEAncia sujeito-verbo-complemento do",
+    "       original s\xF3 trocando cada palavra pela equivalente em portugu\xEAs.",
+    "     - USE OUTRO VOCABUL\xC1RIO. Escolha verbos e substantivos diferentes dos que a fonte usou",
+    "       (exceto o que as regras 2 e 9 mandam preservar: nomes pr\xF3prios e jarg\xE3o do nicho).",
+    "     - PODE MUDAR A ORDEM DA INFORMA\xC7\xC3O. Se a fonte abre pela empresa, voc\xEA pode abrir pelo",
+    "       fato, e vice-versa \u2014 o que importa \xE9 que a informa\xE7\xE3o essencial esteja l\xE1.",
+    "     - VALE PARA O T\xCDTULO E PARA O RESUMO, sem exce\xE7\xE3o. Manchete curta \xE9 onde mais se",
+    "       escorrega para a tradu\xE7\xE3o palavra a palavra, e \xE9 justamente onde ela \xE9 mais vis\xEDvel.",
+    "   Teste mental antes de responder: se algu\xE9m puser o seu texto ao lado do original, as duas",
+    "   frases precisam ser reconhec\xEDveis como a MESMA NOT\xCDCIA e n\xE3o como o MESMO TEXTO.",
+    "   Exemplo do que N\xC3O fazer:",
+    '     original: "Nintendo Direct drops surprise Metroid reveal"',
+    '     errado:   "Nintendo Direct derruba revela\xE7\xE3o surpresa de Metroid"  (\xE9 a frase deles)',
+    '     certo:    "Nintendo revela novo Metroid sem aviso durante o Direct"',
     "",
-    "2. USE O T\xCDTULO OFICIAL BRASILEIRO QUANDO ELE EXISTE E VOC\xCA TIVER CERTEZA. Exemplos:",
+    "2. N\xC3O TRADUZA NOMES PR\xD3PRIOS. Nomes de jogos, filmes, s\xE9ries, personagens, est\xFAdios, empresas,",
+    '   consoles e pessoas ficam como est\xE3o ("Dead Space", "Silksong", "Rockstar", "Xbox Game Pass").',
+    "   Preservar o nome n\xE3o conflita com a regra 1: nome pr\xF3prio \xE9 identifica\xE7\xE3o do fato, n\xE3o",
+    "   escolha de escrita da fonte.",
+    "",
+    "3. USE O T\xCDTULO OFICIAL BRASILEIRO QUANDO ELE EXISTE E VOC\xCA TIVER CERTEZA. Exemplos:",
     '   "Avengers: Endgame" -> "Vingadores: Ultimato"; "Spider-Man" (filme) -> "Homem-Aranha".',
     "   Na d\xFAvida, mantenha o nome original. Errar o nome \xE9 pior que deixar em ingl\xEAs.",
     "",
-    "3. N\xC3O ACRESCENTE NENHUMA INFORMA\xC7\xC3O. Nada de data, pre\xE7o, plataforma, n\xFAmero ou detalhe que",
+    "4. N\xC3O ACRESCENTE NENHUMA INFORMA\xC7\xC3O. Nada de data, pre\xE7o, plataforma, n\xFAmero ou detalhe que",
     "   n\xE3o esteja no material. Se o material \xE9 vago, o texto em portugu\xEAs tamb\xE9m ser\xE1 vago.",
+    "   Reescrever com liberdade \xE9 liberdade de FORMA, nunca de conte\xFAdo.",
     "",
-    "4. N\xC3O REMOVA INFORMA\xC7\xC3O ESSENCIAL. Quem fez o qu\xEA, e sobre qual obra, precisa continuar ali.",
+    "5. N\xC3O REMOVA INFORMA\xC7\xC3O ESSENCIAL. Quem fez o qu\xEA, e sobre qual obra, precisa continuar ali.",
     "",
-    '5. TOM DE NOT\xCDCIA, N\xC3O DE AN\xDANCIO. Sem caixa alta, sem emoji, sem exclama\xE7\xE3o, sem "confira",',
+    "6. NUNCA COPIE UM TRECHO LITERAL DA FONTE, nem entre aspas. N\xE3o reproduza declara\xE7\xF5es palavra",
+    "   por palavra: se o material menciona uma fala, descreva o teor dela em discurso indireto.",
+    "",
+    '7. TOM DE NOT\xCDCIA, N\xC3O DE AN\xDANCIO. Sem caixa alta, sem emoji, sem exclama\xE7\xE3o, sem "confira",',
     '   sem "voc\xEA n\xE3o vai acreditar". Terceira pessoa, direto.',
     "",
-    "6. LIMITES DE TAMANHO: t\xEDtulo com no m\xE1ximo 120 caracteres; resumo com no m\xE1ximo 300.",
+    "8. LIMITES DE TAMANHO: t\xEDtulo com no m\xE1ximo 120 caracteres; resumo com no m\xE1ximo 300.",
     '   Se o resumo original estiver vazio, devolva o resumo vazio ("").',
     "",
-    '7. JARG\xC3O DO NICHO FICA EM INGL\xCAS quando \xE9 assim que se fala aqui: "gameplay", "trailer",',
+    '9. JARG\xC3O DO NICHO FICA EM INGL\xCAS quando \xE9 assim que se fala aqui: "gameplay", "trailer",',
     '   "spin-off", "reboot", "DLC", "review". Traduzir isso soa amador.',
     "",
-    '8. ORTOGRAFIA COMPLETA DO PORTUGU\xCAS, COM TODOS OS ACENTOS. Escreva "s\xE9rie", "\xE9", "hist\xF3ria",',
-    '   "sequ\xEAncia", "lan\xE7amento", "\xFAnica" \u2014 nunca "serie", "e", "historia", "sequencia".',
-    "   Comece o t\xEDtulo com letra mai\xFAscula. Texto sem acento parece erro de sistema e vai",
-    "   publicado do jeito que sair daqui.",
+    '10. ORTOGRAFIA COMPLETA DO PORTUGU\xCAS, COM TODOS OS ACENTOS. Escreva "s\xE9rie", "\xE9", "hist\xF3ria",',
+    '    "sequ\xEAncia", "lan\xE7amento", "\xFAnica" \u2014 nunca "serie", "e", "historia", "sequencia".',
+    "    Comece o t\xEDtulo com letra mai\xFAscula. Texto sem acento parece erro de sistema e vai",
+    "    publicado do jeito que sair daqui.",
     "",
     "FORMATO DA RESPOSTA: responda APENAS com um objeto json, sem nenhum texto antes ou depois,",
     "exatamente neste formato:",
@@ -2782,7 +2900,9 @@ function buildRewriteUserPrompt(item) {
     `Resumo: ${item.summary}`,
     "</material>",
     "",
-    "Reescreva os dois campos em portugu\xEAs do Brasil e responda no formato json combinado."
+    "Escreva com suas pr\xF3prias palavras, em portugu\xEAs do Brasil, um t\xEDtulo e um resumo que contem",
+    "o MESMO FATO \u2014 sem reproduzir a estrutura de frase nem as escolhas de palavra do material.",
+    "Responda no formato json combinado."
   ].join("\n");
 }
 async function rewriteItemsToPtBr(items) {
@@ -3144,25 +3264,6 @@ async function collectSignals(connectors, context) {
   };
 }
 
-// src/actions/instrumentation.ts
-async function logPipelineEvent(input) {
-  try {
-    await prisma.pipelineEvent.create({
-      data: {
-        eventType: input.eventType,
-        topicId: input.topicId ?? null,
-        articleId: input.articleId ?? null,
-        connectorId: input.connectorId ?? null,
-        actorId: input.actorId ?? null,
-        payload: input.payload ?? {},
-        durationMs: input.durationMs ?? null
-      }
-    });
-  } catch (error) {
-    console.error("[instrumentation] falha ao registrar evento:", error);
-  }
-}
-
 // src/actions/newsroom-alert.ts
 var adminUrl = (topicId) => {
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -3404,6 +3505,7 @@ async function runCurationCycle(options) {
   const result = {
     runId: run.id,
     discovered: 0,
+    expiredTopics: 0,
     rewrittenToPtBr: 0,
     deduplicated: 0,
     screened: 0,
@@ -3413,6 +3515,15 @@ async function runCurationCycle(options) {
     durationMs: 0
   };
   try {
+    const expiry = await expireStaleTopics({ dryRun });
+    result.expiredTopics = expiry.expired;
+    if (expiry.expired > 0) {
+      console.log(
+        `[curate] ${expiry.expired} pauta(s) descartada(s) por passarem de ${TOPIC_EXPIRY_DAYS} dias na fila` + // O aviso de "sobrou" é o que explica um número redondo repetido
+        // ciclo após ciclo (o teto de lote) sem parecer um bug.
+        (expiry.hasMore ? " \u2014 ainda h\xE1 mais vencidas, o pr\xF3ximo ciclo continua" : "") + (dryRun ? " [dryRun: nada foi gravado]" : "") + "."
+      );
+    }
     const { items: rawItems, failedSources } = await discoverFromFeeds({ phase, maxAgeHours });
     result.discovered = rawItems.length;
     console.log(`[curate] ${rawItems.length} itens descobertos em feeds (fase ${phase}).`);

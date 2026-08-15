@@ -1,1 +1,4 @@
-Not found
+# ads.txt — Ortus Pixel
+# Lista de vendedores autorizados (IAB Tech Lab ads.txt v1.1).
+# Gerado por apps/web/src/app/ads.txt/route.ts a partir das variáveis de ambiente.
+google.com, pub-3649138242085072, DIRECT, f08c47fec0942fa0

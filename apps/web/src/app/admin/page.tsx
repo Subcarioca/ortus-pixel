@@ -32,6 +32,7 @@ import { prisma, toStringArray } from '@subcarioca/db';
 
 import { AdminLogin } from '@/components/admin/admin-login';
 import { AdminNav } from '@/components/admin/admin-nav';
+import { CuratorRunButton } from '@/components/admin/curator-run-button';
 import { TopicCreateForm } from '@/components/admin/topic-create-form';
 import { TopicRow } from '@/components/admin/topic-row';
 import { isAiDraftConfigured } from '@/server/ai-draft';
@@ -149,6 +150,23 @@ export default async function AdminPage() {
               ? `${lastRun.topicsDiscovered} descobertos · ${lastRun.connectorsFailed} conector(es) com falha`
               : 'Pipeline ainda não rodou'}
           </p>
+
+          {/*
+            DISPARO MANUAL — fica AQUI, colado no número que motiva o clique.
+            Quem lê "há 240min" quer agir na mesma olhada; o botão em outro canto
+            da tela obrigaria a cruzar duas informações distantes.
+
+            Só para quem CURA a fila: um ciclo reordena a fila que alimenta a home
+            e o /em-alta, e ainda consome chamadas pagas de API. É a mesma
+            capacidade de sobrepor score e descartar tópico (ver core/staff.ts).
+            Esconder o botão é cortesia — quem recusa de verdade é a rota.
+
+            ⚠ Este botão deixou de ser plano B: o cron desta hospedagem não
+            dispara (confirmado no hPanel E por crontab via SSH). Hoje o pipeline
+            depende de um agendador EXTERNO chamando a mesma rota, mais este
+            clique. Ver o cabeçalho de `api/internal/curator-run/route.ts`.
+          */}
+          {podeCurar && <CuratorRunButton />}
         </div>
         {/* O relatório é de administrador: para um redator, este cartão seria
             um link para uma tela que responde "sem acesso". */}
@@ -210,9 +228,17 @@ export default async function AdminPage() {
         )}
 
         {topics.length === 0 ? (
+          /* A instrução daqui era "rode `npm run curator:once`", que só serve a
+             quem tem um terminal no monorepo. Em produção — hospedagem
+             compartilhada, sem shell útil — ela mandava a redação para um beco
+             sem saída. Agora quem cura tem o botão logo acima, e é para ele que
+             o texto aponta. Quem não cura recebe a instrução que de fato pode
+             seguir: falar com um administrador. */
           <p className="empty-state">
-            Nenhum tópico na fila. O pipeline ainda não rodou ou nada foi descoberto.
-            Rode <code>npm run curator:once</code>.
+            Nenhum tópico na fila. O pipeline ainda não rodou ou nada foi descoberto.{' '}
+            {podeCurar
+              ? 'Use “Buscar pautas agora”, no cartão “Último ciclo” acima.'
+              : 'Peça a um administrador para disparar uma busca de pautas.'}
           </p>
         ) : (
           <ul className="admin__list">

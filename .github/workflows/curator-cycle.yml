@@ -1,0 +1,172 @@
+# =============================================================================
+# AGENDADOR EXTERNO DO CICLO DE CURADORIA
+# =============================================================================
+#
+# POR QUE ESTE ARQUIVO EXISTE
+# -----------------------------------------------------------------------------
+# O ciclo do curator era agendado pelo cron da hospedagem. Ficou estabelecido,
+# depois de um dia de depuração, que o cron desta conta NÃO dispara — nem pelo
+# hPanel, nem por `crontab` direto via SSH (chamado aberto com o suporte).
+#
+# A saída foi tirar o AGENDAMENTO de dentro daquele servidor: quem marca a hora
+# passa a ser um serviço de fora, e a única coisa que ele faz é bater numa rota
+# HTTPS do próprio site. O trabalho continua acontecendo no servidor — o Next
+# executa o bundle do curator como processo filho (ver
+# `apps/web/src/app/api/internal/curator-run/route.ts`).
+#
+# -----------------------------------------------------------------------------
+# ⚠ ANTES DE ATIVAR: ISTO CUSTA MINUTOS DE ACTIONS, E A CONTA NÃO FECHA NO PLANO
+#    GRATUITO NA CADÊNCIA DE 15 MINUTOS
+# -----------------------------------------------------------------------------
+# O repositório é PRIVADO (Subcarioca/ortus-pixel), e em repositório privado os
+# minutos de Actions são cobrados/descontados da cota. A matemática:
+#
+#   a cada 15 min  = 96 execuções/dia = ~2.880/mês
+#   o GitHub arredonda CADA execução para cima, para 1 minuto no mínimo
+#   e esta aqui espera a resposta do ciclo (15s a ~75s), então na prática
+#   cada uma consome 1 a 2 minutos
+#
+#   => ~2.880 a 5.760 minutos/mês, contra 2.000 do GitHub Free
+#      (3.000 no Pro). ESTOURA a cota, e o sintoma é o agendamento parar
+#      no meio do mês — exatamente o problema que este arquivo resolve.
+#
+# TRÊS CAMINHOS, para decidir com o dono do site:
+#
+#   (a) AUMENTAR O INTERVALO para 30 min (`*/30`). ~1.440 execuções/mês, dentro
+#       da cota com folga. O custo editorial é real mas pequeno: o próprio
+#       curator foi desenhado para descoberta de 15 em 15 min, então 30 min
+#       apenas dobra a latência do "assunto novo aparecer na fila" — e o botão
+#       "Buscar pautas agora" no painel cobre a urgência quando ela existir.
+#
+#   (b) USAR UM PINGADOR DE HTTP DEDICADO em vez do Actions (cron-job.org,
+#       Cloudflare Workers com Cron Trigger, UptimeRobot). São gratuitos nessa
+#       faixa de uso e é literalmente para isto que servem. É a opção mais
+#       barata e a mais adequada tecnicamente; a desvantagem é ser mais um
+#       serviço com credencial para administrar, fora do repositório.
+#
+#   (c) MANTER 15 MIN E PAGAR os minutos excedentes.
+#
+# O padrão abaixo é (a) — 30 minutos —, porque é a única das três que funciona
+# sem decisão de custo e sem serviço novo. Trocar para `*/15` é uma linha.
+#
+# -----------------------------------------------------------------------------
+# ⚠ SEGUNDA LIMITAÇÃO, INDEPENDENTE DO CUSTO: `schedule` DO GITHUB NÃO É PONTUAL
+# -----------------------------------------------------------------------------
+# O agendamento do Actions é de MELHOR ESFORÇO. É documentado pelo próprio
+# GitHub que execuções agendadas podem atrasar em períodos de carga alta (atrasos
+# de 10+ minutos são comuns no início de cada hora) e podem ser DESCARTADAS.
+# Ou seja: isto é mais confiável que o cron quebrado da hospedagem, mas não é um
+# relógio. Para o caso de uso — descobrir pauta de portal de notícias — é
+# suficiente; só não trate a ausência de um ciclo como incidente.
+#
+# -----------------------------------------------------------------------------
+# CONFIGURAÇÃO (uma vez)
+# -----------------------------------------------------------------------------
+#   1. Gere o segredo:
+#        node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
+#   2. No servidor (hPanel > variáveis de ambiente): CURATOR_RUN_SECRET=<valor>
+#      e REINICIE a aplicação — com até 6 processos-filho do LiteSpeed, uma
+#      variável nova só vale para todos eles depois do restart.
+#   3. No GitHub: Settings > Secrets and variables > Actions > New secret
+#        CURATOR_RUN_SECRET = <o mesmo valor>
+#        CURATOR_RUN_URL    = https://ortuspixel.com/api/internal/curator-run
+#
+# ⚠ O segredo NUNCA entra neste arquivo: ele é versionado e legível por qualquer
+# pessoa com acesso ao repositório.
+
+name: Ciclo de curadoria
+
+on:
+  schedule:
+    # Ver o bloco de custo acima antes de trocar para `*/15`.
+    - cron: '*/30 * * * *'
+  # Permite disparar à mão pela aba Actions — útil para testar a configuração
+  # sem esperar a próxima janela do agendamento.
+  workflow_dispatch:
+
+# Duas execuções simultâneas não fazem sentido aqui (a rota as recusaria de
+# qualquer forma, com 409). Cancelar a anterior evita fila de jobs presos
+# esperando um ciclo que já está rodando.
+concurrency:
+  group: curator-cycle
+  cancel-in-progress: false
+
+jobs:
+  disparar:
+    runs-on: ubuntu-latest
+    # Teto curto: o job só faz uma chamada HTTP. Sem isto, um servidor que não
+    # responde prenderia um runner por 6 horas (o padrão do GitHub) — e minutos
+    # de Actions são exatamente o recurso escasso aqui.
+    timeout-minutes: 5
+
+    steps:
+      - name: Disparar o ciclo
+        env:
+          # Passados por AMBIENTE, e não interpolados na linha de comando: o
+          # GitHub mascara segredos no log, mas manter o valor fora do texto do
+          # comando evita que ele apareça em `set -x`, em mensagem de erro do
+          # shell ou num `ps` do runner. Custa nada e fecha o caminho.
+          URL: ${{ secrets.CURATOR_RUN_URL }}
+          SEGREDO: ${{ secrets.CURATOR_RUN_SECRET }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "${URL}" ] || [ -z "${SEGREDO}" ]; then
+            echo "::error::Faltam os secrets CURATOR_RUN_URL e/ou CURATOR_RUN_SECRET no repositório."
+            exit 1
+          fi
+
+          # `--max-time 120` acima do teto do servidor (75s) para que quem
+          # decide o corte seja o servidor, que sabe traduzir o motivo.
+          # `-w` põe o código HTTP na última linha, separado do corpo.
+          resposta="$(curl --silent --show-error --max-time 120 \
+            --request POST "${URL}" \
+            --header "x-internal-secret: ${SEGREDO}" \
+            --header 'Content-Type: application/json' \
+            --data '{}' \
+            --write-out '\n%{http_code}')"
+          curl_status=$?
+
+          codigo="$(printf '%s' "${resposta}" | tail -n 1)"
+          corpo="$(printf '%s' "${resposta}" | sed '$d')"
+
+          echo "HTTP ${codigo}"
+          echo "${corpo}"
+
+          # --- O curl nem completou (rede, DNS, ou o proxy cortou) ------------
+          # NÃO é falha do ciclo: o servidor pode ter terminado o trabalho e
+          # perdido só a resposta (ver a nota sobre o tempo limite do LiteSpeed
+          # em `server/curator-runner.ts`). Avisa sem pintar o workflow de
+          # vermelho — um alarme que toca sozinho é um alarme que se ignora.
+          if [ "${curl_status}" -ne 0 ]; then
+            echo "::warning::A chamada não completou (curl ${curl_status}). O ciclo pode ter rodado assim mesmo — confira o KPI 'Último ciclo' no painel."
+            exit 0
+          fi
+
+          case "${codigo}" in
+            200)
+              echo "Ciclo concluído."
+              ;;
+            409)
+              # Já havia um ciclo em andamento (o botão do painel, ou uma
+              # execução anterior que se atrasou). É o comportamento correto da
+              # trava de concorrência, não um erro.
+              echo "::notice::Já havia um ciclo em andamento. Nada a fazer."
+              ;;
+            429)
+              echo "::warning::Limite de disparos atingido. Reduza a cadência do agendamento."
+              ;;
+            401|403)
+              # Este SIM precisa acordar alguém: o agendamento está morto até
+              # ser consertado, e o pipeline inteiro depende dele.
+              echo "::error::Segredo recusado pelo servidor. Confira se CURATOR_RUN_SECRET é o MESMO nos dois lados e se a aplicação foi reiniciada após a mudança."
+              exit 1
+              ;;
+            504)
+              echo "::warning::O ciclo passou do tempo limite do servidor. Confira o KPI 'Último ciclo' no painel."
+              ;;
+            *)
+              echo "::error::Resposta inesperada (HTTP ${codigo})."
+              exit 1
+              ;;
+          esac

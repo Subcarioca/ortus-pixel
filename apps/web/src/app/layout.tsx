@@ -171,9 +171,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         {/*
           Script do AdSense — por último no <body> e com estratégia preguiçosa.
-          Não renderiza nada quando não há Publisher ID configurado, então em
-          desenvolvimento nenhuma requisição sai para o Google (o que também
-          evita impressão inválida com o próprio time navegando).
+
+          Não renderiza nada em três situações, e as três são proteção contra
+          impressão inválida (a infração que suspende a CONTA, não a página):
+            1. sem Publisher ID configurado (desenvolvimento e pré-produção);
+            2. em qualquer rota do painel editorial (`/admin/*`);
+            3. quando o roteador não sabe informar a rota atual (falha fechada).
+          O racional completo está no cabeçalho do componente.
         */}
         <AdSenseLoader />
       </body>

@@ -43,6 +43,40 @@
  * feita em um arquivo só, é a evidência de que a camada não faz falta.
  *
  * -----------------------------------------------------------------------------
+ * DIREITO AUTORAL: POR QUE "TRADUZIR BEM" NÃO É SUFICIENTE
+ * -----------------------------------------------------------------------------
+ * ⚠ TRADUÇÃO NÃO LIBERA NADA. Uma tradução é OBRA DERIVADA: continua submetida
+ * ao direito autoral do texto original (Lei 9.610/98, art. 5º VIII "g" e art.
+ * 29 IV — traduzir depende de autorização prévia do autor). Ou seja, um resumo
+ * que só troca o idioma mantendo a mesma sequência de frases da fonte é
+ * exatamente o que NÃO pode sair daqui, por mais correto que esteja o
+ * português.
+ *
+ * O que a lei não protege é o FATO — "a Rockstar adiou GTA VI para novembro"
+ * não pertence a ninguém. O que pertence ao veículo estrangeiro é a FORMA com
+ * que ele contou esse fato: a escolha das palavras, o recorte, a ordem em que
+ * a informação aparece. É por isso que o prompt abaixo pede uma PARÁFRASE
+ * GENUÍNA (frase reestruturada, vocabulário próprio, ordem da informação
+ * possivelmente diferente) e não uma versão em português da frase deles.
+ *
+ * POR QUE A MITIGAÇÃO É DE PROMPT, E NÃO DE CÓDIGO: uma checagem automática de
+ * similaridade textual entre a saída em português e a entrada em inglês não
+ * mede o que precisa ser medido — textos em idiomas diferentes têm sobreposição
+ * léxica quase nula mesmo quando a estrutura foi copiada frase a frase, e teria
+ * que ser calibrada contra os nomes próprios (que a regra 2 manda PRESERVAR
+ * idênticos). O número resultante seria uma falsa garantia, que é pior que
+ * garantia nenhuma — daria a quem lê a fila a sensação de que alguém já
+ * conferiu.
+ *
+ * A SEGUNDA CAMADA, ESSA SIM REAL, JÁ EXISTE E É HUMANA: nada do que sai daqui
+ * é publicado. O texto vira `Topic` — uma PAUTA na fila do painel, que ainda
+ * precisa de aprovação editorial e de alguém escrever a matéria (ver
+ * `apps/web/src/app/admin/page.tsx` e a rota de criação de matéria). O produto
+ * final que o leitor vê nunca é esta saída; é um texto que passou por uma
+ * pessoa. Ver a decisão equivalente no cabeçalho de
+ * `apps/web/src/server/ai-draft.ts`.
+ *
+ * -----------------------------------------------------------------------------
  * DUAS DECISÕES QUE VALEM MAIS QUE O CÓDIGO
  * -----------------------------------------------------------------------------
  *
@@ -240,6 +274,14 @@ export function needsRewrite(item: DiscoveredItem): boolean {
  * Cada regra existe por um erro concreto e conhecido de tradução automática no
  * nosso nicho — não por preferência de estilo:
  *
+ *   PARÁFRASE GENUÍNA, NÃO TRADUÇÃO — a regra 1, e a única com risco JURÍDICO.
+ *   É a materialização, em instrução, da seção "direito autoral" do cabeçalho
+ *   deste arquivo: o modelo precisa reconstruir o FATO com frase própria, não
+ *   verter a frase alheia para o português. Ela vem antes de todas as outras de
+ *   propósito — modelo de linguagem ancora no que lê primeiro, e o pedido
+ *   implícito de "traduza" é o comportamento padrão dele quando recebe texto em
+ *   outra língua.
+ *
  *   NOME PRÓPRIO NÃO SE TRADUZ — o erro mais caro e o mais fácil de cometer.
  *   "Dead Space" virando "Espaço Morto" destrói a busca (ninguém procura por
  *   isso), destrói o casamento de franquia do pipeline (`matchFranchises` casa
@@ -264,37 +306,61 @@ export function buildRewriteSystemPrompt(): string {
     'Você é editor de texto da Ortus Pixel, um portal brasileiro de notícias de cultura pop',
     '(games, cinema, séries, anime, quadrinhos e tecnologia).',
     '',
-    'Sua tarefa: reescrever o título e o resumo de uma notícia estrangeira em PORTUGUÊS DO BRASIL,',
-    'do jeito que um jornalista brasileiro escreveria. Não é tradução literal: é reescrita natural,',
-    'com a ordem das palavras e as expressões que se usam aqui.',
+    'Sua tarefa: a partir do material recebido, ESCREVER COM SUAS PRÓPRIAS PALAVRAS, em PORTUGUÊS',
+    'DO BRASIL, um título e um resumo que informem o MESMO FATO. Isto NÃO é uma tradução: é uma',
+    'notícia curta nova, escrita do zero por um jornalista brasileiro que acabou de saber do fato.',
     '',
     'REGRAS INEGOCIÁVEIS:',
     '',
-    '1. NÃO TRADUZA NOMES PRÓPRIOS. Nomes de jogos, filmes, séries, personagens, estúdios, empresas,',
-    '   consoles e pessoas ficam como estão ("Dead Space", "Silksong", "Rockstar", "Xbox Game Pass").',
+    '1. PARÁFRASE GENUÍNA — ESTA É A REGRA MAIS IMPORTANTE. O texto de origem é protegido por',
+    '   direito autoral, e traduzi-lo não muda isso: tradução é obra derivada e continua sendo',
+    '   cópia. O fato é livre; a forma de contá-lo, não. Então:',
+    '     - REESTRUTURE as frases. Não mantenha a mesma sequência sujeito-verbo-complemento do',
+    '       original só trocando cada palavra pela equivalente em português.',
+    '     - USE OUTRO VOCABULÁRIO. Escolha verbos e substantivos diferentes dos que a fonte usou',
+    '       (exceto o que as regras 2 e 9 mandam preservar: nomes próprios e jargão do nicho).',
+    '     - PODE MUDAR A ORDEM DA INFORMAÇÃO. Se a fonte abre pela empresa, você pode abrir pelo',
+    '       fato, e vice-versa — o que importa é que a informação essencial esteja lá.',
+    '     - VALE PARA O TÍTULO E PARA O RESUMO, sem exceção. Manchete curta é onde mais se',
+    '       escorrega para a tradução palavra a palavra, e é justamente onde ela é mais visível.',
+    '   Teste mental antes de responder: se alguém puser o seu texto ao lado do original, as duas',
+    '   frases precisam ser reconhecíveis como a MESMA NOTÍCIA e não como o MESMO TEXTO.',
+    '   Exemplo do que NÃO fazer:',
+    '     original: "Nintendo Direct drops surprise Metroid reveal"',
+    '     errado:   "Nintendo Direct derruba revelação surpresa de Metroid"  (é a frase deles)',
+    '     certo:    "Nintendo revela novo Metroid sem aviso durante o Direct"',
     '',
-    '2. USE O TÍTULO OFICIAL BRASILEIRO QUANDO ELE EXISTE E VOCÊ TIVER CERTEZA. Exemplos:',
+    '2. NÃO TRADUZA NOMES PRÓPRIOS. Nomes de jogos, filmes, séries, personagens, estúdios, empresas,',
+    '   consoles e pessoas ficam como estão ("Dead Space", "Silksong", "Rockstar", "Xbox Game Pass").',
+    '   Preservar o nome não conflita com a regra 1: nome próprio é identificação do fato, não',
+    '   escolha de escrita da fonte.',
+    '',
+    '3. USE O TÍTULO OFICIAL BRASILEIRO QUANDO ELE EXISTE E VOCÊ TIVER CERTEZA. Exemplos:',
     '   "Avengers: Endgame" -> "Vingadores: Ultimato"; "Spider-Man" (filme) -> "Homem-Aranha".',
     '   Na dúvida, mantenha o nome original. Errar o nome é pior que deixar em inglês.',
     '',
-    '3. NÃO ACRESCENTE NENHUMA INFORMAÇÃO. Nada de data, preço, plataforma, número ou detalhe que',
+    '4. NÃO ACRESCENTE NENHUMA INFORMAÇÃO. Nada de data, preço, plataforma, número ou detalhe que',
     '   não esteja no material. Se o material é vago, o texto em português também será vago.',
+    '   Reescrever com liberdade é liberdade de FORMA, nunca de conteúdo.',
     '',
-    '4. NÃO REMOVA INFORMAÇÃO ESSENCIAL. Quem fez o quê, e sobre qual obra, precisa continuar ali.',
+    '5. NÃO REMOVA INFORMAÇÃO ESSENCIAL. Quem fez o quê, e sobre qual obra, precisa continuar ali.',
     '',
-    '5. TOM DE NOTÍCIA, NÃO DE ANÚNCIO. Sem caixa alta, sem emoji, sem exclamação, sem "confira",',
+    '6. NUNCA COPIE UM TRECHO LITERAL DA FONTE, nem entre aspas. Não reproduza declarações palavra',
+    '   por palavra: se o material menciona uma fala, descreva o teor dela em discurso indireto.',
+    '',
+    '7. TOM DE NOTÍCIA, NÃO DE ANÚNCIO. Sem caixa alta, sem emoji, sem exclamação, sem "confira",',
     '   sem "você não vai acreditar". Terceira pessoa, direto.',
     '',
-    '6. LIMITES DE TAMANHO: título com no máximo 120 caracteres; resumo com no máximo 300.',
+    '8. LIMITES DE TAMANHO: título com no máximo 120 caracteres; resumo com no máximo 300.',
     '   Se o resumo original estiver vazio, devolva o resumo vazio ("").',
     '',
-    '7. JARGÃO DO NICHO FICA EM INGLÊS quando é assim que se fala aqui: "gameplay", "trailer",',
+    '9. JARGÃO DO NICHO FICA EM INGLÊS quando é assim que se fala aqui: "gameplay", "trailer",',
     '   "spin-off", "reboot", "DLC", "review". Traduzir isso soa amador.',
     '',
-    '8. ORTOGRAFIA COMPLETA DO PORTUGUÊS, COM TODOS OS ACENTOS. Escreva "série", "é", "história",',
-    '   "sequência", "lançamento", "única" — nunca "serie", "e", "historia", "sequencia".',
-    '   Comece o título com letra maiúscula. Texto sem acento parece erro de sistema e vai',
-    '   publicado do jeito que sair daqui.',
+    '10. ORTOGRAFIA COMPLETA DO PORTUGUÊS, COM TODOS OS ACENTOS. Escreva "série", "é", "história",',
+    '    "sequência", "lançamento", "única" — nunca "serie", "e", "historia", "sequencia".',
+    '    Comece o título com letra maiúscula. Texto sem acento parece erro de sistema e vai',
+    '    publicado do jeito que sair daqui.',
     '',
     'FORMATO DA RESPOSTA: responda APENAS com um objeto json, sem nenhum texto antes ou depois,',
     'exatamente neste formato:',
@@ -315,7 +381,9 @@ export function buildRewriteUserPrompt(item: DiscoveredItem): string {
     `Resumo: ${item.summary}`,
     '</material>',
     '',
-    'Reescreva os dois campos em português do Brasil e responda no formato json combinado.',
+    'Escreva com suas próprias palavras, em português do Brasil, um título e um resumo que contem',
+    'o MESMO FATO — sem reproduzir a estrutura de frase nem as escolhas de palavra do material.',
+    'Responda no formato json combinado.',
   ].join('\n');
 }
 

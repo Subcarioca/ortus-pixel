@@ -71,6 +71,41 @@ describe('prompt', () => {
     assert.ok(prompt.includes('"resumo"'));
   });
 
+  /**
+   * A REGRA DE PARÁFRASE — travada por teste porque ela é a mitigação INTEIRA
+   * de um risco jurídico (o texto da fonte é protegido; a tradução dele é obra
+   * derivada e continua protegida) e some sem deixar rastro. Apagada numa
+   * refatoração, a etapa continua funcionando, a pauta continua chegando em
+   * português, e o único sintoma é uma manchete decalcada da estrangeira — que
+   * ninguém liga a esta linha. Ver a seção "direito autoral" no cabeçalho de
+   * `rewrite-ptbr.ts`.
+   */
+  it('exige paráfrase genuína, e não tradução do título alheio', () => {
+    const prompt = buildRewriteSystemPrompt();
+
+    assert.ok(prompt.includes('PARÁFRASE GENUÍNA'));
+    // As três instruções OPERACIONAIS. "Não traduza literalmente" sozinho já
+    // existia no prompt antigo e não bastava: o modelo cumpre isso trocando a
+    // ordem de dois adjetivos e devolvendo a mesma frase.
+    assert.ok(/REESTRUTURE as frases/.test(prompt));
+    assert.ok(/USE OUTRO VOCABULÁRIO/.test(prompt));
+    assert.ok(/PODE MUDAR A ORDEM DA INFORMAÇÃO/.test(prompt));
+    // A regra tem de alcançar o TÍTULO: manchete curta é onde a tradução palavra
+    // a palavra é mais provável e mais visível.
+    assert.ok(/VALE PARA O TÍTULO E PARA O RESUMO/.test(prompt));
+    // Trecho literal (inclusive citação entre aspas) é o caso mais indefensável.
+    assert.ok(/NUNCA COPIE UM TRECHO LITERAL/.test(prompt));
+  });
+
+  it('o pedido final também fala em fato, não em tradução', () => {
+    // O prompt de sistema pode ser lido "de longe" pelo modelo; a última linha
+    // do turno do usuário é a que ele lê por último e pesa mais. As duas
+    // precisam dizer a mesma coisa.
+    const prompt = buildRewriteUserPrompt(makeItem('en'));
+    assert.ok(prompt.includes('suas próprias palavras'));
+    assert.ok(prompt.includes('MESMO FATO'));
+  });
+
   it('delimita o material do feed, para separar dado de instrução', () => {
     const prompt = buildRewriteUserPrompt(makeItem('en'));
     assert.ok(prompt.includes('<material>'));

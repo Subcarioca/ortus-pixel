@@ -57,6 +57,44 @@ export async function logPipelineEvent(input: PipelineEventInput): Promise<void>
 }
 
 /**
+ * Registra VÁRIOS eventos de uma vez. Falha silenciosa, como a versão singular.
+ *
+ * POR QUE EXISTE, sendo que `logPipelineEvent` já resolve: há um caso — a
+ * expiração de pautas (`pipeline/expire-topics.ts`) — em que a quantidade é
+ * conhecidamente grande na PRIMEIRA execução (o passivo acumulado, centenas de
+ * linhas). Chamar a versão singular num laço seria uma ida ao banco por evento,
+ * ou seja, o N+1 clássico, dentro de um ciclo que já tem trabalho de verdade
+ * para fazer. `createMany` é um `INSERT` só.
+ *
+ * NÃO é a versão "preferida": para 1 evento, use `logPipelineEvent` — a
+ * assinatura é mais simples e a intenção fica mais legível na chamada.
+ *
+ * Lista vazia não vai ao banco: um `createMany` com zero linhas é uma viagem de
+ * ida e volta para não fazer nada, e o caso é comum aqui (ciclo sem nenhuma
+ * pauta vencida é o normal depois da primeira semana).
+ */
+export async function logPipelineEvents(inputs: PipelineEventInput[]): Promise<void> {
+  if (inputs.length === 0) return;
+
+  try {
+    await prisma.pipelineEvent.createMany({
+      data: inputs.map((input) => ({
+        eventType: input.eventType,
+        topicId: input.topicId ?? null,
+        articleId: input.articleId ?? null,
+        connectorId: input.connectorId ?? null,
+        actorId: input.actorId ?? null,
+        payload: (input.payload ?? {}) as object,
+        durationMs: input.durationMs ?? null,
+      })),
+    });
+  } catch (error) {
+    // Só loga. Ver princípio de projeto no topo do arquivo.
+    console.error('[instrumentation] falha ao registrar lote de eventos:', error);
+  }
+}
+
+/**
  * KPI: TIME-TO-PUBLISH.
  *
  * Mede o intervalo entre "o score cruzou 80" (`becameHotAt`) e "a matéria foi

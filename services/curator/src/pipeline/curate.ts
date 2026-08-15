@@ -5,6 +5,7 @@
  *
  * Fluxo completo:
  *
+ *   [0] EXPIRAÇÃO         pauta parada há mais de 7 dias sai da fila
  *   [1] DESCOBERTA        feeds RSS -> itens candidatos
  *   [1.5] REESCRITA pt-BR itens de fonte estrangeira -> português do Brasil
  *   [2] DEDUPLICAÇÃO      5 veículos noticiando o mesmo fato -> 1 tópico
@@ -41,6 +42,7 @@ import { detectTriggers } from '../connectors/emotional-triggers';
 import { classifyDomain } from '../connectors/source-authority';
 import { discoverFromFeeds, type DiscoveredItem } from '../discovery/rss-sources';
 import { canonicalHash, findDuplicate } from './dedupe';
+import { expireStaleTopics, TOPIC_EXPIRY_DAYS } from './expire-topics';
 import { isRewriteConfigured, rewriteItemsToPtBr } from './rewrite-ptbr';
 import { collectSignals } from './orchestrator';
 import { onScoreCalculated } from '../actions/dispatcher';
@@ -69,6 +71,8 @@ export interface CurationCycleOptions {
 export interface CurationCycleResult {
   runId: string;
   discovered: number;
+  /** Pautas retiradas da fila por idade na etapa [0]. Ver `expire-topics.ts`. */
+  expiredTopics: number;
   /** Itens de fonte estrangeira efetivamente reescritos para pt-BR na etapa [1.5]. */
   rewrittenToPtBr: number;
   deduplicated: number;
@@ -97,6 +101,7 @@ export async function runCurationCycle(
   const result: CurationCycleResult = {
     runId: run.id,
     discovered: 0,
+    expiredTopics: 0,
     rewrittenToPtBr: 0,
     deduplicated: 0,
     screened: 0,
@@ -107,6 +112,36 @@ export async function runCurationCycle(
   };
 
   try {
+    // -------------------------------------------------------------------------
+    // [0] EXPIRAÇÃO DAS PAUTAS ANTIGAS
+    // -------------------------------------------------------------------------
+    // POR QUE ANTES DA DESCOBERTA, e não depois de tudo:
+    //
+    //   1. A FAXINA NÃO PODE DEPENDER DO SUCESSO DO RESTO. Se um feed pendurar
+    //      a descoberta ou uma API paga derrubar o ciclo com exceção, uma etapa
+    //      no fim da função simplesmente não roda — e a fila acumularia
+    //      justamente nos dias em que o pipeline está com problema, que é quando
+    //      a redação mais precisa que ela esteja legível.
+    //   2. A FILA FICA CERTA ANTES DE CRESCER. As pautas novas deste ciclo já
+    //      chegam a uma fila sem as vencidas, e a disputa pelas 50 vagas do
+    //      painel (ordenadas por score) acontece só entre o que ainda é notícia.
+    //
+    // O custo é uma consulta indexada por ciclo — desprezível perto do resto.
+    // A rotina não lança em nenhuma hipótese; ver o cabeçalho de expire-topics.
+    const expiry = await expireStaleTopics({ dryRun });
+    result.expiredTopics = expiry.expired;
+
+    if (expiry.expired > 0) {
+      console.log(
+        `[curate] ${expiry.expired} pauta(s) descartada(s) por passarem de ${TOPIC_EXPIRY_DAYS} dias na fila` +
+          // O aviso de "sobrou" é o que explica um número redondo repetido
+          // ciclo após ciclo (o teto de lote) sem parecer um bug.
+          (expiry.hasMore ? ' — ainda há mais vencidas, o próximo ciclo continua' : '') +
+          (dryRun ? ' [dryRun: nada foi gravado]' : '') +
+          '.',
+      );
+    }
+
     // -------------------------------------------------------------------------
     // [1] DESCOBERTA
     // -------------------------------------------------------------------------

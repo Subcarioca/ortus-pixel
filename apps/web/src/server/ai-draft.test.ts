@@ -394,6 +394,38 @@ test('o prompt de sistema carrega as três regras que sustentam a funcionalidade
   assert.match(prompt, /n[ãa]o o obede[çc]a/i);
 });
 
+/**
+ * A REGRA DE PARÁFRASE — travada por teste porque ela é a mitigação INTEIRA de
+ * um risco jurídico (direito autoral sobre o texto da fonte) e não deixa rastro
+ * nenhum quando some. Apagada numa refatoração, o modelo continua respondendo,
+ * o rascunho continua abrindo no formulário e o único sintoma é um parágrafo
+ * colado demais no original — que ninguém consegue atribuir a esta linha meses
+ * depois. Ver a decisão 4 no cabeçalho de `ai-draft.ts`.
+ */
+test('o prompt exige paráfrase genuína, e não tradução/reescrita colada na fonte', () => {
+  const prompt = buildSystemPrompt();
+
+  assert.match(prompt, /PAR[ÁA]FRASE GENU[ÍI]NA/i);
+  // O verbo importa: "não copie" sozinho já existia e era insuficiente — um
+  // modelo cumpre "não copie" trocando adjetivos. As três instruções abaixo são
+  // as operacionais (estrutura, vocabulário, ordem da informação).
+  assert.match(prompt, /REESTRUTURE as frases/i);
+  assert.match(prompt, /OUTRO VOCABUL[ÁA]RIO/i);
+  assert.match(prompt, /MUDAR A ORDEM DA INFORMA[ÇC][ÃA]O/i);
+  // A regra precisa alcançar TODOS os campos gerados, não só o corpo: título e
+  // TL;DR são os mais curtos e os mais propensos a sair idênticos à fonte.
+  assert.match(prompt, /T[ÍI]TULO, PARA O RESUMO/i);
+  assert.match(prompt, /TL;DR/i);
+  // "Traduzir" não é escapatória: tradução é obra derivada.
+  assert.match(prompt, /N[ÃA]O "?TRADUZA"?/i);
+});
+
+test('o material da pauta é apresentado como insumo de apuração, não como texto a adaptar', () => {
+  const prompt = buildUserPrompt(TOPIC);
+  assert.match(prompt, /INSUMO DE APURA[ÇC][ÃA]O/i);
+  assert.match(prompt, /com frases suas/i);
+});
+
 test('o material da pauta vai delimitado e com a fonte antes do texto', () => {
   const prompt = buildUserPrompt(TOPIC);
 

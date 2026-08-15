@@ -45,6 +45,18 @@ export const ROUTE_PREFIXES = {
   trending: '/em-alta',
   event: '/evento',
   author: '/autor',
+  /**
+   * PAINEL EDITORIAL. Este prefixo não é só o começo de uma URL — é uma
+   * FRONTEIRA, e três coisas dependem dela:
+   *
+   *   1. `robots.txt` bloqueia o prefixo inteiro (nada do painel é indexado);
+   *   2. `staff-auth` exige conta da redação em toda página sob ele;
+   *   3. o script do AdSense NÃO é carregado abaixo dele (ver `isAdminPath`).
+   *
+   * Por isso ele vive aqui, com nome, em vez de aparecer como o literal
+   * `'/admin'` espalhado por três arquivos que precisam concordar entre si.
+   */
+  admin: '/admin',
 } as const;
 
 /** Prefixos alternativos, mantidos vivos via redirecionamento 301. */
@@ -113,16 +125,35 @@ export const routes = {
   event: (slug: string) => `${ROUTE_PREFIXES.event}/${slug}`,
 
   // --- Painel editorial ---
-  admin: () => '/admin',
-  adminTopic: (id: string) => `/admin/topicos/${id}`,
-  adminArticles: () => '/admin/materias',
+  // Todas derivadas de `ROUTE_PREFIXES.admin`: é o que garante que `isAdminPath`
+  // reconheça TODA rota do painel, inclusive as que forem criadas depois desta
+  // linha. Um literal `'/admin/...'` escrito à mão seria uma rota que continua
+  // funcionando, continua protegida por `staff-auth`... e passa a carregar o
+  // script do AdSense sem ninguém perceber.
+  admin: () => ROUTE_PREFIXES.admin,
+  adminTopic: (id: string) => `${ROUTE_PREFIXES.admin}/topicos/${id}`,
+  adminArticles: () => `${ROUTE_PREFIXES.admin}/materias`,
+
+  /**
+   * PREVIEW DA MATÉRIA — como o leitor a veria, antes de publicar.
+   *
+   * POR ID, e não pelo par categoria/slug da rota pública. Um rascunho pode ter
+   * o slug ainda em branco, repetido ou prestes a mudar; o id é a única chave
+   * que já existe no momento em que o preview é útil.
+   *
+   * Fica sob `/admin` de propósito: é o prefixo que o `robots.txt` já bloqueia e
+   * que `staff-auth` já protege página a página. Uma rota de preview fora dele
+   * (`/preview/...`) exigiria lembrar das duas coisas de novo — e a primeira
+   * esquecida seria um rascunho indexado pelo Google.
+   */
+  adminPreview: (id: string) => `${ROUTE_PREFIXES.admin}/preview/${id}`,
   /** Audiência: visualizações e cliques. O RECORTE por autoria é da tela. */
-  adminAnalytics: () => '/admin/analytics',
-  adminAccuracy: () => '/admin/precisao',
-  adminAffiliates: () => '/admin/afiliados',
-  adminComments: () => '/admin/comentarios',
+  adminAnalytics: () => `${ROUTE_PREFIXES.admin}/analytics`,
+  adminAccuracy: () => `${ROUTE_PREFIXES.admin}/precisao`,
+  adminAffiliates: () => `${ROUTE_PREFIXES.admin}/afiliados`,
+  adminComments: () => `${ROUTE_PREFIXES.admin}/comentarios`,
   /** Gestão de contas da redação. Só administrador. */
-  adminAccounts: () => '/admin/contas',
+  adminAccounts: () => `${ROUTE_PREFIXES.admin}/contas`,
 
   // --- APIs públicas ---
   apiTrending: () => '/api/trending',
@@ -180,6 +211,49 @@ export const RESERVED_SLUGS = new Set([
 
 export function isReservedSlug(slug: string): boolean {
   return RESERVED_SLUGS.has(slug.toLowerCase());
+}
+
+/**
+ * Este caminho pertence ao PAINEL EDITORIAL?
+ *
+ * POR QUE ESTA FUNÇÃO EXISTE, e a consequência de errá-la não é cosmética:
+ *
+ * O script do AdSense era carregado no layout raiz, ou seja, no site INTEIRO —
+ * painel incluído. Com "Auto ads" ligado (um interruptor da CONTA do Google, não
+ * do nosso código), o Google injeta unidades sozinho em qualquer página onde o
+ * script esteja presente. Na prática: anúncios dentro da fila de pautas, da
+ * lista de matérias, da tela de contas — vistos e eventualmente clicados pela
+ * PRÓPRIA REDAÇÃO. Isso é a definição de impressão inválida, e a punição do
+ * AdSense para tráfego inválido recai sobre a CONTA inteira, com todo o
+ * histórico de receita junto. Não é risco hipotético: é o motivo mais comum de
+ * suspensão de publisher pequeno.
+ *
+ * MORA EM `core`, e não em `apps/web`, por duas razões:
+ *   1. a definição de "rota de painel" fica colada à definição das rotas de
+ *      painel (o objeto `routes` acima) — quem criar `/admin/algo-novo` amanhã
+ *      não precisa lembrar de atualizar uma segunda lista em outro pacote;
+ *   2. `core` tem suíte de testes que roda no CI, e esta regra PRECISA de teste:
+ *      o efeito de quebrá-la é silencioso (nenhum erro, nenhuma tela diferente,
+ *      só um e-mail do Google semanas depois).
+ *
+ * DETALHES DE IMPLEMENTAÇÃO QUE PARECEM PARANOIA E NÃO SÃO:
+ *
+ * - A comparação é por SEGMENTO, não por `startsWith('/admin')` cru. Sem isso,
+ *   uma futura rota pública `/administrativo` ou `/admin-de-si-mesmo` seria
+ *   tratada como painel e ficaria sem monetização — o erro contrário, mas
+ *   igualmente invisível.
+ * - `toLowerCase()`: o roteador do Next diferencia maiúsculas, então `/ADMIN`
+ *   nem existe como página. Normalizar mesmo assim custa nada e fecha a única
+ *   porta que sobraria (um proxy ou redirect que preserve o caminho original).
+ * - Aceita string vazia e caminhos sem barra inicial sem estourar: a entrada
+ *   típica é `usePathname()`, e uma função de segurança que lança exceção em
+ *   entrada estranha derruba a página em vez de proteger a conta.
+ */
+export function isAdminPath(pathname: string): boolean {
+  const path = pathname.trim().toLowerCase();
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+
+  return normalized === ROUTE_PREFIXES.admin || normalized.startsWith(`${ROUTE_PREFIXES.admin}/`);
 }
 
 /**

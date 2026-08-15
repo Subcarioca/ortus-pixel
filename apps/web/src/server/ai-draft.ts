@@ -24,7 +24,7 @@
  * em prop de componente, em resposta HTTP ou em log — ver `logSafeError`.
  *
  * -----------------------------------------------------------------------------
- * TRÊS DECISÕES DE PROJETO QUE VALEM MAIS QUE O CÓDIGO
+ * QUATRO DECISÕES DE PROJETO QUE VALEM MAIS QUE O CÓDIGO
  * -----------------------------------------------------------------------------
  *
  * 1. NÃO BUSCAMOS A PÁGINA DA FONTE. O `sourceUrl` do tópico entra no prompt
@@ -57,6 +57,35 @@
  *    Um rascunho que nasce reprovado pela validação da rota seria pior que
  *    nenhum — o redator veria um erro sem entender o que ele mesmo digitou de
  *    errado.
+ *
+ * 4. O TEXTO GERADO É PARÁFRASE, NUNCA REESCRITA COLADA NA FONTE — e isto é
+ *    risco JURÍDICO, não preferência editorial.
+ *
+ *    O material de pauta que chega aqui (título e resumo) nasceu do texto de um
+ *    veículo de terceiro, e às vezes já passou pela reescrita para pt-BR do
+ *    curator. O direito autoral protege a FORMA de contar o fato — a escolha das
+ *    palavras, o recorte, a ordem da informação —, não o fato em si. Traduzir ou
+ *    "reescrever mantendo o sentido" NÃO resolve: tradução é obra derivada (Lei
+ *    9.610/98, art. 5º VIII "g"), e um parágrafo que só troca sinônimos continua
+ *    sendo o parágrafo do outro. Por isso a regra 6 do prompt de sistema é
+ *    específica e operacional (reestruture a frase, mude o vocabulário, pode
+ *    mudar a ordem) em vez do genérico "escreva com suas palavras", que um
+ *    modelo cumpre trocando três adjetivos.
+ *
+ *    ⚠ NÃO EXISTE — nem se pretende implementar — CHECAGEM AUTOMÁTICA DE
+ *    SIMILARIDADE aqui. Não haveria com o que comparar: a página da fonte não é
+ *    baixada (decisão 1), então o único texto disponível para confronto é o
+ *    resumo de duas linhas do feed. Uma métrica calculada contra ele mediria a
+ *    aderência ao resumo, não à matéria original, e devolveria um número
+ *    tranquilizador e sem lastro — pior que nenhum, porque quem revisa passaria
+ *    a confiar nele.
+ *
+ *    A MITIGAÇÃO REAL É A MESMA DA DECISÃO 2: nada aqui publica. O resultado
+ *    nasce `status: 'draft'` com `contentOrigin: 'ai-assisted'` (a etiqueta
+ *    "rascunho de IA" que a lista de matérias exibe justamente para quem revisa
+ *    ler com mais desconfiança) e só vai ao ar quando uma pessoa clicar em
+ *    publicar. Prompt + revisão humana obrigatória: é assim que esta
+ *    funcionalidade é aceitável, e é assim que ela precisa continuar.
  */
 
 import type { ArticleBlock } from '@subcarioca/core';
@@ -271,7 +300,18 @@ export function buildSystemPrompt(): string {
     '5. RUMOR É RUMOR. Se o material vier de fonte não oficial, não confirmada ou de vazamento, o',
     '   texto precisa dizer isso explicitamente e evitar o tom de fato consumado.',
     '',
-    '6. NÃO COPIE O TEXTO DA FONTE. Escreva com as suas palavras, na estrutura de uma notícia nossa.',
+    '6. PARÁFRASE GENUÍNA — NÃO COPIE E NÃO "TRADUZA" O TEXTO DA FONTE. O material de pauta veio de',
+    '   um veículo de terceiro e é protegido por direito autoral. O FATO é livre; a FORMA de contá-lo',
+    '   não é. Reescrever mantendo a mesma frase com outras palavras continua sendo cópia. Então:',
+    '   - REESTRUTURE as frases: não reaproveite a ordem sujeito-verbo-complemento do material.',
+    '   - USE OUTRO VOCABULÁRIO: verbos e substantivos diferentes dos que aparecem no material',
+    '     (exceto nomes próprios e jargão técnico, que não se trocam).',
+    '   - PODE MUDAR A ORDEM DA INFORMAÇÃO em relação ao material, desde que o primeiro parágrafo',
+    '     continue respondendo o essencial.',
+    '   - VALE PARA O TÍTULO, PARA O RESUMO, PARA CADA PARÁGRAFO E PARA CADA PONTO DO TL;DR.',
+    '   Nunca reproduza uma sequência de mais de seis palavras exatamente como está no material.',
+    '   Teste mental: colocado lado a lado com o material, o seu texto tem de ser reconhecível como',
+    '   a MESMA NOTÍCIA, jamais como o MESMO TEXTO.',
     '',
     'TOM E FORMA:',
     '- Jornalístico, direto, terceira pessoa. Nada de "neste artigo", "vamos descobrir", "prepare-se".',
@@ -336,8 +376,10 @@ export function buildUserPrompt(topic: AiDraftTopicContext): string {
   linhas.push('</material-de-pauta>');
   linhas.push('');
   linhas.push(
-    'Escreva o rascunho seguindo as regras. Se o material não sustentar um texto completo, ' +
-      'escreva o que ele sustenta e liste o resto em "pendencias".',
+    'Escreva o rascunho seguindo as regras. O material acima é INSUMO DE APURAÇÃO, não um texto a ' +
+      'ser adaptado: conte o mesmo fato com frases suas, sem reaproveitar a estrutura nem as ' +
+      'escolhas de palavra dele. Se o material não sustentar um texto completo, escreva o que ele ' +
+      'sustenta e liste o resto em "pendencias".',
   );
 
   return linhas.join('\n');

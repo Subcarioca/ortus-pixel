@@ -21,7 +21,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-import type { ContentOrigin } from '@subcarioca/core';
+import { routes, type ContentOrigin } from '@subcarioca/core';
 
 import { readAdminResponse } from './admin-response';
 import type { FranchiseOption } from './article-classification-fields';
@@ -164,6 +164,37 @@ export function ArticleRow({
         >
           {editing ? 'Fechar edição' : 'Editar'}
         </button>
+
+        {/*
+          PRÉ-VISUALIZAR — em TODA linha, publicada ou não.
+
+          É o botão que fechou o buraco do fluxo editorial: até aqui, a primeira
+          vez que alguém via a própria matéria renderizada era depois de publicar.
+          Ele vem ANTES de "Ver no site" na ordem de leitura porque é o que se usa
+          antes de publicar; "Ver no site" só existe depois.
+
+          Em matéria publicada ele continua útil e não é redundante com "Ver no
+          site": a página pública é servida de um cache de 1 hora, enquanto o
+          preview lê o banco na hora — é onde se confere uma correção que acabou
+          de ser salva e ainda não apareceu para o leitor.
+
+          `target="_blank"`: o redator perderia o formulário aberto (e o que
+          digitou nele) se a pré-visualização substituísse esta aba. O
+          `rel="noopener"` é obrigatório com `_blank` — sem ele, a página aberta
+          recebe acesso a `window.opener`.
+
+          A URL é montada aqui, e não recebida por prop como `article.url`,
+          porque ela precisa só do `id`, que já está nesta linha. `article.url`
+          vem do servidor porque depende do slug da CATEGORIA, que não vem.
+        */}
+        <a
+          className="btn btn--ghost btn--sm"
+          href={routes.adminPreview(article.id)}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Pré-visualizar
+        </a>
 
         {isPublished && (
           <a

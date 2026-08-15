@@ -940,45 +940,114 @@ function articleQuery(slug: string) {
   )(slug);
 }
 
-const articleLoader = async (slug: string) => {
-  {
-    const article = await requiredQuery('article:by-slug', () =>
-      prisma.article.findFirst({
-        where: { slug, status: 'published' },
-        include: {
-          ...ARTICLE_INCLUDE,
-          liveUpdates: { orderBy: { createdAt: 'desc' }, take: 50 },
-        },
-      }),
-    );
-    if (!article) return null;
+const articleLoader = async (slug: string) =>
+  loadArticleBundle('article:by-slug', { slug, status: 'published' });
 
-    return {
-      article: mapArticle(article),
-      liveUpdates: article.liveUpdates,
-      format: article.format as ContentFormat,
-      isLive: article.isLive,
-      hasSpoiler: article.hasSpoiler,
-      /**
-       * Classificação de sensibilidade, normalizada AQUI.
-       *
-       * Viaja fora de `mapArticle` de propósito, junto de `format`, `isLive` e
-       * `hasSpoiler`: são todos "contrato de APRESENTAÇÃO" — dizem como a página
-       * se comporta, não o que a matéria É. O tipo `Article` do domínio continua
-       * descrevendo conteúdo, e quem decide sobre anúncio e aviso é a página.
-       */
-      contentSensitivity: toContentSensitivity(article.contentSensitivity),
-      // Coluna `Json` desde a migração para o MySQL: normalizamos AQUI, no
-      // servidor, para que a página do artigo continue recebendo `string[]` e
-      // possa fazer `.length` e `.map` sem checagem defensiva na view.
-      tldr: toStringArray(article.tldr),
-      reviewData: article.reviewData,
-      scoreDelta1h: article.scoreDelta1h,
-    };
-  }
-};
+/**
+ * O PACOTE QUE A PÁGINA DE MATÉRIA CONSOME — montado em um lugar só.
+ *
+ * Esta função nasceu de uma extração, e a razão dela é o PREVIEW do painel
+ * (`/admin/preview/[id]`): o redator precisa ver o rascunho com o mesmo
+ * template, o mesmo CSS e os mesmos dados derivados que o leitor vê. Duas
+ * consultas parecidas — uma "para o site", outra "para o preview" — seriam duas
+ * fontes da verdade, e elas desalinhariam na primeira vez que alguém
+ * acrescentasse um campo ao pacote e lembrasse de só uma. A partir daí, o
+ * preview mentiria sobre a página real, que é o único defeito capaz de tornar a
+ * funcionalidade inteira pior que não ter preview nenhum.
+ *
+ * O QUE MUDA ENTRE OS DOIS CHAMADORES é só o `where` (e o cache, ver abaixo).
+ * Todo o resto — o `include`, o `mapArticle`, a normalização de `tldr` e de
+ * `contentSensitivity` — é literalmente o mesmo código.
+ */
+async function loadArticleBundle(
+  label: string,
+  where: { slug: string; status: string } | { id: string },
+) {
+  const article = await requiredQuery(label, () =>
+    prisma.article.findFirst({
+      where,
+      include: {
+        ...ARTICLE_INCLUDE,
+        liveUpdates: { orderBy: { createdAt: 'desc' }, take: 50 },
+      },
+    }),
+  );
+  if (!article) return null;
+
+  return {
+    article: mapArticle(article),
+    liveUpdates: article.liveUpdates,
+    format: article.format as ContentFormat,
+    isLive: article.isLive,
+    hasSpoiler: article.hasSpoiler,
+    /**
+     * Classificação de sensibilidade, normalizada AQUI.
+     *
+     * Viaja fora de `mapArticle` de propósito, junto de `format`, `isLive` e
+     * `hasSpoiler`: são todos "contrato de APRESENTAÇÃO" — dizem como a página
+     * se comporta, não o que a matéria É. O tipo `Article` do domínio continua
+     * descrevendo conteúdo, e quem decide sobre anúncio e aviso é a página.
+     */
+    contentSensitivity: toContentSensitivity(article.contentSensitivity),
+    // Coluna `Json` desde a migração para o MySQL: normalizamos AQUI, no
+    // servidor, para que a página do artigo continue recebendo `string[]` e
+    // possa fazer `.length` e `.map` sem checagem defensiva na view.
+    tldr: toStringArray(article.tldr),
+    reviewData: article.reviewData,
+    scoreDelta1h: article.scoreDelta1h,
+    /**
+     * O STATUS ATRAVESSA A FRONTEIRA — e existe por causa do preview.
+     *
+     * A página pública nunca o consulta (ela só recebe 'published' pela própria
+     * consulta), mas o preview precisa dizer ao redator o que ele está olhando:
+     * "rascunho" e "matéria no ar" são a mesma tela com consequências
+     * completamente diferentes para quem clica em publicar depois.
+     */
+    status: article.status,
+  };
+}
+
+/** O pacote completo da página de matéria. Ver `loadArticleBundle`. */
+export type ArticlePageData = NonNullable<Awaited<ReturnType<typeof loadArticleBundle>>>;
 
 export const getArticleBySlug = withDateRevival(articleQuery);
+
+/**
+ * A MESMA MATÉRIA, POR ID E EM QUALQUER STATUS — só para o painel.
+ *
+ * É o que sustenta o preview: ler um rascunho (`draft`/`in-review`) com o
+ * pacote idêntico ao da página pública, para renderizá-lo com o template real.
+ *
+ * -----------------------------------------------------------------------------
+ * TRÊS DECISÕES, TODAS DE SEGURANÇA OU DE CORREÇÃO
+ * -----------------------------------------------------------------------------
+ *
+ * 1. NÃO FILTRA POR STATUS — E POR ISSO NÃO PODE SER CHAMADA SEM GUARDA.
+ *    Esta função devolve conteúdo NÃO PUBLICADO. Ela é o único ponto do módulo
+ *    de consultas em que isso acontece, e a proteção NÃO está aqui: está em
+ *    quem chama (`requireStaffPage` + a comparação de autoria em
+ *    `/admin/preview/[id]`). O nome carrega o aviso de propósito — qualquer
+ *    chamada nova a `getArticleForPreview` a partir de uma página pública é um
+ *    vazamento de rascunho, e precisa saltar aos olhos numa revisão.
+ *
+ * 2. SEM CACHE. Nada de `unstable_cache`, e não é esquecimento: o preview existe
+ *    para mostrar o que ACABOU de ser salvo. Um cache de um minuto sequer
+ *    devolveria a versão anterior do texto logo depois de o redator salvar — e
+ *    ele concluiria que a alteração se perdeu. Além disso, cache de conteúdo não
+ *    publicado é conteúdo não publicado guardado num lugar a mais.
+ *
+ * 3. POR ID, E NÃO POR SLUG. Rascunho pode ter slug repetido de uma matéria
+ *    publicada, slug vazio ou slug que ainda vai mudar antes de publicar — o id
+ *    é a única chave estável de uma matéria que ainda não existe para o mundo.
+ *
+ *    Sem cache, também não há `withDateRevival`: aquele embrulho existe só para
+ *    desfazer a serialização JSON que o `unstable_cache` impõe (ver o topo do
+ *    arquivo). Aqui os campos de data chegam como `Date` de verdade, direto do
+ *    Prisma — e o template recebe exatamente o mesmo tipo dos dois caminhos.
+ */
+export async function getArticleForPreview(id: string): Promise<ArticlePageData | null> {
+  return loadArticleBundle('article:preview', { id });
+}
 
 /**
  * Comentários APROVADOS de um artigo.

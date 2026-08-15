@@ -50,6 +50,24 @@ interface AdSlotProps {
   slot: AdSlotSpec;
   /** `true` no trilho lateral: acompanha a rolagem (`.ad--sticky`). */
   sticky?: boolean;
+  /**
+   * RESERVA O ESPAÇO, MAS NÃO PEDE ANÚNCIO. Usado pelo preview do painel.
+   *
+   * A caixa continua ocupando a altura exata que ocuparia na página do leitor
+   * (a reserva vem do CSS, `--ad-h`), então o redator vê o texto na mesma
+   * posição em que ele sairá publicado. O que não acontece é a requisição ao
+   * AdSense — e a razão é de RISCO DE CONTA, não de estética: o preview fica
+   * atrás de login, e impressão de anúncio em página autenticada é impressão
+   * inválida pelas políticas do programa. A punição do AdSense não é a página,
+   * é a conta inteira (é o mesmo raciocínio que governa `canLowerSensitivity`
+   * em core/staff.ts).
+   *
+   * ⚠ Isto sozinho NÃO basta: o script do AdSense é carregado no layout raiz,
+   * portanto ele está presente também em `/admin`, e o recurso "Auto ads" pode
+   * injetar unidade por conta própria. Quem fecha essa porta é o `<AdsPaused/>`,
+   * renderizado pelo preview — ver `components/article-view.tsx`.
+   */
+  inert?: boolean;
 }
 
 const VARIANT_CLASS: Record<AdSlotSpec['format'], string> = {
@@ -59,7 +77,7 @@ const VARIANT_CLASS: Record<AdSlotSpec['format'], string> = {
   feed: 'ad--feed',
 };
 
-export function AdSlot({ slot, sticky = false }: AdSlotProps) {
+export function AdSlot({ slot, sticky = false, inert = false }: AdSlotProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [registered, setRegistered] = useState(false);
 
@@ -67,7 +85,11 @@ export function AdSlot({ slot, sticky = false }: AdSlotProps) {
     // Sem Publisher ID não há o que registrar. O componente nem deveria ter
     // sido renderizado (ver `commercePolicy`), mas a checagem local evita
     // depender de o chamador ter feito a dele.
-    if (!ADS_ENABLED || registered) return;
+    //
+    // `inert` corta ANTES do observer: sem esta condição, o slot do preview
+    // instalaria o `IntersectionObserver` e chamaria `adsbygoogle.push` assim
+    // que o redator rolasse até ele.
+    if (!ADS_ENABLED || inert || registered) return;
 
     const element = ref.current;
     if (!element) return;
@@ -98,7 +120,7 @@ export function AdSlot({ slot, sticky = false }: AdSlotProps) {
 
     observer.observe(element);
     return () => observer.disconnect();
-  }, [registered]);
+  }, [registered, inert]);
 
   if (!ADS_ENABLED) return null;
 
@@ -117,16 +139,25 @@ export function AdSlot({ slot, sticky = false }: AdSlotProps) {
       // Ver o cabeçalho de analytics-tracker.tsx.
       {...{ [ANALYTICS_ATTR.adSlot]: slot.id }}
     >
-      <span className="ad__label">{AD_LABEL}</span>
+      {/* O rótulo muda no preview para explicar a caixa vazia. Sem isso, o
+          redator lê o espaço reservado como um bug do preview e vai reportá-lo. */}
+      <span className="ad__label">
+        {inert ? `${AD_LABEL} — espaço reservado, sem carregar no preview` : AD_LABEL}
+      </span>
+      {/* A caixa fica de qualquer jeito: a altura é do CSS (`--ad-h`), e é ela
+          que garante que o texto do preview esteja na mesma posição vertical em
+          que estará publicado. O que some é a unidade do AdSense lá dentro. */}
       <div className="ad__box">
-        <ins
-          className="adsbygoogle"
-          style={{ display: 'block', width: '100%', height: '100%' }}
-          data-ad-client={ADSENSE_CLIENT_ID}
-          data-ad-slot={slot.id}
-          data-ad-format="auto"
-          data-full-width-responsive="true"
-        />
+        {!inert && (
+          <ins
+            className="adsbygoogle"
+            style={{ display: 'block', width: '100%', height: '100%' }}
+            data-ad-client={ADSENSE_CLIENT_ID}
+            data-ad-slot={slot.id}
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+          />
+        )}
       </div>
     </div>
   );

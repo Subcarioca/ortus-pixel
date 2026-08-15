@@ -28,7 +28,7 @@
 import Link from 'next/link';
 
 import { CATEGORIES, SCORE_BANDS, bandForScore, can, routes, toTopicOrigin } from '@subcarioca/core';
-import { prisma, toStringArray } from '@subcarioca/db';
+import { prisma, toStringArray, type Prisma } from '@subcarioca/db';
 
 import { AdminLogin } from '@/components/admin/admin-login';
 import { AdminNav } from '@/components/admin/admin-nav';
@@ -38,9 +38,46 @@ import { TopicRow } from '@/components/admin/topic-row';
 import { isAiDraftConfigured } from '@/server/ai-draft';
 import { getHotPublishRateSafe } from '@/server/admin-metrics';
 import { requireStaffPage } from '@/server/staff-auth';
+import {
+  effectiveTopicScore,
+  rankTopicQueue,
+  TOPIC_QUEUE_WINDOW,
+} from '@/server/topic-queue';
 
 /** Painel nunca é cacheado: mostra o estado ao vivo da redação. */
 export const dynamic = 'force-dynamic';
+
+/**
+ * O que cada linha da fila precisa carregar junto.
+ *
+ * Extraído para uma constante porque a fila é buscada em DUAS consultas (o
+ * porquê está logo abaixo) e as duas precisam trazer exatamente os mesmos
+ * relacionamentos. Duplicar este bloco seria criar a possibilidade de as duas
+ * metades da mesma lista virem com formatos diferentes — um erro que o
+ * TypeScript pegaria só se tivesse sorte, e que na tela apareceria como
+ * "algumas pautas estão sem categoria".
+ *
+ * `satisfies` e não `as const`: `satisfies` valida o objeto contra o tipo do
+ * Prisma (um `slug` escrito errado falha AQUI, não em produção) e ainda preserva
+ * os literais — que é o que permite ao Prisma inferir o tipo do retorno com as
+ * relações incluídas. Com `as const`, o objeto vira somente-leitura e a
+ * inferência do cliente gerado se perde: o retorno degrada para um `Topic` sem
+ * `category`, `franchises` nem `scoreSnapshots`.
+ */
+const TOPIC_QUEUE_INCLUDE = {
+  category: { select: { slug: true, name: true } },
+  franchises: { include: { franchise: { select: { id: true, slug: true, name: true } } } },
+  scoreSnapshots: {
+    orderBy: { calculatedAt: 'desc' },
+    take: 1,
+    select: { contributions: true, calculatedAt: true },
+  },
+} satisfies Prisma.TopicInclude;
+
+/** Status que definem "pauta ainda em aberto" — o que a fila mostra. */
+const FILA_ABERTA = {
+  status: { in: ['new', 'assigned'] },
+} satisfies Prisma.TopicWhereInput;
 
 export default async function AdminPage() {
   const guard = await requireStaffPage('verFilaDePautas');
@@ -49,20 +86,48 @@ export default async function AdminPage() {
   const { user } = guard;
   const podeCurar = can(user.accessLevel, 'curarFilaDePautas');
 
-  const [topics, publishRate, lastRun, authors, franchises] = await Promise.all([
+  const [comOverride, semOverride, publishRate, lastRun, authors, franchises] = await Promise.all([
+    /**
+     * FILA, PARTE 1 — as pautas com override manual. TODAS elas.
+     *
+     * Consulta separada, e a razão é a mesma que motivou a correção inteira: a
+     * fila é ordenada pelo score EFETIVO (`manualScoreOverride ?? currentScore`,
+     * ver `server/topic-queue.ts`), mas o banco só sabe ordenar por coluna. Se a
+     * janela buscada fosse uma só, ordenada por `currentScore`, uma pauta com
+     * score algorítmico rasteiro e override máximo poderia ficar FORA da janela —
+     * o mesmo bug de antes, só que num limite maior e portanto mais raro e mais
+     * difícil de diagnosticar.
+     *
+     * Trazendo os overrides à parte, é estruturalmente impossível perder um: a
+     * decisão humana nunca depende de ter passado num corte do algoritmo.
+     *
+     * O teto continua existindo (`TOPIC_QUEUE_WINDOW`) porque toda consulta sem
+     * teto é um incidente esperando o cadastro crescer — mas 200 overrides
+     * simultâneos na fila aberta seria um cenário sem relação com o uso real
+     * (override é ato editorial pontual, não rotina).
+     */
     prisma.topic.findMany({
-      where: { status: { in: ['new', 'assigned'] } },
+      where: { ...FILA_ABERTA, manualScoreOverride: { not: null } },
+      orderBy: { manualScoreOverride: 'desc' },
+      take: TOPIC_QUEUE_WINDOW,
+      include: TOPIC_QUEUE_INCLUDE,
+    }),
+    /**
+     * FILA, PARTE 2 — as demais, pelo score do algoritmo.
+     *
+     * `manualScoreOverride: null` torna os dois conjuntos DISJUNTOS por
+     * construção: nenhum tópico aparece nas duas consultas, então basta
+     * concatenar — sem deduplicação, sem chave, sem o bug clássico do "a mesma
+     * pauta apareceu duas vezes na lista".
+     *
+     * Esta é a consulta que usa o índice `[status, currentScore DESC]` do
+     * schema, e é ela que carrega o volume.
+     */
+    prisma.topic.findMany({
+      where: { ...FILA_ABERTA, manualScoreOverride: null },
       orderBy: { currentScore: 'desc' },
-      take: 50,
-      include: {
-        category: { select: { slug: true, name: true } },
-        franchises: { include: { franchise: { select: { id: true, slug: true, name: true } } } },
-        scoreSnapshots: {
-          orderBy: { calculatedAt: 'desc' },
-          take: 1,
-          select: { contributions: true, calculatedAt: true },
-        },
-      },
+      take: TOPIC_QUEUE_WINDOW,
+      include: TOPIC_QUEUE_INCLUDE,
     }),
     getHotPublishRateSafe(),
     prisma.pipelineRun.findFirst({
@@ -93,6 +158,19 @@ export default async function AdminPage() {
     }),
   ]);
 
+  /**
+   * A FILA DE VERDADE: as duas metades juntas, ordenadas pelo score EFETIVO e
+   * só então cortadas em 50.
+   *
+   * Esta única linha é a correção de um bug que contradizia o princípio impresso
+   * no topo desta tela ("o override manual sempre vence o algoritmo"): antes, a
+   * ordenação e o corte vinham do banco, por `currentScore`, enquanto a etiqueta
+   * de cada linha exibia o score com override aplicado. O racional completo
+   * (inclusive por que ordenar em memória é aceitável aqui) está em
+   * `server/topic-queue.ts`.
+   */
+  const topics = rankTopicQueue([...comOverride, ...semOverride]);
+
   const categoryOptions = CATEGORIES.map((c) => ({ slug: c.slug, name: c.name }));
   const podeAfrouxarConteudo = can(user.accessLevel, 'reduzirRestricaoDeConteudo');
 
@@ -107,7 +185,19 @@ export default async function AdminPage() {
    */
   const aiEnabled = isAiDraftConfigured();
 
-  const hotTopics = topics.filter((t) => t.currentBand === 'HOT');
+  /**
+   * KPI "QUENTES na fila".
+   *
+   * Usa o score EFETIVO, e não a coluna `currentBand` (que é a faixa gravada
+   * pelo algoritmo). Motivo: cada linha da lista abaixo já exibe sua faixa
+   * calculada com o override aplicado — contar aqui pela coluna do algoritmo
+   * produzia um cartão que dizia "2 QUENTES" acima de uma lista com 3 etiquetas
+   * vermelhas. Uma tela que se contradiz sozinha é uma tela que ninguém usa para
+   * decidir.
+   */
+  const hotTopics = topics.filter(
+    (t) => bandForScore(effectiveTopicScore(t)).band === 'HOT',
+  );
 
   return (
     <div className="container admin">
@@ -257,11 +347,15 @@ export default async function AdminPage() {
                   title: topic.title,
                   summary: topic.summary,
                   // Se há override manual, é ELE que aparece — o humano venceu.
-                  score: topic.manualScoreOverride ?? topic.currentScore,
+                  // A MESMA função que ordena a fila (`effectiveTopicScore`):
+                  // foi a divergência entre o número exibido aqui e o critério
+                  // de ordenação que gerou o bug. Uma fonte só, e a divergência
+                  // deixa de ser possível.
+                  score: effectiveTopicScore(topic),
                   algorithmicScore: topic.currentScore,
                   hasOverride: topic.manualScoreOverride !== null,
                   overrideReason: topic.manualOverrideReason,
-                  band: bandForScore(topic.manualScoreOverride ?? topic.currentScore).band,
+                  band: bandForScore(effectiveTopicScore(topic)).band,
                   confidence: topic.confidence,
                   seoOpportunity: topic.seoOpportunity,
                   termType: topic.termType,

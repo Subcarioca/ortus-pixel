@@ -112,7 +112,7 @@ function parseFeed(xml: string, source: string, sourceWeight: number): FeedItem[
   return items;
 }
 
-/** Decodifica apenas as entidades XML básicas — suficiente para títulos. */
+/** Decodifica as entidades XML básicas e as numéricas — suficiente para títulos. */
 function decodeEntities(text: string): string {
   return text
     .replace(/&lt;/g, '<')
@@ -120,6 +120,10 @@ function decodeEntities(text: string): string {
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'")
+    // Entidades numéricas (ex.: &#8216; &#8217; &#8230; — aspas curvas e
+    // reticências, comuns em feeds de imprensa em inglês).
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(parseInt(dec, 10)))
     // `&amp;` por último, senão desfaz as substituições anteriores.
     .replace(/&amp;/g, '&');
 }

@@ -313,6 +313,11 @@ function decodeEntities(text: string): string {
     .replace(/&#39;/g, "'")
     .replace(/&apos;/g, "'")
     .replace(/&nbsp;/g, ' ')
+    // Entidades numéricas (ex.: &#8216; &#8217; &#8230; — aspas curvas e
+    // reticências, comuns em feeds de imprensa em inglês). Sem isto, o
+    // título chega ao painel com o código literal em vez do caractere.
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex: string) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, dec: string) => String.fromCodePoint(parseInt(dec, 10)))
     .replace(/&amp;/g, '&');
 }
 

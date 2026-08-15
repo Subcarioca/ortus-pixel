@@ -23,8 +23,29 @@
  * `pauseAdRequests` é o mecanismo do próprio AdSense para dizer "nesta página,
  * não peça anúncio". Ele é definido ANTES de o script carregar (o array
  * `adsbygoogle` aceita configuração enfileirada), o que é justamente o que
- * permite este componente funcionar mesmo com o loader em `lazyOnload`.
+ * permite este componente funcionar sem coordenação com o carregador.
  *
+ * -----------------------------------------------------------------------------
+ * POR QUE SÃO DOIS MECANISMOS (script inline + efeito), E NÃO UM
+ * -----------------------------------------------------------------------------
+ * Eles cobrem MOMENTOS diferentes, e nenhum dos dois cobre os dois momentos:
+ *
+ *   1. SCRIPT INLINE (no HTML servido) — cobre a primeira carga da página.
+ *      É síncrono: roda enquanto o navegador ainda analisa o HTML, portanto
+ *      antes de `adsbygoogle.js` (que é `async` e depende de uma ida à rede)
+ *      ter chance de executar. Este item passou a ser NECESSÁRIO quando
+ *      `adsense-loader.tsx` deixou de adiar o script para o ócio do navegador
+ *      e passou a emiti-lo no `<head>` — ver o cabeçalho de lá. Antes disso, o
+ *      script do Google só chegava depois do evento `load`, e o efeito abaixo
+ *      sempre ganhava a corrida; hoje ele não ganharia.
+ *
+ *   2. `useEffect` — cobre a navegação do lado do cliente. Ao trocar de rota
+ *      sem recarregar, nenhum HTML novo é analisado: o React insere o elemento
+ *      `<script>` no DOM, e script inserido assim NÃO é executado pelo
+ *      navegador (regra do HTML, não do React). Sem o efeito, entrar no painel
+ *      por um link a partir do site público não suspenderia nada.
+ *
+ * -----------------------------------------------------------------------------
  * -----------------------------------------------------------------------------
  * ISTO É DEFESA EM PROFUNDIDADE, NÃO A DEFESA PRINCIPAL
  * -----------------------------------------------------------------------------
@@ -56,12 +77,28 @@ import { useEffect } from 'react';
  */
 type AdsQueue = unknown[] & { pauseAdRequests?: number };
 
+/**
+ * A versão inline da mesma instrução.
+ *
+ * É uma CONSTANTE do nosso próprio código: nenhum dado de usuário, de banco ou
+ * de variável de ambiente entra nesta string, portanto `dangerouslySetInnerHTML`
+ * aqui não abre superfície de injeção. É o mesmo padrão (e o mesmo racional) do
+ * script de tema no layout raiz.
+ *
+ * O `try/catch` também está aqui dentro pelo mesmo motivo do efeito: um
+ * bloqueador de anúncios pode ter substituído `window.adsbygoogle` por algo
+ * estranho, e uma exceção num script inline síncrono interrompe a análise
+ * daquele bloco — nunca vale derrubar nada do leitor por causa disto.
+ */
+const PAUSE_AD_REQUESTS_SCRIPT =
+  'try{(window.adsbygoogle=window.adsbygoogle||[]).pauseAdRequests=1}catch(e){}';
+
 export function AdsPaused() {
   useEffect(() => {
     try {
-      // O array pode não existir ainda (o loader é `lazyOnload`): criá-lo aqui é
-      // o comportamento previsto pela própria API do AdSense, que consome o que
-      // estiver enfileirado quando o script chega.
+      // O array pode não existir ainda: criá-lo aqui é o comportamento previsto
+      // pela própria API do AdSense, que consome o que estiver enfileirado
+      // quando o script chega.
       const queue = (window.adsbygoogle = window.adsbygoogle || []) as AdsQueue;
       queue.pauseAdRequests = 1;
     } catch {
@@ -80,5 +117,11 @@ export function AdsPaused() {
     };
   }, []);
 
-  return null;
+  /**
+   * Sem `async` e sem `src`: é um script inline comum, que o React renderiza no
+   * HTML exatamente onde este componente está na árvore. (O tratamento especial
+   * do React 19 — içar para o `<head>` e deduplicar — só vale para script COM
+   * `src` e `async`, que é o caso do carregador do AdSense, não deste.)
+   */
+  return <script dangerouslySetInnerHTML={{ __html: PAUSE_AD_REQUESTS_SCRIPT }} />;
 }

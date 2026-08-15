@@ -170,7 +170,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <OrganizationJsonLd siteName={SITE_NAME} siteUrl={SITE_URL} />
 
         {/*
-          Script do AdSense — por último no <body> e com estratégia preguiçosa.
+          Script do AdSense.
+
+          Ele está declarado aqui no fim do <body>, mas NÃO é aqui que ele
+          aparece no HTML: o componente renderiza um `<script async src>`, e o
+          React 19 iça esse tipo de tag para dentro do <head> — que é onde o
+          Google manda colar o trecho e onde o rastreador dele procura. O
+          racional completo (e por que `next/script` não servia) está no
+          cabeçalho do componente.
 
           Não renderiza nada em três situações, e as três são proteção contra
           impressão inválida (a infração que suspende a CONTA, não a página):

@@ -16,13 +16,19 @@
  *
  * 2. ORÇAMENTO DE JS PRESERVADO. O script do AdSense pesa mais de 100 KB e, se
  *    disputar a rede com o HTML e a imagem de capa, atrasa o LCP no 4G — a
- *    métrica que o projeto inteiro protege. Por isso:
- *      - o loader entra com `strategy="lazyOnload"` (depois do `load`, quando o
- *        conteúdo já está na tela);
- *      - cada slot só se REGISTRA quando chega perto da viewport
- *        (IntersectionObserver com margem de 200px).
- *    Um leitor que nunca rola até o fim do artigo não paga por um anúncio que
- *    nunca veria.
+ *    métrica que o projeto inteiro protege.
+ *
+ *    ⚠ O CARREGAMENTO DO SCRIPT DEIXOU DE SER TARDIO. Ele agora sai no `<head>`
+ *    do HTML servido, com `async`, porque o rastreador do AdSense se recusava a
+ *    verificar um site em que a tag só existia depois que o JavaScript rodava —
+ *    o racional completo está no cabeçalho de `components/adsense-loader.tsx`.
+ *    `async` mantém a garantia que importa aqui: o script não bloqueia a
+ *    renderização, ele apenas disputa banda.
+ *
+ *    O que continua valendo, e é a economia de verdade deste arquivo: cada slot
+ *    só se REGISTRA quando chega perto da viewport (IntersectionObserver com
+ *    margem de 200px). Um leitor que nunca rola até o fim do artigo não paga
+ *    pelo pedido de um anúncio que nunca veria.
  *
  * 3. HONESTIDADE. O rótulo "Publicidade" fica FORA da caixa, em mono cinza. Não
  *    é decoração: publicidade não identificável é infração ao CDC (art. 36) e

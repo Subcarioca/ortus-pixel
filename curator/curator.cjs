@@ -384,6 +384,312 @@ function weightedMean(samples) {
   return samples.reduce((acc, s) => acc + s.value * s.weight, 0) / totalWeight;
 }
 
+// ../../packages/core/src/editorial-risk-terms.ts
+var DISCRIMINATORY_RULES = [
+  // --- Homofobia e transfobia -----------------------------------------------
+  {
+    pattern: /viado|viadinho|viadagem|viadão/,
+    category: "discriminacao",
+    severity: "alto",
+    reason: "Termo homof\xF3bico. Inj\xFAria por orienta\xE7\xE3o sexual \xE9 crime (STF, ADO 26)."
+  },
+  {
+    pattern: /boiola|baitola|bichona|frutinha/,
+    category: "discriminacao",
+    severity: "alto",
+    reason: "Termo homof\xF3bico usado como ofensa."
+  },
+  {
+    pattern: /traveco|travecão|traveca/,
+    category: "discriminacao",
+    severity: "alto",
+    reason: 'Termo transf\xF3bico. A palavra correta \xE9 "travesti" ou "mulher trans".',
+    suggestion: "travesti / mulher trans"
+  },
+  {
+    // Reapropriados por parte da própria comunidade — o que muda tudo quando
+    // aparecem em citação direta ou em nome de obra ("Bicha Nerd"). Por isso
+    // 'atencao': o problema não é a palavra existir no texto, é ela ser NOSSA.
+    pattern: /bicha|bichinha|sapatão|sapatona/,
+    category: "discriminacao",
+    severity: "atencao",
+    reason: "Termo com uso ofensivo e tamb\xE9m reapropriado pela pr\xF3pria comunidade. Confira se est\xE1 em cita\xE7\xE3o/nome de obra \u2014 se for voz do site, troque."
+  },
+  // --- Racismo ---------------------------------------------------------------
+  {
+    pattern: /crioulo|crioula/,
+    category: "discriminacao",
+    severity: "alto",
+    reason: "Termo racista. Inj\xFAria racial \xE9 crime (Lei 14.532/2023)."
+  },
+  {
+    pattern: /serviço de preto|coisa de preto|programa de índio|inveja branca/,
+    category: "discriminacao",
+    severity: "alto",
+    reason: "Express\xE3o de origem racista, sem uso leg\xEDtimo em texto jornal\xEDstico."
+  },
+  {
+    // O animal existe, e o portal cobre Donkey Kong e "Planeta dos Macacos".
+    // Sinalizar como 'alto' aqui seria treinar todo mundo a ignorar o aviso.
+    pattern: /macaco|macaca|mulato|mulata/,
+    category: "discriminacao",
+    severity: "atencao",
+    reason: "Palavra com uso racista quando se refere a pessoa. Confira o contexto: falando de gente, troque.",
+    suggestion: "para pessoas: negro, negra, pessoa parda"
+  },
+  // --- Capacitismo -----------------------------------------------------------
+  {
+    pattern: /retardado|retardada|mongol[oó]ide|d[ée]bil mental|imbecil mental/,
+    category: "discriminacao",
+    severity: "alto",
+    reason: "Termo capacitista usado como ofensa. Ofende pessoas com defici\xEAncia intelectual."
+  },
+  {
+    pattern: /aleijado|aleijada|manco|coxo|surdo-mudo|mudinho/,
+    category: "discriminacao",
+    severity: "atencao",
+    reason: "Termo capacitista ou desatualizado para defici\xEAncia f\xEDsica/auditiva.",
+    suggestion: "pessoa com defici\xEAncia f\xEDsica / pessoa surda"
+  },
+  {
+    // Diagnóstico virando adjetivo é o capacitismo mais comum em crítica de
+    // games ("level design esquizofrênico"). Não é crime, é deselegante — e o
+    // aviso aqui existe para melhorar o texto, não para evitar processo.
+    pattern: /esquizofr[êe]nico|bipolar|autista|down/,
+    category: "discriminacao",
+    severity: "atencao",
+    reason: "Diagn\xF3stico usado como adjetivo depreciativo \xE9 capacitismo. Se n\xE3o \xE9 sobre a condi\xE7\xE3o de verdade, troque.",
+    suggestion: "confuso, inconstante, desconexo"
+  },
+  // --- Misoginia -------------------------------------------------------------
+  {
+    pattern: /vadia|vagabunda|piranha|rapariga|biscate|feminazi|mulherzinha/,
+    category: "discriminacao",
+    severity: "alto",
+    reason: "Termo mis\xF3gino usado como ofensa."
+  },
+  {
+    // "Puta que pariu", "puta jogo" e "putaria" são interjeição e gíria, não
+    // ofensa de gênero. A ambiguidade é grande demais para 'alto'.
+    pattern: /puta|histérica|escandalosa/,
+    category: "discriminacao",
+    severity: "atencao",
+    reason: "Pode ser interjei\xE7\xE3o/g\xEDria ou ofensa de g\xEAnero, dependendo de quem \xE9 o sujeito. Confira o contexto."
+  },
+  // --- Intolerância religiosa ------------------------------------------------
+  {
+    pattern: /macumbeiro|macumbeira|adorador do diabo|seita/,
+    category: "discriminacao",
+    severity: "atencao",
+    reason: "Termo pejorativo sobre religi\xE3o. Intoler\xE2ncia religiosa \xE9 crime (Lei 7.716/89) e atinge sobretudo religi\xF5es de matriz africana.",
+    suggestion: 'nome correto da religi\xE3o (candombl\xE9, umbanda) ou "religi\xE3o"'
+  },
+  // --- Xenofobia -------------------------------------------------------------
+  {
+    // Muito frequente em pauta de hardware e periférico — justamente por isso
+    // vale a pena estar aqui: é o deslize mais provável neste portal.
+    pattern: /xing[ -]?ling|japa|jamanta chinesa|coisa de chinês/,
+    category: "discriminacao",
+    severity: "atencao",
+    reason: 'Termo xenof\xF3bico. "Xing ling"/"japa" carregam estere\xF3tipo de nacionalidade.',
+    suggestion: 'produto gen\xE9rico / sem marca conhecida; "japon\xEAs"'
+  }
+];
+var OUTDATED_TERM_RULES = [
+  {
+    pattern: /homossexualismo/,
+    category: "termo-inadequado",
+    severity: "atencao",
+    reason: 'O sufixo "-ismo" trata orienta\xE7\xE3o sexual como doen\xE7a. Fora da CID desde 1990.',
+    suggestion: "homossexualidade"
+  },
+  {
+    pattern: /opção sexual|opção de gênero/,
+    category: "termo-inadequado",
+    severity: "atencao",
+    reason: '"Op\xE7\xE3o" sugere escolha. O termo t\xE9cnico e jornal\xEDstico \xE9 "orienta\xE7\xE3o".',
+    suggestion: "orienta\xE7\xE3o sexual / identidade de g\xEAnero"
+  },
+  {
+    pattern: /transexualismo|mudança de sexo/,
+    category: "termo-inadequado",
+    severity: "atencao",
+    reason: "Termo patologizante e desatualizado.",
+    suggestion: "transexualidade / cirurgia de afirma\xE7\xE3o de g\xEAnero"
+  },
+  {
+    pattern: /hermafrodita/,
+    category: "termo-inadequado",
+    severity: "atencao",
+    reason: "Termo da biologia aplicado a pessoas. Impr\xF3prio para gente.",
+    suggestion: "intersexo"
+  },
+  {
+    pattern: /portador de deficiência|portadora de deficiência|portador de necessidades/,
+    category: "termo-inadequado",
+    severity: "atencao",
+    reason: 'Defici\xEAncia n\xE3o se "porta". Terminologia oficial da LBI (Lei 13.146/2015).',
+    suggestion: "pessoa com defici\xEAncia"
+  },
+  {
+    pattern: /[íi]ndio|[íi]ndios|silv[íi]cola/,
+    category: "termo-inadequado",
+    severity: "atencao",
+    reason: 'Termo colonial. Manuais de reda\xE7\xE3o e a pr\xF3pria legisla\xE7\xE3o usam "ind\xEDgena".',
+    suggestion: "ind\xEDgena / povo origin\xE1rio"
+  },
+  {
+    // Cobertura de morte de artista é rotina num portal de cultura pop, e a
+    // recomendação da OMS sobre noticiar suicídio existe porque a forma de
+    // narrar tem efeito medido de contágio. Risco reputacional real, custo zero
+    // para corrigir.
+    pattern: /cometeu suicídio|suicidou-se covardemente|se matou/,
+    category: "termo-inadequado",
+    severity: "atencao",
+    reason: '"Cometer" associa suic\xEDdio a crime. A recomenda\xE7\xE3o da OMS para cobertura respons\xE1vel pede outra constru\xE7\xE3o.',
+    suggestion: "morreu por suic\xEDdio / tirou a pr\xF3pria vida"
+  }
+];
+var ACCUSATION_RULES = [
+  {
+    // A cópula. Repare que `é` está acentuado: é o que impede a conjunção "e"
+    // de casar (ver o cabeçalho do arquivo).
+    pattern: /(é|são|era|eram|foi|foram)\s+(um |uma |uns |umas )?(corrupt[oa]s?|criminos[oa]s?|bandid[oa]s?|ladr(ão|ões|a|as)|golpist[ao]s?|estelionatári[oa]s?|ped[óo]fil[oa]s?|estuprador(a|es|as)?|assediador(a|es|as)?|racistas?|nazistas?|misógin[oa]s?|homof[óo]bic[oa]s?|transf[óo]bic[oa]s?|abusador(a|es|as)?|fraudador(a|es|as)?|caloteir[oa]s?|charlat(ão|ões|ã)|picaretas?)/,
+    category: "acusacao",
+    severity: "alto",
+    needsAttribution: true,
+    reason: "Afirma\xE7\xE3o categ\xF3rica de que algu\xE9m \xC9 criminoso ou desonesto, sem atribuir a fonte. \xC9 a constru\xE7\xE3o cl\xE1ssica de cal\xFAnia/difama\xE7\xE3o (CP, arts. 138 a 140).",
+    suggestion: 'atribua: "\xE9 acusado de\u2026", "segundo o processo\u2026", "de acordo com a den\xFAncia do MP\u2026"'
+  },
+  {
+    pattern: /(cometeu|cometeram|praticou|praticaram)\s+(um |uma )?(crime|fraude|estelionato|ass[ée]dio|pl[áa]gio|racismo|abuso|homic[íi]dio|estupro|agress(ão|ões)|preconceito|corrupção)/,
+    category: "acusacao",
+    severity: "alto",
+    needsAttribution: true,
+    reason: "Imputa\xE7\xE3o direta de crime, sem fonte citada.",
+    suggestion: 'atribua a quem acusa: "\xE9 acusado de ter cometido\u2026", "segundo a den\xFAncia\u2026"'
+  },
+  {
+    pattern: /(fraudou|fraudaram|sonegou|sonegaram|subornou|subornaram|corrompeu|desviou (dinheiro|verba|verbas|recursos|milhões)|lavou dinheiro)/,
+    category: "acusacao",
+    severity: "alto",
+    needsAttribution: true,
+    reason: "Verbo que imputa crime financeiro em frase afirmativa, sem fonte.",
+    suggestion: 'atribua: "teria fraudado, segundo\u2026", "\xE9 acusado de sonegar\u2026"'
+  },
+  {
+    pattern: /(plagiou|plagiaram|copiou descaradamente|roubou (a arte|o trabalho|o c[óo]digo|a ideia|o design|as animações))/,
+    category: "acusacao",
+    severity: "alto",
+    needsAttribution: true,
+    reason: "Acusa\xE7\xE3o de pl\xE1gio afirmada como fato. Pl\xE1gio \xE9 viola\xE7\xE3o de direito autoral \u2014 imput\xE1-lo sem fonte \xE9 o caminho mais curto para uma notifica\xE7\xE3o extrajudicial.",
+    suggestion: 'descreva o que se v\xEA ("as anima\xE7\xF5es s\xE3o muito parecidas com\u2026") ou cite quem acusa'
+  },
+  {
+    pattern: /(assediou|assediaram|estuprou|estupraram|espancou|espancaram|agrediu|agrediram)/,
+    category: "acusacao",
+    severity: "alto",
+    needsAttribution: true,
+    reason: "Imputa\xE7\xE3o de crime contra pessoa, afirmada como fato consumado, sem fonte.",
+    suggestion: 'atribua: "\xE9 acusado de assediar\u2026", "segundo o processo movido por\u2026"'
+  },
+  {
+    pattern: /(trabalho escravo|trabalho an[áa]logo [àa] escravid[ãa]o|exploração infantil|caixa dois|propina|suborno|lavagem de dinheiro|apropriação indébita|pir[âa]mide financeira)/,
+    category: "acusacao",
+    severity: "alto",
+    needsAttribution: true,
+    reason: "Men\xE7\xE3o a crime grave sem atribuir a fonte que o afirma.",
+    suggestion: 'diga de onde veio: "segundo o relat\xF3rio do MPT\u2026", "de acordo com a a\xE7\xE3o\u2026"'
+  },
+  {
+    pattern: /(mentiu|mentiram|enganou|enganaram)\s+(os |as |o |a )?(jogadores|consumidores|clientes|p[úu]blico|f[ãa]s|investidores|acionistas)/,
+    category: "acusacao",
+    severity: "alto",
+    needsAttribution: true,
+    reason: 'Afirmar m\xE1-f\xE9 como fato ("mentiu para os jogadores") imputa conduta desonesta e pode virar a\xE7\xE3o por dano \xE0 imagem \u2014 inclusive de pessoa jur\xEDdica (S\xFAmula 227 do STJ).',
+    suggestion: 'descreva o fato verific\xE1vel: "prometeu X e entregou Y"'
+  },
+  {
+    pattern: /(maquiou|manipulou|forjou|falsificou)\s+(os |as )?(n[úu]meros|dados|resultados|benchmarks?|vendas)/,
+    category: "acusacao",
+    severity: "alto",
+    needsAttribution: true,
+    reason: "Acusa\xE7\xE3o de falsifica\xE7\xE3o de dados afirmada como fato.",
+    suggestion: 'atribua a an\xE1lise: "segundo a apura\xE7\xE3o de X, os n\xFAmeros n\xE3o batem"'
+  },
+  {
+    pattern: /(é|era|foi)\s+(uma\s+)?(fraude|farsa|golpe aplicado|estelionato)/,
+    category: "acusacao",
+    severity: "alto",
+    needsAttribution: true,
+    reason: "Chamar um produto ou empresa de fraude/farsa \xE9 imputa\xE7\xE3o de conduta criminosa.",
+    suggestion: 'opine sobre o produto ("n\xE3o entrega o que promete") ou cite quem acusa'
+  }
+];
+var PERSONAL_INSULT_RULES = [
+  {
+    pattern: /idiotas?|imbecis?|burr[oa]s?|est[úu]pid[oa]s?|ot[áa]ri[oa]s?|babacas?|canalhas?|escrot[oa]s?|cretin[oa]s?|energ[úu]men[oa]s?|patétic[oa]s?|incompetentes?|fracassad[oa]s?|lixo humano|verme/,
+    category: "ofensa-pessoal",
+    severity: "atencao",
+    reason: "Xingamento. Sobre uma OBRA \xE9 cr\xEDtica; sobre uma PESSOA \xE9 inj\xFAria (CP art. 140). Confira quem \xE9 o sujeito da frase.",
+    suggestion: 'critique o trabalho, n\xE3o a pessoa: "a decis\xE3o de X foi mal executada porque\u2026"'
+  }
+];
+var PERSONAL_DATA_RULES = [
+  {
+    pattern: /\d{3}\.\d{3}\.\d{3}-\d{2}|CPF\s*(n[ºo°]?\s*)?:?\s*\d[\d.\s-]{9,16}\d/,
+    category: "dado-pessoal",
+    severity: "alto",
+    reason: "CPF no texto. Publicar dado pessoal sem base legal viola a LGPD.",
+    suggestion: 'remova o n\xFAmero ou substitua por "CPF preservado"'
+  },
+  {
+    pattern: /RG\s*(n[ºo°]?\s*)?:?\s*[\d.\s-]{6,14}\d/,
+    category: "dado-pessoal",
+    severity: "alto",
+    reason: "N\xFAmero de RG no texto. Dado pessoal identific\xE1vel (LGPD).",
+    suggestion: "remova o n\xFAmero"
+  },
+  {
+    pattern: /\(\d{2}\)\s?9?\d{4}[-\s]?\d{4}/,
+    category: "dado-pessoal",
+    severity: "alto",
+    reason: "Telefone no texto. S\xF3 publique se for contato comercial divulgado pelo pr\xF3prio dono.",
+    suggestion: "remova o n\xFAmero ou use o canal oficial de imprensa"
+  },
+  {
+    pattern: /\d{5}-\d{3}/,
+    category: "dado-pessoal",
+    severity: "atencao",
+    reason: "Parece um CEP. Endere\xE7o residencial de pessoa identificada n\xE3o deve ir ao ar."
+  },
+  {
+    // E-mail de assessoria é informação pública e legítima; e-mail pessoal de
+    // alguém citado na matéria, não. Por isso 'atencao' e não 'alto'.
+    pattern: /[\w.+-]+@[\w-]+\.[A-Za-z]{2,}(\.[A-Za-z]{2,})?/,
+    category: "dado-pessoal",
+    severity: "atencao",
+    reason: "E-mail no texto. Contato de imprensa/assessoria \xE9 aceit\xE1vel; e-mail pessoal de algu\xE9m citado, n\xE3o."
+  }
+];
+var ALL_RISK_RULES = [
+  ...DISCRIMINATORY_RULES,
+  ...OUTDATED_TERM_RULES,
+  ...ACCUSATION_RULES,
+  ...PERSONAL_INSULT_RULES,
+  ...PERSONAL_DATA_RULES
+];
+
+// ../../packages/core/src/editorial-risk.ts
+function compileRule(rule) {
+  return new RegExp(`(?<![\\p{L}\\p{N}])(?:${rule.pattern.source})(?![\\p{L}\\p{N}])`, "giu");
+}
+var COMPILED_RULES = ALL_RISK_RULES.map((rule) => ({
+  rule,
+  regex: compileRule(rule)
+}));
+var ACCUSATION_RULE_SET = new Set(ACCUSATION_RULES);
+
 // src/connectors/http.ts
 var ConnectorHttpError = class extends Error {
   constructor(message, status, isRetryable = false) {
@@ -1262,7 +1568,7 @@ function parseFeed(xml, source, sourceWeight) {
   return items;
 }
 function decodeEntities(text) {
-  return text.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/&amp;/g, "&");
+  return text.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16))).replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10))).replace(/&amp;/g, "&");
 }
 async function getCompetitorItems(timeoutMs) {
   if (feedCache && Date.now() - feedCache.fetchedAt < FEED_TTL_MS) {
@@ -1986,7 +2292,7 @@ function stripHtml(text) {
   return text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 function decodeEntities2(text) {
-  return text.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&");
+  return text.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&apos;/g, "'").replace(/&nbsp;/g, " ").replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16))).replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10))).replace(/&amp;/g, "&");
 }
 async function discoverFromFeeds(options) {
   const { phase, maxAgeHours = 6, timeoutMs = 8e3 } = options;

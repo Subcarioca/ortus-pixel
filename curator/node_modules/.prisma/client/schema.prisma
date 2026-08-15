@@ -737,6 +737,29 @@ model Article {
   /// bloco desconhecido — banco é fronteira, e fronteira se trata com desconfiança.
   blocks Json?
 
+  /// DE ONDE VEIO O TEXTO INICIAL: 'human' | 'ai-assisted'.
+  /// Vocabulário fechado em packages/core/src/content-origin.ts.
+  ///
+  /// Gravado uma vez, na CRIAÇÃO, e nunca reescrito pela edição — a pergunta que
+  /// ele responde é sobre a procedência do rascunho, e essa não muda depois de o
+  /// redator reescrever por cima. É por isso que ele fica fora do
+  /// `parseArticleInput` (que é a validação do FORMULÁRIO, chamada também na
+  /// edição) e é lido diretamente pela rota de criação.
+  ///
+  /// NÃO É TRAVA DE PUBLICAÇÃO, de propósito: a trava é humana e anterior (a
+  /// sugestão nasce como rascunho e alguém precisa clicar em publicar). Um campo
+  /// que bloqueasse seria contornado deixando de marcá-lo, e aí ele deixaria de
+  /// valer também como registro. Ver o cabeçalho de `content-origin.ts`.
+  ///
+  /// `VarChar(16)`: vocabulário curto e fechado, mesmo critério de
+  /// `contentSensitivity`. Sem índice pelo mesmo motivo dela — nenhuma listagem
+  /// filtra por este campo hoje; a auditoria que o consulta é rara e pode varrer.
+  ///
+  /// ⚠ COLUNA NOVA: exige `npm run db:push` (e, em banco novo, o
+  /// `npm run db:fulltext` de sempre depois). O `@default("human")` é o que faz a
+  /// coluna nascer correta nas linhas que já existem.
+  contentOrigin String @default("human") @db.VarChar(16)
+
   /// 'suggested' | 'claimed' | 'draft' | 'in-review' | 'published' | 'archived'
   status String @default("draft")
 

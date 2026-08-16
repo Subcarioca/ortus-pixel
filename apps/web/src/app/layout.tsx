@@ -9,6 +9,7 @@
  */
 
 import type { Metadata, Viewport } from 'next';
+import { Archivo, Inter, JetBrains_Mono } from 'next/font/google';
 
 import { CATEGORIES, routes } from '@subcarioca/core';
 
@@ -20,6 +21,52 @@ import { SiteFooter } from '@/components/site-footer';
 import { BottomNav } from '@/components/bottom-nav';
 import { OrganizationJsonLd } from '@/components/json-ld';
 import { AdSenseLoader } from '@/components/adsense-loader';
+
+/**
+ * =============================================================================
+ * FONTES — `next/font/google`, e não `<link>` para fonts.googleapis.com
+ * =============================================================================
+ *
+ * Antes o `<head>` tinha um `<link rel="stylesheet" href="fonts.googleapis...">`
+ * carregando as três famílias. Isso custa DUAS viagens de rede em série: o
+ * navegador baixa o CSS do Google, só depois de lê-lo descobre a URL do arquivo
+ * .woff2 de cada peso e então baixa a fonte — enquanto isso, o texto pisca sem
+ * estilo (FOUT) ou fica invisível, e os títulos em Archivo 800/900 (métrica bem
+ * diferente da fonte de sistema) reflowam quando a fonte enfim chega.
+ *
+ * `next/font/google` baixa os arquivos em BUILD TIME, os hospeda no próprio
+ * domínio (zero requisição a `fonts.googleapis.com`/`fonts.gstatic.com`, e por
+ * isso os `<link rel="preconnect">` que existiam para eles saíram) e calcula um
+ * `font-display: swap` com métricas de fallback ajustadas — o navegador já
+ * reserva o espaço certo antes da fonte chegar, e a troca não move o layout.
+ *
+ * As FAMÍLIAS e os PESOS são exatamente os que já estavam em produção: Archivo
+ * 600/800/900, Inter 400/500/600/700, JetBrains Mono 500/700. `variable` gera
+ * uma CSS custom property que o `ortuspixel.css` referencia dentro de
+ * `--font-display` / `--font-text` / `--font-mono` (ver `:root`) — a troca é só
+ * de MECANISMO de carregamento, o nome final dessas três variáveis (usadas em
+ * dezenas de regras do CSS) não mudou.
+ */
+const archivo = Archivo({
+  subsets: ['latin'],
+  weight: ['600', '800', '900'],
+  display: 'swap',
+  variable: '--font-archivo',
+});
+
+const inter = Inter({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  display: 'swap',
+  variable: '--font-inter',
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  weight: ['500', '700'],
+  display: 'swap',
+  variable: '--font-jetbrains-mono',
+});
 
 /**
  * Metadados padrão, herdados e sobrescritos por cada página.
@@ -115,7 +162,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     // atributo `data-theme` ANTES do React hidratar. Sem esta anotação, o React
     // avisaria no console que o HTML do servidor difere do que ele encontrou —
     // um aviso correto para qualquer outro atributo, e esperado para este.
-    <html lang="pt-BR" suppressHydrationWarning>
+    <html
+      lang="pt-BR"
+      suppressHydrationWarning
+      className={`${archivo.variable} ${inter.variable} ${jetbrainsMono.variable}`}
+    >
       <head>
         {/*
           TEMA ANTES DA PRIMEIRA PINTURA (anti-FOUC).
@@ -130,18 +181,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           de injeção.
         */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
-
-        {/*
-          Pré-conexão com o Google Fonts. `preconnect` resolve DNS, TCP e TLS
-          antecipadamente; sem isso, a fonte só começa a baixar depois do CSS
-          ser analisado, atrasando o First Contentful Paint em ~300ms no 4G.
-        */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap"
-          rel="stylesheet"
-        />
       </head>
       <body>
         {/*

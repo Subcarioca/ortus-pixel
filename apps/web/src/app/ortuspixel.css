@@ -174,10 +174,18 @@
   --scrim-1:       light-dark(rgba(245,245,247,.80), rgba(19,19,23,.55));
   --scrim-2:       light-dark(rgba(245,245,247,.99), rgba(19,19,23,.97));
 
-  /* Tipografia */
-  --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
-  --font-text:    "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono:    "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  /* Tipografia
+     As três famílias são carregadas por `next/font/google` (ver layout.tsx),
+     que injeta as custom properties `--font-archivo` / `--font-inter` /
+     `--font-jetbrains-mono` no <html> com o arquivo .woff2 já hospedado no
+     próprio domínio — nada mais vem de fonts.googleapis.com. O CSS abaixo só
+     encadeia essa variável antes do fallback antigo (nome literal + pilha de
+     system fonts), que continua servindo de rede de segurança caso a variável
+     não esteja disponível por algum motivo (ex.: uma folha de estilo isolada
+     de teste que não passa pelo layout raiz). */
+  --font-display: var(--font-archivo), "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --font-text:    var(--font-inter), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:    var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
 
   /* Escala tipográfica fluida (mobile → desktop) */
   --fs-hero:  clamp(1.75rem, 6.2vw, 3.75rem);
@@ -402,7 +410,13 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 800; line-height
      um submit próprio e o atalho ficaria redundante. */
   .header__search-link { display: none; }
 }
-@media (min-width: 1024px) { .nav-toggle { display: none; } }
+/* `.icon-btn.nav-toggle`, não só `.nav-toggle`: a regra `.icon-btn` logo abaixo
+   também define `display` sem media query, e com a mesma especificidade
+   (0,1,0) uma classe só perde para a outra pela ordem no arquivo — bastava
+   `.icon-btn` vir depois desta regra para o botão nunca sumir no desktop,
+   como aconteceu na primeira versão. Duas classes juntas (0,2,0) resolve
+   sem depender de manter uma ordem específica entre as duas regras. */
+@media (min-width: 1024px) { .icon-btn.nav-toggle { display: none; } }
 .icon-btn {
   width: 40px; height: 40px; display: grid; place-items: center;
   border-radius: var(--r-md); color: var(--ink-2); position: relative;
@@ -413,6 +427,67 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 800; line-height
   position: absolute; top: 8px; right: 9px; width: 7px; height: 7px;
   border-radius: 50%; background: var(--brand); border: 2px solid var(--bg);
 }
+
+/* --- Drawer do menu de editorias (tablet/mobile) ---------------------------
+   Cobre a lacuna de navegação entre 768px e 1024px: `.bottom-nav` some em
+   768px, `.header__nav` só chega em 1024px, e nessa faixa não sobrava NENHUM
+   jeito de trocar de editoria. `.nav-toggle` (acima) já existia no protótipo,
+   escondido em desktop — só faltava o painel que ele abre, que o protótipo
+   nunca desenhou. Ver `nav-drawer.tsx`.
+
+   Desliza da ESQUERDA (mesmo lado do botão, que fica antes da logo) e fica
+   acima de tudo: `.header` é sticky em z-index 60 e `.bottom-nav` é fixa em
+   65, então o painel (89) e o fundo escurecido (88) precisam superar os dois. */
+.nav-drawer__backdrop {
+  position: fixed; inset: 0; z-index: 88;
+  background: rgba(0, 0, 0, .5);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s var(--ease);
+}
+.nav-drawer__backdrop--open { opacity: 1; pointer-events: auto; }
+
+.nav-drawer {
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: 89;
+  width: min(300px, 84vw);
+  background: var(--surface-1); border-right: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: var(--s-4);
+  padding: var(--s-4);
+  padding-top: calc(var(--s-4) + env(safe-area-inset-top));
+  overflow-y: auto;
+  /* Some para fora da tela por transform, não por `display`/`visibility`: é o
+     que permite ANIMAR a entrada e a saída. O componente cuida de tirar o
+     painel da árvore de foco/leitor de tela enquanto fechado via `inert`
+     (ver nav-drawer.tsx) — CSS e acessibilidade resolvendo problemas
+     diferentes, cada um com a ferramenta certa. */
+  transform: translateX(-100%);
+  transition: transform .22s var(--ease);
+}
+.nav-drawer--open { transform: translateX(0); }
+.nav-drawer__head { display: flex; align-items: center; justify-content: space-between; }
+.nav-drawer__title {
+  font-family: var(--font-display); font-weight: 800; font-size: 1rem;
+  text-transform: uppercase; letter-spacing: .02em;
+}
+.nav-drawer nav { display: grid; gap: var(--s-1); }
+.nav-drawer nav a {
+  display: block; padding: 12px var(--s-3); border-radius: var(--r-md);
+  font-weight: 600; color: var(--ink-2);
+}
+.nav-drawer nav a:hover { background: var(--surface-2); color: var(--ink); }
+/* Mesma semântica de `.header__nav a[aria-current="page"]` (linha ~392):
+   filete de marca na editoria atual — aqui como borda esquerda, porque o
+   drawer é uma lista vertical em vez de uma barra horizontal. */
+.nav-drawer nav a[aria-current="page"] {
+  color: var(--ink); background: var(--brand-soft);
+  border-left: 3px solid var(--brand); padding-left: calc(var(--s-3) - 3px);
+}
+/* Some junto com `.nav-toggle`: a partir de 1024px o menu de editorias já
+   vive sempre visível no cabeçalho (`.header__nav`), e um drawer sem botão
+   para abri-lo ficaria pendurado no DOM sem função. */
+@media (min-width: 1024px) {
+  .nav-drawer, .nav-drawer__backdrop { display: none; }
+}
+
 .btn-hot-nav {
   display: none; align-items: center; gap: 6px; font-size: var(--fs-sm); font-weight: 700;
   color: var(--heat-hot-text); border: 1px solid var(--heat-hot-line); background: var(--heat-hot-soft);
@@ -614,12 +689,33 @@ html:has(#th-dark:focus-visible)  .lbl-dark { outline: 3px solid var(--brand); o
 .hero__media { position: relative; aspect-ratio: 4/3; }
 @media (min-width: 768px) { .hero__media { aspect-ratio: 21/9; } }
 .hero__media .thumb { border-radius: 0; aspect-ratio: auto; height: 100%; }
+/*
+  RECORTE DO ROSTO NO MOBILE (relatório de UI).
+
+  `.hero__body` sobe por cima da própria foto com `margin-top` negativo (linha
+  abaixo) para o texto morder a imagem — é assim que o design consegue manchete
+  + foto na mesma dobra sem um segundo scroll. No mobile isso cobria ~metade da
+  ALTURA da imagem a partir da base (era -38%, contra -26% do desktop), e a
+  maioria das capas reais do acervo é foto de painel/evento com gente na
+  metade INFERIOR do quadro — exatamente a área coberta.
+
+  `object-position: top` empurra o recorte do `object-fit: cover` para o topo
+  da foto: com um enquadramento vertical mais alto que o do card (a razão de
+  aspecto 4:3 do hero é mais quadrada que a maioria das fotos de capa, que
+  vêm mais para paisagem/retrato largo), sobra imagem para cortar, e cortar
+  por CIMA (céu, teto do evento) preserva rosto muito mais vezes do que o
+  center-crop padrão do navegador.
+*/
+.hero__media .thumb > img { object-position: top; }
 .hero__overlay {
   position: absolute; inset: 0; z-index: 3;
   background: linear-gradient(180deg, var(--scrim-0) 0%, var(--scrim-1) 45%, var(--scrim-2) 100%);
 }
 .hero__body {
-  position: relative; z-index: 4; margin-top: -38%; padding: var(--s-4) var(--s-4) var(--s-5);
+  /* Era -38%: cobria a foto além do que o corte para cima consegue
+     compensar sozinho. -22% mantém o texto mordendo a imagem (o efeito que
+     o design quer) sem avançar sobre a região onde rosto costuma estar. */
+  position: relative; z-index: 4; margin-top: -22%; padding: var(--s-4) var(--s-4) var(--s-5);
 }
 @media (min-width: 768px) {
   .hero__body { margin-top: -26%; padding: var(--s-6); max-width: 46rem; }
@@ -1094,6 +1190,9 @@ table.cmp tr.is-deal { background: var(--surface-2); }
 .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--ink-3); padding-block: var(--s-3); flex-wrap: wrap; }
 .breadcrumb a:hover { color: var(--ink); }
 .breadcrumb .ico { width: 12px; height: 12px; }
+/* Último item da trilha na matéria: título truncado com reticências quando não
+   cabe na largura disponível (ex.: mobile), inteiro quando cabe. */
+.breadcrumb__current { max-width: 28rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Faixa de navegação do protótipo (só existe no protótipo, não no produto) */
 .protobar {

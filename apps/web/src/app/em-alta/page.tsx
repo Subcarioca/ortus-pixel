@@ -180,7 +180,13 @@ export default async function TrendingPage() {
         {/* ---------- PÓDIO: o #1 vira card grande ---------- */}
         {podium ? (
           <>
-            <ArticleCard item={podium} variant="lead" rank={1} priority />
+            {/* `showHeatBar`: aqui, e só aqui, o termômetro fica — o pódio abre
+                a SEQUÊNCIA de barras que continua nas linhas do ranking logo
+                abaixo (cada `RankRow` desenha a sua própria via `HeatBar`
+                direto, sem passar por `ArticleCard`). É a comparação lado a
+                lado que o card do feed não tem. Ver o comentário de
+                `showHeatBar` em `article-card.tsx`. */}
+            <ArticleCard item={podium} variant="lead" rank={1} priority showHeatBar />
 
             {/* Do #2 em diante: lista densa. "Ranking sem hierarquia de tamanho
                 vira planilha." */}

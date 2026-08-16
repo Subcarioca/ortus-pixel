@@ -50,6 +50,7 @@ import {
 
 import { AdSlot } from '@/components/ad-slot';
 import { ArticleCard } from '@/components/article-card';
+import { Breadcrumb } from '@/components/breadcrumb';
 import { BreadcrumbJsonLd, CollectionJsonLd } from '@/components/json-ld';
 import { NewsletterForm } from '@/components/newsletter-form';
 import { feedAdSlot } from '@/lib/ads';
@@ -153,13 +154,13 @@ export default async function SubcategoryPage({
       <div className="container">
         {/* Trilha visível: a pessoa precisa saber que Hardware está DENTRO de
             Tech, senão a sub-seção parece um site à parte. */}
-        <nav className="breadcrumb" aria-label="Você está em">
-          <Link href={routes.home()}>Home</Link>
-          <span aria-hidden="true">›</span>
-          <Link href={routes.category(categorySlug)}>{subcategory.categoryName}</Link>
-          <span aria-hidden="true">›</span>
-          <span aria-current="page">{subcategory.name}</span>
-        </nav>
+        <Breadcrumb
+          items={[
+            { label: 'Home', href: routes.home() },
+            { label: subcategory.categoryName, href: routes.category(categorySlug) },
+            { label: subcategory.name },
+          ]}
+        />
 
         {/* Mesma correção da página da editoria: o modificador de cor vem de
             `catModifier`, porque o slug da URL nem sempre é o nome que o design

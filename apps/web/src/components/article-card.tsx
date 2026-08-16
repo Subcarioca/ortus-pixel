@@ -63,6 +63,20 @@ interface ArticleCardProps {
    * baixaria tudo ao mesmo tempo e o LCP pioraria em vez de melhorar.
    */
   priority?: boolean;
+  /**
+   * Mostra o `HeatBar` (termômetro de 4 blocos) ao lado do `HeatBadge`, além
+   * da pílula de temperatura.
+   *
+   * `false` por padrão: no card do feed, pílula + termômetro lado a lado
+   * comunicavam a MESMA informação duas vezes (relatório de UI) — a pílula já
+   * diz a faixa por extenso, e é mais legível que quatro barrinhas de 16px.
+   *
+   * A EXCEÇÃO É `/em-alta`: o pódio (`variant="lead"`) liga esta prop de
+   * propósito, porque ali o termômetro aparece em SEQUÊNCIA, um por posição
+   * do ranking — é comparação lado a lado entre itens, não repetição dentro
+   * do mesmo card, e é exatamente o caso em que a barra ganha do texto.
+   */
+  showHeatBar?: boolean;
 }
 
 /**
@@ -80,7 +94,13 @@ const VARIANT_CLASS: Record<'grid' | 'row' | 'lead' | 'ever', string> = {
   ever: 'card--ever',
 };
 
-export function ArticleCard({ item, variant = 'grid', rank, priority = false }: ArticleCardProps) {
+export function ArticleCard({
+  item,
+  variant = 'grid',
+  rank,
+  priority = false,
+  showHeatBar = false,
+}: ArticleCardProps) {
   const isEvergreenFormat = (EVERGREEN_FORMATS as readonly string[]).includes(item.format);
 
   /*
@@ -176,7 +196,7 @@ export function ArticleCard({ item, variant = 'grid', rank, priority = false }: 
       <div className="card__body">
         <div className="card__head">
           <HeatBadge heat={item.heat} label={badgeLabel} />
-          <HeatBar heat={item.heat} level={item.heatLevel} size="sm" />
+          {showHeatBar && <HeatBar heat={item.heat} level={item.heatLevel} size="sm" />}
           <TrendTag trend={item.trend} />
           {showFormatSeal && (
             <span className={formatSealClass(item.format)}>{FORMAT_LABELS[item.format]}</span>

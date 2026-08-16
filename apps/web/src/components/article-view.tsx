@@ -82,7 +82,6 @@ import {
   formatSealClass,
   hasBlocks,
   heatForBand,
-  heatLevelForHeat,
   routes,
   schemaVideoFromBlocks,
   sensitivityNotice,
@@ -94,6 +93,7 @@ import { AdsPaused } from '@/components/ads-paused';
 import { AffiliateDisclosure } from '@/components/affiliate-disclosure';
 import { AnalyticsTracker } from '@/components/analytics-tracker';
 import { AffiliateOffers } from '@/components/affiliate-offers';
+import { Breadcrumb } from '@/components/breadcrumb';
 import { CommentSection } from '@/components/comments/comment-section';
 import { ArticleBody, markdownToc } from '@/components/article-body';
 import { ArticleBlocks } from '@/components/article-blocks';
@@ -101,7 +101,7 @@ import { ArticleToc } from '@/components/article-toc';
 import { ArticleCard } from '@/components/article-card';
 import { ArticleJsonLd, BreadcrumbJsonLd, ProductJsonLd } from '@/components/json-ld';
 import { HeatBadge } from '@/components/heat-badge';
-import { HeatBar, TrendTag } from '@/components/heat-bar';
+import { TrendTag } from '@/components/heat-bar';
 import { NewsletterForm } from '@/components/newsletter-form';
 import { PushOptIn } from '@/components/push-opt-in';
 import { RelativeTime } from '@/components/relative-time';
@@ -319,16 +319,38 @@ export async function ArticleView({ data, mode = 'public' }: ArticleViewProps) {
         Nielsen #8 (estético e minimalista) e §2 do design (hierarquia).
       */}
       <div className="container article-page">
+        {/* Trilha visível: até aqui só o `<BreadcrumbJsonLd>` acima existia, e
+            ele é dado estruturado — invisível para quem lê a página, só serve
+            ao buscador. Isto aqui é a mesma trilha para a pessoa, e aparece
+            nos dois modos (`public` e `preview`): é layout, não medição nem
+            anúncio, então a lista de diferenças do preview (ver cabeçalho
+            deste arquivo) não a exclui. O título entra truncado (reticências
+            só quando não cabe) porque pode ser bem mais longo que "Home" ou o
+            nome da categoria. */}
+        <Breadcrumb
+          items={[
+            { label: 'Home', href: routes.home() },
+            { label: article.category.name, href: routes.category(categoria) },
+            { label: article.title, truncate: true },
+          ]}
+        />
+
         <article className="article">
           {/* ---------- 1 a 3: badges e contexto ---------- */}
           <div className="article__kicker">
             {/* `heatForBand` centraliza a regra de corte — o template nunca
-                decide a temperatura por conta própria (design/README.md §2). */}
+                decide a temperatura por conta própria (design/README.md §2).
+
+                SEM `HeatBar` AQUI DE PROPÓSITO (relatório de UI): o kicker já
+                empilhava pílula de temperatura + termômetro + selo de formato
+                + categoria antes do H1 — quatro elementos competindo pela
+                mesma faixa de leitura, dois deles (pílula e termômetro)
+                dizendo a mesma coisa. A pílula (`HeatBadge`) sozinha já
+                comunica a faixa por extenso; o termômetro era reforço visual
+                redundante nesta página, ao contrário de `/em-alta`, onde ele
+                aparece em SEQUÊNCIA entre vários itens (comparação, não
+                repetição dentro do mesmo bloco). */}
             <HeatBadge heat={heatForBand(article.currentBand)} size="lg" />
-            <HeatBar
-              heat={heatForBand(article.currentBand)}
-              level={heatLevelForHeat(heatForBand(article.currentBand))}
-            />
             <TrendTag trend={trendForDelta(scoreDelta1h, article.publishedAt)} />
             {/* Selo de FORMATO ao lado do de temperatura. Contorno × pílula
                 preenchida: o leitor separa "isto é um vídeo" de "isto está

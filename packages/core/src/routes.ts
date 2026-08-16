@@ -117,6 +117,14 @@ export const routes = {
    */
   account: () => '/minha-conta',
 
+  /**
+   * Vitrine das 6 editorias — o destino real da aba "Editorias" do menu
+   * inferior mobile (ver `bottom-nav.tsx`). Existe porque, antes dela, aquela
+   * aba apontava para `/categoria/games` sem avisar ninguém: um leitor que
+   * queria "escolher uma editoria" caía direto dentro de Games.
+   */
+  editorias: () => '/editorias',
+
   methodology: () => '/metodologia',
 
   newsletter: () => '/newsletter',
@@ -187,6 +195,9 @@ export const RESERVED_SLUGS = new Set([
   // Área do leitor logado. Sem esta linha, uma franquia com slug "minha-conta"
   // sequestraria a página de conta no dia em que as URLs curtas entrarem.
   'minha-conta',
+  // Vitrine das editorias (ver `routes.editorias`) — mesmo motivo da linha
+  // acima: sem reservar o slug, uma franquia "editorias" tomaria a página.
+  'editorias',
   'sitemap',
   'sitemap.xml',
   'robots.txt',

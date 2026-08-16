@@ -45,6 +45,7 @@ import {
 import { categoryRailSlot, feedAdSlot } from '@/lib/ads';
 import { AdSlot } from '@/components/ad-slot';
 import { ArticleCard } from '@/components/article-card';
+import { Breadcrumb } from '@/components/breadcrumb';
 import { BreadcrumbJsonLd, CollectionJsonLd } from '@/components/json-ld';
 import { HeatBar } from '@/components/heat-bar';
 import { NewsletterForm } from '@/components/newsletter-form';
@@ -230,6 +231,16 @@ export default async function CategoryPage({
       />
 
       <div className="container">
+        {/* Trilha visível: mesma lacuna que existia na sub-seção (Hardware) —
+            só o JSON-LD de `<BreadcrumbJsonLd>` acima é invisível para quem lê
+            a página; isto aqui é o que a pessoa efetivamente vê. */}
+        <Breadcrumb
+          items={[
+            { label: 'Home', href: routes.home() },
+            { label: category.name },
+          ]}
+        />
+
         {/* Filete de 3px na cor da editoria (design §3).
             `catModifier` — e não `cat--${slug}` cru. O slug da URL é longo por
             causa da busca (`cinema-e-series`, `anime-e-manga`, `hqs`), enquanto

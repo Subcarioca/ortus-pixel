@@ -2,6 +2,8 @@ import Link from 'next/link';
 
 import { routes, type CategoryDefinition } from '@subcarioca/core';
 
+import { HeaderNav } from './header-nav';
+import { NavDrawer } from './nav-drawer';
 import { SearchForm } from './search-form';
 
 /**
@@ -57,6 +59,16 @@ export function SiteHeader({ categories }: { categories: readonly CategoryDefini
     <header className="header">
       <div className="container header__bar">
         {/*
+          BOTÃO HAMBÚRGUER — só existe visualmente abaixo de 1024px (CSS
+          `.nav-toggle`, ver §4 do design). Cobre o tablet: `.bottom-nav`
+          (mobile) já sumiu em 768px e `.header__nav` (abaixo) só aparece em
+          1024px — sem este botão, de 768 a 1023px não havia como trocar de
+          editoria. Vem ANTES da logo, na mesma posição do protótipo.
+          Ver `nav-drawer.tsx` para o painel que ele abre.
+        */}
+        <NavDrawer categories={categories} />
+
+        {/*
           `.logo--px` (e não só `.logo`): o modificador zera o `gap` do flex e
           pinta o `<b>` de `--ink`. Ele existe para que a marca antiga continue
           válida nos protótipos de `design/*.html`, que ainda usam `.logo` com o
@@ -82,13 +94,13 @@ export function SiteHeader({ categories }: { categories: readonly CategoryDefini
           </span>
         </Link>
 
-        <nav className="header__nav" aria-label="Editorias">
-          {categories.map((category) => (
-            <Link key={category.slug} href={routes.category(category.slug)}>
-              {category.shortName}
-            </Link>
-          ))}
-        </nav>
+        {/*
+          Marca `aria-current="page"` na editoria atual (CSS já pronto:
+          `.header__nav a[aria-current="page"]`). Precisa saber o pathname,
+          por isso é o único pedaço deste cabeçalho que é Client Component —
+          ver o comentário de `header-nav.tsx`.
+        */}
+        <HeaderNav categories={categories} />
 
         <div className="header__actions">
           <SearchForm variant="header" />

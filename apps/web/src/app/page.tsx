@@ -80,6 +80,7 @@
  * editoria, que continuam ordenadas por data de publicação.
  */
 
+import type { CSSProperties } from 'react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -161,6 +162,14 @@ export default async function HomePage() {
   // O único vazio legítimo do site: nada publicado. Todos os outros "vazios"
   // que a home exibia até aqui eram vazios FABRICADOS por filtro de score.
   const isFirstDay = home.heroKind === 'none';
+
+  // Siglas do "Seus universos" resolvidas UMA vez para a lista inteira, e não
+  // franquia por franquia dentro do `.map()`: unicidade só faz sentido em
+  // relação às outras franquias que estão na MESMA tela (ver o comentário de
+  // `resolveFranchiseAbbreviations`).
+  const franchiseAbbreviations = resolveFranchiseAbbreviations(
+    franchises.map((franchise) => franchise.name),
+  );
 
   return (
     <>
@@ -512,12 +521,19 @@ export default async function HomePage() {
                   href={routes.franchise(franchise.slug)}
                   className="fandom"
                 >
-                  {/* Sigla no disco colorido. O protótipo escolhe a cor pela
-                      editoria da franquia; o dado de `getTopFranchises` não
-                      traz categoria, então fica o neutro (`--ink-2`, o valor
-                      padrão de `--f`) em vez de inventarmos uma cor. */}
-                  <span className="fandom__ico" aria-hidden="true">
-                    {abbreviate(franchise.name)}
+                  {/* Sigla no disco colorido, sem colidir com as outras siglas
+                      DESTA MESMA lista (ver `franchiseAbbreviations` acima) —
+                      e cor própria por franquia (`franchiseAccentColor`), no
+                      lugar do cinza `--ink-2` fixo que todo disco tinha antes
+                      (o dado de `getTopFranchises` não traz categoria, então
+                      a cor não pode vir da editoria de verdade; ver o
+                      comentário de `franchiseAccentColor`). */}
+                  <span
+                    className="fandom__ico"
+                    aria-hidden="true"
+                    style={{ '--f': franchiseAccentColor(franchise.slug) } as CSSProperties}
+                  >
+                    {franchiseAbbreviations.get(franchise.name)}
                   </span>
                   {franchise.name}
                   <span className="fandom__n">
@@ -627,21 +643,137 @@ export default async function HomePage() {
 }
 
 /**
- * Sigla de até 3 letras para o disco do `.fandom__ico`.
+ * =============================================================================
+ * SIGLA E COR DO DISCO DE FRANQUIA (`.fandom__ico`) — relatório de UI
+ * =============================================================================
  *
- * Regra: com duas ou mais palavras, as iniciais ("One Piece" → "OP"); com uma
- * só, as três primeiras letras ("Zelda" → "ZEL"). Numerais romanos e algarismos
- * ("GTA VI") caem naturalmente no primeiro caso. É apresentação pura, então
- * mora aqui e não no domínio.
+ * DOIS PROBLEMAS SEPARADOS, DUAS CORREÇÕES SEPARADAS:
+ *
+ *  1. COLISÃO DE SIGLA. A regra antiga (iniciais das 3 primeiras palavras)
+ *     gerava a MESMA sigla "TLO" para "The Legend Of Zelda" e "The Last Of
+ *     Us" — duas franquias populares que podem aparecer juntas em "Seus
+ *     universos". O motivo é que "The" e "Of" não carregam identidade
+ *     nenhuma; são a parte que MAIS se repete entre nomes em inglês.
+ *
+ *  2. DISCO SEMPRE CINZA. `--f` nunca era definido porque `getTopFranchises`
+ *     não traz a categoria da franquia (a franquia não tem categoria única e
+ *     estável no schema — ver comentário original no JSX), então todo disco
+ *     caía no neutro `var(--ink-2)`.
  */
-function abbreviate(name: string): string {
+
+/**
+ * Palavras sem identidade própria — ignoradas ao montar a sigla. Cobre os
+ * casos mais comuns em nomes de franquia em português e inglês; não precisa
+ * ser exaustivo, só parar de deixar "The"/"Of" dominarem a sigla.
+ */
+const ABBREVIATION_STOPWORDS = new Set([
+  'a',
+  'o',
+  'as',
+  'os',
+  'de',
+  'da',
+  'do',
+  'das',
+  'dos',
+  'e',
+  'the',
+  'of',
+  'an',
+  'and',
+]);
+
+/** Palavras que sobram depois de descartar as sem identidade (nunca vazio). */
+function meaningfulWords(name: string): string[] {
   const words = name.split(/\s+/).filter(Boolean);
-  if (words.length > 1) {
-    return words
-      .slice(0, 3)
-      .map((w) => w.charAt(0))
+  const filtered = words.filter((word) => !ABBREVIATION_STOPWORDS.has(word.toLowerCase()));
+  // Nome feito só de palavras "descartáveis" é o caso de borda: melhor usar a
+  // lista original do que devolver uma sigla vazia.
+  return filtered.length > 0 ? filtered : words;
+}
+
+/**
+ * Candidatos de sigla para UM nome, do mais natural ao mais específico.
+ * "The Legend Of Zelda" → meaningfulWords = ["Legend", "Zelda"] → ["LZ", ...].
+ * "The Last Of Us"      → meaningfulWords = ["Last", "Us"]      → ["LU", ...].
+ * Já não colidem — o filtro de stopword resolve o caso citado no relatório
+ * sozinho; os candidatos seguintes só entram em cena para o caso mais raro de
+ * duas franquias diferentes começando pelas mesmas palavras relevantes.
+ */
+function abbreviationCandidates(name: string): string[] {
+  const words = meaningfulWords(name);
+  const initialsOf = (count: number) =>
+    words
+      .slice(0, count)
+      .map((word) => word.charAt(0))
       .join('')
       .toUpperCase();
+
+  if (words.length > 1) {
+    const first = words[0] ?? '';
+    const second = words[1] ?? '';
+    return [initialsOf(3), initialsOf(4), `${first.slice(0, 3)}${second.charAt(0)}`.toUpperCase()];
   }
-  return (words[0] ?? '').slice(0, 3).toUpperCase();
+
+  const solo = words[0] ?? '';
+  return [solo.slice(0, 3).toUpperCase(), solo.slice(0, 4).toUpperCase()];
+}
+
+/**
+ * Resolve a sigla de cada nome de uma lista garantindo que nenhuma repita
+ * DENTRO da mesma lista — é só aí que a repetição atrapalha o leitor (duas
+ * franquias exibidas lado a lado com o mesmo disco). Não tenta garantir
+ * unicidade GLOBAL entre todas as franquias do site: isso exigiria estado
+ * compartilhado por uma diferença que ninguém nunca vê ao mesmo tempo.
+ */
+function resolveFranchiseAbbreviations(names: string[]): Map<string, string> {
+  const used = new Set<string>();
+  const result = new Map<string, string>();
+
+  for (const name of names) {
+    const candidates = abbreviationCandidates(name);
+    let chosen = candidates.find((candidate) => !used.has(candidate));
+
+    // Esgotou os candidatos naturais (caso raro: 3+ franquias com o mesmo
+    // radical, tipo duas variações do mesmo jogo). Sufixo numérico garante
+    // unicidade de qualquer forma — feio é melhor que enganoso.
+    if (!chosen) {
+      const base = candidates[candidates.length - 1] ?? name.slice(0, 3).toUpperCase();
+      let suffix = 2;
+      let attempt = `${base}${suffix}`;
+      while (used.has(attempt)) {
+        suffix += 1;
+        attempt = `${base}${suffix}`;
+      }
+      chosen = attempt;
+    }
+
+    used.add(chosen);
+    result.set(name, chosen);
+  }
+
+  return result;
+}
+
+/**
+ * Paleta de cor por franquia: as 6 `accentColor` de `CATEGORIES`, escolhida
+ * de forma determinística pelo slug (mesmo hash → mesma cor sempre, para a
+ * mesma franquia, em toda visita).
+ *
+ * Por que não é a cor da categoria REAL da franquia: `getTopFranchises` não
+ * carrega esse dado (a relação franquia → categoria não é 1:1 estável o
+ * bastante no schema para virar coluna simples — franquias cross-mídia como
+ * "Star Wars" têm matéria em Cinema E em Games). Mudar isso é trabalho de
+ * modelagem, não de front. Reaproveitar a paleta das 6 editorias — em vez de
+ * inventar cores novas — mantém o disco dentro da linguagem visual do site
+ * mesmo sem a categoria de verdade.
+ */
+const FRANCHISE_COLOR_PALETTE = CATEGORIES.map((category) => category.accentColor);
+
+function franchiseAccentColor(slug: string): string {
+  let hash = 0;
+  for (let index = 0; index < slug.length; index += 1) {
+    hash = (hash * 31 + slug.charCodeAt(index)) >>> 0;
+  }
+  return FRANCHISE_COLOR_PALETTE[hash % FRANCHISE_COLOR_PALETTE.length] ?? 'var(--ink-2)';
 }

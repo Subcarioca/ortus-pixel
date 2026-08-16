@@ -237,6 +237,12 @@
       "namedRegex": "^/busca(?:/)?$"
     },
     {
+      "page": "/editorias",
+      "regex": "^/editorias(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/editorias(?:/)?$"
+    },
+    {
       "page": "/em-alta",
       "regex": "^/em\\-alta(?:/)?$",
       "routeKeys": {},

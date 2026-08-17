@@ -32,7 +32,7 @@ export function SiteFooter({ categories }: { categories: readonly CategoryDefini
           <div>
             {/*
               O MESMO SÍMBOLO DE GRAVAÇÃO DO HEADER, aqui substituindo a
-              primeira letra do nome por extenso: ●RTUS **PIXEL**.
+              primeira letra do nome por extenso: ◎RTUS **PIXEL**.
 
               `aria-label` no link é OBRIGATÓRIO, e não um capricho: o texto que
               sobrou no HTML é "rtus" + "Pixel", então sem o rótulo um leitor de
@@ -40,11 +40,11 @@ export function SiteFooter({ categories }: { categories: readonly CategoryDefini
               visualmente para quem enxerga e precisa existir textualmente para
               quem não enxerga (WCAG 2.4.4 e 1.1.1).
 
-              Vale o registro honesto: um disco cheio lê menos como a letra "O"
-              do que o anel pixelado que estava aqui antes, e é no rodapé — onde
-              ele encosta em "rtus" — que isso aparece mais. Foi decisão do dono
-              do produto trocar a legibilidade da letra pelo significado do
-              símbolo de gravação; o nome completo continua garantido no rótulo.
+              O RODAPÉ É O PIOR CASO DO SÍMBOLO, e por isso ele mandou na
+              terceira rodada do redesenho: aqui o "O" encosta em "rtus", então
+              se ele não ler como letra a marca lê "rtus Pixel". O disco cheio
+              que esteve aqui falhava nesse teste; o anel com ponto (§19.1 do
+              CSS) volta a fechar a palavra ORTUS sem perder o sinal de "no ar".
             */}
             <Link
               href={routes.home()}

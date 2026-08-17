@@ -29,24 +29,43 @@ import { SearchForm } from './search-form';
  *
  *    O "O" de Ortus virou o único elemento colorido da marca. O `<b>` continua
  *    ali, mas com o papel trocado: `.logo--px b` pinta o texto de `--ink`.
+ *    (Este parágrafo descreve a v0.3; a cor do `<b>` mudou de novo na terceira
+ *    rodada, logo abaixo.)
  *
  * AJUSTE 2026-08 (segunda rodada) — O SÍMBOLO VIROU "GRAVANDO":
  *
  *    O "O" passou por duas formas em dois dias, e as duas foram pedido do dono:
- *    primeiro um "O" em pixel art (um anel de células quadradas), agora o SINAL
- *    DE GRAVAÇÃO — o disco vermelho cheio de "algo está sendo gravado", com um
- *    halo que pulsa devagar.
+ *    primeiro um "O" em pixel art (um anel de células quadradas), depois o
+ *    SINAL DE GRAVAÇÃO — o disco vermelho cheio de "algo está sendo gravado",
+ *    com um halo que pulsa devagar.
  *
  *    A troca faz sentido para este produto: o site cobre notícia em tempo real,
- *    e o disco de gravação diz "estamos no ar AGORA" toda vez que a página
+ *    e o símbolo de gravação diz "estamos no ar AGORA" toda vez que a página
  *    carrega. É a mesma ideia do ponto pulsante que existia antes do redesenho
  *    (`.logo__dot`), agora promovida a letra da marca em vez de enfeite ao lado
- *    dela — por isso o `.logo__dot` não voltou: seriam dois discos carmim
- *    pulsando no mesmo canto da tela.
+ *    dela — por isso o `.logo__dot` não voltou: seriam dois carmins pulsando no
+ *    mesmo canto da tela.
  *
- *    O símbolo é um `<span>` vazio, não um SVG: um círculo é `border-radius:
- *    50%` e mais nada, e como elemento de CSS ele herda tamanho do wordmark e
- *    ganha a animação de graça. Ver `.logo__rec` em ortuspixel.css §19.1.
+ * AJUSTE 2026-08 (terceira rodada) — O SÍMBOLO VIROU LETRA DE NOVO, SEM DEIXAR
+ * DE SER O SINAL DE GRAVAÇÃO:
+ *
+ *    agora:  ◎.<b>Pixel</b>   → anel carmim com ponto pulsante  +  "Pixel" em
+ *                               pixel art (Press Start 2P) verde-fósforo
+ *
+ *    O disco CHEIO da rodada anterior não lia como letra — e o pedido desta
+ *    rodada foi manter o significado sem perder o "O". A solução não escolhe um
+ *    dos dois: o botão de gravação de verdade (o de qualquer app de câmera) É
+ *    um anel com um ponto dentro, e anel é a forma do "O". O vazio interno, que
+ *    o disco tinha eliminado, é justamente o que faz o olho reconhecer a letra.
+ *
+ *    O "Pixel" saiu de `--ink` e foi para o verde-fósforo de CRT
+ *    (`--brand-pixel`), em fonte bitmap. A marca passa a ter duas cores com
+ *    papéis distintos: carmim = "no ar agora", verde 8-bit = "nerd/games".
+ *
+ *    O símbolo é um `<span>` vazio, não um SVG: anel, ponto e halo são
+ *    `border-radius: 50%` e mais nada, e como elemento de CSS ele herda o
+ *    tamanho do wordmark e ganha a animação de graça. Ver `.logo__rec` e o
+ *    racional completo dos três desenhos testados em ortuspixel.css §19.1.
  *  - Os links do menu deixaram de usar `.cat cat--{slug}`. `.cat` é o RÓTULO
  *    de editoria (filete colorido + caixa-alta 10px), pensado para aparecer
  *    dentro de um card, subordinado ao badge de temperatura. Aplicá-lo ao menu
@@ -70,7 +89,8 @@ export function SiteHeader({ categories }: { categories: readonly CategoryDefini
 
         {/*
           `.logo--px` (e não só `.logo`): o modificador zera o `gap` do flex e
-          pinta o `<b>` de `--ink`. Ele existe para que a marca antiga continue
+          troca a fonte e a cor do `<b>` (pixel art verde). Ele existe para que
+          a marca antiga continue
           válida nos protótipos de `design/*.html`, que ainda usam `.logo` com o
           ponto pulsante — mudar a regra base quebraria todos eles de uma vez.
 

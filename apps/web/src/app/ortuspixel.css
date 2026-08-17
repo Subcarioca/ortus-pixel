@@ -114,6 +114,36 @@
   --brand-line:    light-dark(rgba(168,23,41,.34), rgba(202,65,79,.45));
   --on-brand:      #FFFFFF;                        /* 7.45:1 claro · 4.79:1 escuro */
 
+  /* --- VERDE DE FÓSFORO: A SEGUNDA COR DA MARCA (só o wordmark) -----------
+     Pedido do dono do produto: o "Pixel" da marca em pixel art, VERDE.
+
+     ESTE TOKEN EXISTE EM VEZ DE REAPROVEITAR UM VERDE QUE JÁ HAVIA, e a razão
+     é a mesma que separa os dois vermelhos: cor com função não empresta.
+       · `--cat-games` (#00795C/#00E0A4) é o FILETE da editoria Games. Pintar a
+         marca com ele diria "isto é uma matéria de Games" no topo de toda
+         página — inclusive nas de Anime e Cinema.
+       · `--ok` e `--heat-ever` são SEMÂNTICOS (sucesso, conteúdo perene). Uma
+         marca verde-sucesso pisca "deu certo" onde não houve ação nenhuma.
+     Por isso o tom escolhido é deliberadamente OUTRO ramo do verde: os três
+     acima são esmeralda/azulados; este é o verde-fósforo do monitor CRT, mais
+     amarelado, que é justamente a referência de "jogo antigo" pedida. A
+     distância de matiz é visível lado a lado (145° contra ~165° dos verdes de
+     editoria), então ninguém confunde marca com rótulo.
+
+     CONTRASTE (fundo do header em cada tema): 4.9:1 no claro, 10.9:1 no
+     escuro. O wordmark é isento da regra 1.4.3 da WCAG (logotipos não contam),
+     mas ele também é TEXTO real, selecionável e lido por busca — passa nos dois
+     temas com folga sobre o mínimo de 3:1 de texto grande, sem precisar da
+     isenção.                                                              */
+  --brand-pixel:   light-dark(#0F7A2E, #1FA80A);
+  /* Brilho do "PIXEL" — o VERDE MAIS CLARO/vivo (#39FF14) não virou a cor de
+     preenchimento: virou a cor do HALO. É o inverso do preenchimento escurecido
+     acima, e junto simula tubo de neon de verdade — o vidro tem uma cor
+     saturada, e o brilho ao redor é o que parece mais claro que a fonte. No
+     claro o halo é só uma sombra suave (não dá pra "acender neon" sobre fundo
+     branco sem borrar a legibilidade), no escuro é o verde puro. */
+  --brand-pixel-glow: light-dark(rgba(15, 122, 46, .22), rgba(57, 255, 20, .45));
+
   /* --- ESCALA DE TEMPERATURA (uso exclusivo: sinalização de popularidade) --- */
   /* v0.3 — CORREÇÃO DE ACESSIBILIDADE, não estética.
      O #FF3050 do tema escuro dava apenas 3.63:1 com o texto branco da pílula
@@ -186,6 +216,13 @@
   --font-display: var(--font-archivo), "Archivo", "Arial Narrow", system-ui, sans-serif;
   --font-text:    var(--font-inter), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono:    var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  /* Fonte BITMAP do wordmark (Press Start 2P, OFL 1.1). USO EXCLUSIVO da marca —
+     ver §19.1. Nenhum texto de interface usa esta família: ela não tem
+     acentuação completa nem minúsculas de leitura confortável, e a 8x8 pixels
+     qualquer parágrafo vira ruído. O fallback é uma monoespaçada porque o
+     desenho é de largura fixa: se a fonte falhar, o espaçamento do wordmark
+     continua parecido e a palavra não "desmonta". */
+  --font-pixel:   var(--font-press-start), "Press Start 2P", ui-monospace, monospace;
 
   /* Escala tipográfica fluida (mobile → desktop) */
   --fs-hero:  clamp(1.75rem, 6.2vw, 3.75rem);
@@ -2175,58 +2212,153 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
 }
 
 /* --------------------------------------------------------------------------
-   19.1 WORDMARK COM O "O" COMO SINAL DE GRAVAÇÃO
+   19.1 WORDMARK: O "O" É LETRA E BOTÃO DE GRAVAÇÃO AO MESMO TEMPO
    --------------------------------------------------------------------------
-   Pedido do dono do produto, primeira rodada: "o 'O' da ortus deve ser como um
-   pixel e inverta as cores do 'pixel'. O 'O' pixelado deve ser vermelho e o
-   pixel preto."
-   Segunda rodada (é a que está no ar): "vamos manter o 'Pixel' pixelado e o O
-   como se fosse o símbolo de gravação em andamento, aquele símbolo vermelho de
-   que algo está sendo gravado."
+   TRÊS RODADAS DE PEDIDO DO DONO DO PRODUTO, na ordem em que aconteceram:
 
-   O QUE INVERTEU, EXATAMENTE:
-     antes → "O" na cor do texto  +  "Pixel" em carmim (`.logo b`)
-     agora → "O" é um DISCO CARMIM  +  "Pixel" na cor do texto (`--ink`)
+     1ª  "o 'O' da ortus deve ser como um pixel e inverta as cores do 'pixel'.
+          O 'O' pixelado deve ser vermelho e o pixel preto."
+          → o "O" virou um anel de células quadradas.
+     2ª  "vamos manter o 'Pixel' pixelado e o O como se fosse o símbolo de
+          gravação em andamento, aquele símbolo vermelho de que algo está
+          sendo gravado."
+          → o "O" virou um DISCO carmim cheio, com halo pulsante.
+     3ª  (esta) "o 'O' precisa voltar a parecer um 'O' de verdade, sem perder a
+          referência ao símbolo de gravação" + "'Pixel' em estilo pixelado de
+          jogo antigo, na cor verde".
+
+   O QUE A 3ª RODADA CORRIGE. O disco cheio resolvia o SIGNIFICADO e perdia a
+   LETRA: em `●.PIXEL` o leitor via um marcador vermelho seguido de "PIXEL", e
+   no rodapé — onde o símbolo encosta em "rtus" — a marca chegava a ler "rtus
+   Pixel". Nielsen #4 (consistência e padrões) e #2 (correspondência com o mundo
+   real): a primeira letra do nome precisa ser reconhecível como letra, senão o
+   nome deixa de ser o nome.
+
+   A SAÍDA NÃO FOI ESCOLHER ENTRE LETRA E SÍMBOLO — o símbolo REAL de gravação
+   já é as duas coisas. O botão de REC de qualquer app de câmera é um ANEL com
+   um ponto dentro, e um anel é exatamente a forma de um "O". Desenhando esse
+   anel com a espessura de haste de um "O" de display (Archivo 900) e pondo o
+   ponto no contraforma, sai um único glifo que:
+     · a 16px no header lê como a letra O — é o VAZIO INTERNO que identifica a
+       letra; foi justamente ele que o disco cheio tinha eliminado;
+     · lê como "gravando agora" pelo conjunto carmim + ponto central + halo que
+       pulsa (Nielsen #1, visibilidade do estado do sistema, aplicada à promessa
+       do produto: cobertura em tempo real);
+     · e volta a fechar o nome no rodapé: `O` + `rtus` = ORTUS.
+
+   TRÊS DESENHOS FORAM TESTADOS EM TELA antes deste, nos dois temas:
+     A) anel espesso puro, sem ponto → letra impecável, mas a referência de
+        gravação enfraquece: vira "um O vermelho";
+     B) anel + ponto central pequeno (ESTE) → letra e símbolo empatados;
+     C) a letra "O" de verdade da Archivo 900 com um ponto dentro → o
+        contraforma da Archivo é estreito e o ponto o entope; a 16px voltava a
+        virar um borrão vermelho, ou seja, o problema da 2ª rodada de novo.
+   Fica registrado porque a variante A é o plano B se o ponto algum dia
+   incomodar: basta apagar o `::before` abaixo, nada mais depende dele.
+
+   PROPORÇÕES — todas em `em`, para o símbolo acompanhar a escala do wordmark em
+   vez de virar um px fixo que desalinha quando o header muda de altura:
+     0,80em de diâmetro  → a maiúscula da Archivo mede 0,69em e o "O" dela vai a
+       0,72em (medido no arquivo da fonte, não estimado): uma forma redonda
+       precisa de overshoot para PARECER da mesma altura das retas ao lado. O
+       resultado foi conferido pixel a pixel na captura do rodapé — o anel fecha
+       exatamente na linha de base do "RTUS" e ultrapassa 1px o topo, que é o
+       overshoot esperado.
+     0,17em de traço     → escolhido para casar com o peso das hastes da Archivo
+       900 que ficam ao lado dele no rodapé, onde a comparação é direta.
+     0,17em de ponto     → ~37% do vazio interno. Foi o limite achado no teste:
+       acima disso o conjunto vira alvo de tiro, abaixo o ponto some no celular.
+
+   O CARMIM VEM DE `--brand`, e não de `--heat-hot`: a regra dos dois vermelhos
+   (seção 1) reserva o vermelho vivo para urgência, e o próprio design system
+   lista "logotipo" como o primeiro uso legítimo de `--brand`.
+
+   ⚠ E A REGRA DE QUE `--brand` NÃO PULSA? Ela existe (seção 1) e continua
+   valendo. A exceção também já existia, escrita pelo próprio design system na
+   linha do `.logo__dot`: "o único uso animado do carmim de marca — sinal de
+   'site vivo', nunca de conteúdo quente". É este elemento, promovido de enfeite
+   ao lado da marca a letra da marca — e é por isso que o `.logo__dot` não
+   voltou: seriam dois carmins pulsando no mesmo canto da tela.
 
    POR QUE UM MODIFICADOR (`.logo--px`) E NÃO UMA MUDANÇA NA REGRA BASE:
    `.logo` é componente do design system e é usado pelos dez protótipos de
    `design/*.html`, que ainda trazem o ponto pulsante e o "Pixel" em carmim.
    Redefinir `.logo b` na raiz mudaria todos eles em silêncio, inclusive os que
-   documentam a versão anterior da marca. O modificador deixa as duas marcas
-   coexistirem enquanto os protótipos não forem atualizados — e deixa o diff
-   desta mudança caber inteiro nesta seção.
+   documentam as versões anteriores da marca. O modificador deixa as marcas
+   coexistirem e mantém o diff desta mudança dentro desta seção.
+   -------------------------------------------------------------------------- */
 
-   O CARMIM VEM DE `--brand`, e não de `--heat-hot`: a regra dos dois vermelhos
-   (seção 1) reserva o vermelho vivo para urgência, e o próprio design system
-   lista "logotipo" como o primeiro uso legítimo de `--brand`. O "O" ficou,
-   portanto, o único acento de marca do cabeçalho — e é por isso que o ponto
-   pulsante (`.logo__dot`) não voltou junto com o disco: seriam dois carmins
-   pulsando no mesmo canto da tela, anulando um ao outro.
-
-   ⚠ E A REGRA DE QUE `--brand` NÃO PULSA? Ela existe (seção 1) e continua
-   valendo. A exceção também já existia, escrita pelo próprio design system na
-   linha do `.logo__dot`: "o único uso animado do carmim de marca — sinal de
-   'site vivo', nunca de conteúdo quente". O disco de gravação é exatamente esse
-   elemento, promovido de enfeite ao lado da marca para letra da marca. Nenhuma
-   regra nova foi aberta; a que existia mudou de endereço.                    */
-
-/* `gap: 0` porque agora o "O" é uma LETRA, não um ícone ao lado do texto: entre
-   ele e o resto da palavra não pode haver espaço. O respiro entre "Ortus" e
-   "Pixel" (no rodapé) é um espaço de texto de verdade, dentro do `.logo__word`. */
+/* `gap: 0` de volta: uma rodada pediu o afastamento padrão de `.logo` aqui,
+   mas o "." é abreviação DO "O" (o par lê como um "O." só, não como duas
+   letras separadas) — os dois precisam ficar colados, e quem ganhou respiro
+   foi só o "." em relação a "PIXEL", no `margin-left` abaixo. */
 .logo--px { gap: 0; }
-.logo--px b { color: var(--ink); }
 
-/* O DISCO DE GRAVAÇÃO.
+/* O "PIXEL" EM PIXEL ART VERDE — a segunda metade do pedido da 3ª rodada.
 
-   Tamanho em `em`: o símbolo acompanha a tipografia do wordmark em vez de ter
-   um px fixo que desalinha quando o header muda de escala.
+   FONTE: Press Start 2P (`--font-pixel`, ver seção 1 e o layout raiz). É uma
+   fonte BITMAP: cada glifo é desenhado numa grade de 8x8 unidades por em.
 
-   0,72em NÃO é um número escolhido no olho: `.logo` é caixa-alta e a altura de
-   maiúscula da Archivo é ~0,72em, então o disco tem exatamente a altura das
-   letras ao lado. Ele fica um fio MENOR que o "O" pixelado que ocupava este
-   lugar antes (0,82em) porque aquele era um anel de cantos recuados — o
-   contorno não preenchia a caixa. Um disco cheio preenche, e no mesmo tamanho
-   pareceria maior que as letras. É o overshoot óptico ao contrário. */
+   POR ISSO O TAMANHO É ABSOLUTO (1rem = 16px) E NÃO RELATIVO, ao contrário de
+   todo o resto deste wordmark. Numa fonte de curvas, qualquer tamanho renderiza
+   bem; numa fonte de grade, um tamanho que não seja MÚLTIPLO DE 8 cai entre
+   pixels e o navegador suaviza as bordas — o desenho perde exatamente o que faz
+   dele pixel art. 16px = 2 unidades de tela por pixel da fonte: sai cravado.
+
+   E o número não foi escolhido só pela grade: a 16px a altura de maiúscula da
+   Press Start 2P dá 13,9px, contra 13,8px das maiúsculas da Archivo do resto do
+   wordmark (medido nos dois arquivos de fonte). As duas famílias alinham topo e
+   base sozinhas — nenhum ajuste óptico foi necessário.
+
+   `font-weight: 400` é OBRIGATÓRIO: o "Pixel" vive num `<b>`, a família tem um
+   peso só, e sem esta linha o navegador sintetiza o negrito engordando o traço
+   na horizontal — a grade sai borrada e torta.
+
+   `letter-spacing: 0` desfaz o `-.045em` que `.logo` aplica ao wordmark inteiro:
+   tracking negativo é ajuste de fonte de display, e numa monoespaçada de grade
+   ele só aproxima blocos que foram desenhados para ficar a uma distância fixa.
+
+   `text-transform` continua vindo do `.logo` (caixa-alta): as minúsculas da
+   Press Start 2P têm x-height minúscula e sumiriam ao lado das maiúsculas da
+   Archivo. */
+.logo--px b {
+  font-family: var(--font-pixel);
+  font-weight: 400;
+  font-size: 1rem;
+  letter-spacing: 0;
+  /* Mais respiro entre o "." e "PIXEL" — pedido explícito, ao contrário do
+     afastamento O↔palavra (esse é o `gap` padrão de `.logo`, sem override). */
+  margin-left: 4px;
+  color: var(--brand-pixel);
+  /* BRILHO FLUORESCENTE, 4ª rodada de ajuste — cada vez mais contido:
+     2/6/14px → 1/3/7px → 1/2/4px → 1/2/3px, opacidade também reduzida junto
+     (ver `--brand-pixel-glow`). A ideia do neon está aprovada; só o quanto ele
+     "vaza" para fora da letra que continuava forte demais. Três camadas do
+     mesmo `--brand-pixel-glow` em raios crescentes simulam a difusão de luz de
+     um tubo de neon — a camada mais estreita reforça o traço, as maiores criam
+     o halo (agora bem rente à letra, quase só uma borda mais viva). */
+  text-shadow:
+    0 0 1px var(--brand-pixel-glow),
+    0 0 2px var(--brand-pixel-glow),
+    0 0 3px var(--brand-pixel-glow);
+  /* DESCE UM PIXEL DA FONTE (2px a 16px) PARA ENCOSTAR NA LINHA DE BASE.
+     A Press Start 2P desenha as maiúsculas 13% do em ACIMA da linha de base —
+     a folga que ela reserva para as descendentes. Sem esta correção o "PIXEL"
+     flutua sobre a base do resto do wordmark, e no rodapé, onde ele fica ao
+     lado de "RTUS" em Archivo, o degrau aparece a olho nu. `position/top` (e
+     não `vertical-align`) porque assim o deslocamento é só visual: a altura da
+     linha não muda e o header não ganha um pixel de altura. O valor é INTEIRO e
+     igual a um pixel do desenho da fonte — meio pixel devolveria a borda
+     suavizada que o tamanho de 16px foi escolhido para evitar. */
+  position: relative;
+  top: 2px;
+}
+
+/* O DISCO DE GRAVAÇÃO — de volta exatamente a como era antes desta sessão.
+   Duas rodadas tentaram um anel (letra "O" mais literal); o dono pediu pra
+   voltar ao disco cheio, então o "O" volta a ser só o símbolo de gravação,
+   sem tentar dobrar como contorno de letra. `.72em`, sem borda, preenchido —
+   nenhuma variação de tamanho ou espessura sobrou das rodadas do anel. */
 .logo__rec {
   position: relative;
   width: .72em; height: .72em; flex: none;
@@ -2236,18 +2368,16 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
 
 /* O HALO — é ele que diz "em andamento" em vez de só "vermelho".
 
-   POR QUE UM `::after` COM `transform`, E NÃO UM `box-shadow` ANIMADO (que é
-   como o `.logo__dot` da seção 4 faz): `box-shadow` é propriedade de PINTURA.
-   Animá-la obriga o navegador a repintar a região a cada quadro, para sempre,
-   em todas as páginas do site — inclusive enquanto o leitor rola uma matéria
-   longa, que é o momento em que o orçamento de quadro do celular já está no
-   limite. `transform` e `opacity` são compostas pela GPU: a mesma animação sai
-   por custo praticamente zero.
+   POR QUE UM `::after` COM `transform`, E NÃO UM `box-shadow` ANIMADO: `box-
+   shadow` é propriedade de PINTURA — animá-la obriga o navegador a repintar a
+   região a cada quadro, para sempre, em todas as páginas, inclusive enquanto o
+   leitor rola uma matéria longa no celular, o momento em que o orçamento de
+   quadro já está no limite. `transform`/`opacity` são compostas pela GPU: a
+   mesma animação sai por custo praticamente zero.
 
    O halo nasce colado na borda do disco e cresce só 60%: nesse raio ele ainda
-   passa raspando pelo ponto do ".Pixel" quando já está quase transparente, e
-   não chega a cruzar o texto. Um halo maior parece bonito parado e vira um anel
-   atravessando a palavra em movimento.
+   passa raspando pelo "." quando já está quase transparente, e não chega a
+   cruzar o texto.
 
    Movimento reduzido: a regra global de `prefers-reduced-motion` (seção 2)
    zera a duração de toda animação do site, então o halo simplesmente não
@@ -2269,8 +2399,15 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
 
 /* O texto do wordmark é um item de flex único — ver o comentário no header.
    `nowrap` impede que "Ortus Pixel" quebre em duas linhas dentro do rodapé de
-   4 colunas, onde a coluna pode ficar estreita. */
-.logo__word { white-space: nowrap; }
+   4 colunas, onde a coluna pode ficar estreita.
+
+   `word-spacing` só tem efeito onde EXISTE um espaço — ou seja, só no rodapé,
+   que é o único lugar com o nome por extenso ("ORTUS PIXEL"). O header
+   (".PIXEL") não tem espaço nenhum e não muda. Os 3px compensam o encontro de
+   duas famílias muito diferentes: o "S" da Archivo termina em curva e o "P" da
+   fonte bitmap começa num bloco cheio, e sem esse respiro as duas palavras
+   pareciam uma só. */
+.logo__word { white-space: nowrap; word-spacing: 3px; }
 
 /* --------------------------------------------------------------------------
    19.2 O ÍNDICE "NESTE TEXTO" NA MARGEM DIREITA, ACOMPANHANDO A ROLAGEM

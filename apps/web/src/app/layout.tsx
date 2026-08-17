@@ -9,7 +9,7 @@
  */
 
 import type { Metadata, Viewport } from 'next';
-import { Archivo, Inter, JetBrains_Mono } from 'next/font/google';
+import { Archivo, Inter, JetBrains_Mono, Press_Start_2P } from 'next/font/google';
 
 import { CATEGORIES, routes } from '@subcarioca/core';
 
@@ -46,6 +46,27 @@ import { AdSenseLoader } from '@/components/adsense-loader';
  * `--font-display` / `--font-text` / `--font-mono` (ver `:root`) — a troca é só
  * de MECANISMO de carregamento, o nome final dessas três variáveis (usadas em
  * dezenas de regras do CSS) não mudou.
+ *
+ * A QUARTA FAMÍLIA — PRESS START 2P — É DIFERENTE DAS OUTRAS TRÊS:
+ *
+ * ela não é uma fonte de texto, é o WORDMARK. É usada em exatamente UM lugar do
+ * site (o "Pixel" da marca, `.logo--px b`, header e rodapé), com UM peso e em
+ * dois tamanhos. Vale a pena carregá-la mesmo assim porque a marca aparece em
+ * toda página e o arquivo é minúsculo (~9 kB no subset latin — a fonte tem um
+ * desenho bitmap de 8x8, sem curvas para descrever).
+ *
+ * Por que Press Start 2P e não uma fonte pixelada qualquer: ela está no
+ * catálogo do Google Fonts sob SIL Open Font License 1.1 (uso comercial
+ * liberado, sem atribuição no site), e é o desenho que o público reconhece como
+ * "jogo antigo" — deriva das fontes de arcade da Namco dos anos 80. Nenhum
+ * arquivo de terceiro entrou no repositório: `next/font/google` baixa e hospeda
+ * o .woff2 no nosso próprio domínio, igual às outras três.
+ *
+ * ⚠ PESO ÚNICO 400, e o CSS PRECISA respeitar isso: o "Pixel" vive dentro de um
+ * `<b>`, que por padrão pede negrito. Sem um `font-weight: 400` explícito na
+ * regra do wordmark, o navegador SINTETIZA o negrito (engorda o traço na
+ * horizontal) e a grade de pixels sai borrada — o efeito exatamente contrário
+ * ao pretendido. Ver `.logo--px b` em ortuspixel.css §19.1.
  */
 const archivo = Archivo({
   subsets: ['latin'],
@@ -66,6 +87,13 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ['500', '700'],
   display: 'swap',
   variable: '--font-jetbrains-mono',
+});
+
+const pressStart2P = Press_Start_2P({
+  subsets: ['latin'],
+  weight: '400',
+  display: 'swap',
+  variable: '--font-press-start',
 });
 
 /**
@@ -165,7 +193,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html
       lang="pt-BR"
       suppressHydrationWarning
-      className={`${archivo.variable} ${inter.variable} ${jetbrainsMono.variable}`}
+      className={`${archivo.variable} ${inter.variable} ${jetbrainsMono.variable} ${pressStart2P.variable}`}
     >
       <head>
         {/*

@@ -24,6 +24,8 @@ import {
   type ScoreBand,
 } from '@subcarioca/core';
 
+import type { PreArticleOutput } from '@/server/ai/prearticle-types';
+
 import { HeatBadge } from '../heat-badge';
 import { ScoreValue } from './score-value';
 
@@ -61,6 +63,10 @@ export function TopicRow({ topic }: TopicRowProps) {
   const [overrideReason, setOverrideReason] = useState('');
   const [isPending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState('');
+  const [prearticle, setPrearticle] = useState<PreArticleOutput | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [genStatus, setGenStatus] = useState('');
+  const [copied, setCopied] = useState(false);
 
   /** Minutos restantes da meta de 30 min. Negativo = estourou. */
   const minutesLeft = topic.becameHotAt
@@ -87,6 +93,52 @@ export function TopicRow({ topic }: TopicRowProps) {
         setFeedback('Erro de conexão.');
       }
     });
+  }
+
+  /**
+   * Gera a pré-matéria com IA para esta pauta.
+   *
+   * Diferente de `callAction`, esta chamada NÃO recarrega a página ao terminar:
+   * o resultado é conteúdo transiente para o editor revisar, não um novo estado
+   * do tópico. Mantemos o resultado em memória até o usuário recarregar, então
+   * ele pode copiar o JSON ou reler a redação sem perder a geração.
+   */
+  async function generatePreArticle() {
+    setPrearticle(null);
+    setCopied(false);
+    setGenStatus('');
+    setGenerating(true);
+    try {
+      const response = await fetch(`/api/admin/topics/${topic.id}/prearticle`, {
+        method: 'POST',
+      });
+      const data = (await response.json()) as {
+        ok: boolean;
+        message?: string;
+        data?: PreArticleOutput;
+      };
+      if (data.ok && data.data) {
+        setPrearticle(data.data);
+        setGenStatus('Pré-matéria gerada.');
+      } else {
+        setGenStatus(data.message ?? 'Falha ao gerar pré-matéria.');
+      }
+    } catch {
+      setGenStatus('Erro de conexão ao gerar pré-matéria.');
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  /** Copia o JSON completo para a área de transferência — o editor cola onde quiser. */
+  async function copyPreArticle() {
+    if (!prearticle) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(prearticle, null, 2));
+      setCopied(true);
+    } catch {
+      setGenStatus('Não foi possível copiar.');
+    }
   }
 
   const contributions = Array.isArray(topic.contributions)
@@ -210,6 +262,15 @@ export function TopicRow({ topic }: TopicRowProps) {
         <button
           type="button"
           className="btn btn--ghost btn--sm"
+          onClick={generatePreArticle}
+          disabled={generating}
+        >
+          {generating ? 'Gerando…' : 'Gerar pré-matéria'}
+        </button>
+
+        <button
+          type="button"
+          className="btn btn--ghost btn--sm"
           onClick={() => setExpanded(!expanded)}
           aria-expanded={expanded}
         >
@@ -308,9 +369,101 @@ export function TopicRow({ topic }: TopicRowProps) {
         </div>
       )}
 
+      {/* ---------- PRÉ-MATÉRIA GERADA POR IA ---------- */}
+      {prearticle && (
+        <div className="admin-row__detail admin-row__prearticle">
+          <div className="admin-row__prearticle-head">
+            <h4 className="admin-row__title">Pré-matéria (rascunho de IA)</h4>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={copyPreArticle}
+            >
+              {copied ? 'Copiado ✓' : 'Copiar JSON'}
+            </button>
+          </div>
+
+          <p className="admin-row__summary">{prearticle.contextualizacao}</p>
+
+          {prearticle.analise_hype.length > 0 && (
+            <div className="admin-row__prearticle-section">
+              <h5 className="admin-row__summary">Análise do hype</h5>
+              <ul className="admin-row__list">
+                {prearticle.analise_hype.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="admin-row__prearticle-section">
+            <h5 className="admin-row__summary">
+              Modelo de popularidade — {prearticle.modelo_popularidade.categoria}
+            </h5>
+            <p className="form-hint">{prearticle.modelo_popularidade.justificativa}</p>
+            <p className="form-hint">
+              Pico: {prearticle.modelo_popularidade.momento_pico} · Janela:{' '}
+              {prearticle.modelo_popularidade.janela_publicacao} · Risco:{' '}
+              {prearticle.modelo_popularidade.risco_timing}
+            </p>
+            <p className="form-hint">
+              {prearticle.modelo_popularidade.estrategia_posicionamento}
+            </p>
+          </div>
+
+          <div className="admin-row__prearticle-section">
+            <h5 className="admin-row__summary">{prearticle.pre_materia.titulo}</h5>
+            {prearticle.pre_materia.subtitulo && (
+              <p className="admin-row__summary">{prearticle.pre_materia.subtitulo}</p>
+            )}
+            {prearticle.pre_materia.abertura && (
+              <p className="form-hint">{prearticle.pre_materia.abertura}</p>
+            )}
+            {prearticle.pre_materia.corpo.map((block, i) => (
+              <p key={i} className="form-hint">
+                {block}
+              </p>
+            ))}
+            {prearticle.pre_materia.fechamento_cta && (
+              <p className="form-hint">{prearticle.pre_materia.fechamento_cta}</p>
+            )}
+            {prearticle.pre_materia.extras_retencao.length > 0 && (
+              <ul className="admin-row__list">
+                {prearticle.pre_materia.extras_retencao.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="admin-row__prearticle-section">
+            <h5 className="admin-row__summary">SEO & captação</h5>
+            <p className="form-hint">
+              Palavra-chave: {prearticle.otimizacao.palavra_chave_principal} ·{' '}
+              {prearticle.otimizacao.palavras_chave_secundarias.join(', ')}
+            </p>
+            <p className="form-hint">Meta: {prearticle.otimizacao.meta_description}</p>
+            {prearticle.otimizacao.titulos_sociais.length > 0 && (
+              <ul className="admin-row__list">
+                {prearticle.otimizacao.titulos_sociais.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            )}
+            <p className="form-hint">#{prearticle.otimizacao.hashtags.join(' #')}</p>
+          </div>
+        </div>
+      )}
+
       {feedback && (
         <p className="form-hint" role="status">
           {feedback}
+        </p>
+      )}
+
+      {genStatus && (
+        <p className="form-hint" role="status">
+          {genStatus}
         </p>
       )}
     </li>

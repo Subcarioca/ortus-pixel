@@ -202,9 +202,13 @@ export async function onArticlePublished(input: {
       await prisma.pushNotification.create({
         data: {
           articleId: input.articleId,
-          title: article.title.slice(0, 65),
+          // `?? ''` é defensivo: embora o schema declare `title`/`excerpt` como
+          // não-nulos, linhas antigas gravadas antes do `@default("")` podem ter
+          // NULL no banco, e o Prisma devolve null em runtime apesar do tipo.
+          // Sem a guarda, isso quebra com "reading 'slice'" no meio da publicação.
+          title: (article.title ?? '').slice(0, 65),
           // Limites de tamanho seguem o que Android e iOS exibem sem truncar.
-          body: article.excerpt.slice(0, 120),
+          body: (article.excerpt ?? '').slice(0, 120),
           iconUrl: article.coverImageUrl,
           url: `/${article.category.slug}/${article.slug}`,
           trigger: 'automatic',

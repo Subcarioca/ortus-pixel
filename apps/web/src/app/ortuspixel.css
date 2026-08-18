@@ -1686,6 +1686,16 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
   font-size: var(--fs-xs); color: var(--ink); background: var(--heat-rise-soft);
   border: 1px solid var(--heat-rise); border-radius: var(--r-sm); padding: 6px var(--s-3);
 }
+/* PRÉ-MATÉRIA POR IA: bloco estruturado dentro da linha da fila. O estilo é
+   discreto de propósito — o conteúdo é rascunho, e um rascunho não deve
+   competir visualmente com a pauta confirmada ao lado. */
+.admin-row__prearticle {
+  display: grid; gap: var(--s-3); padding: var(--s-3);
+  border: 1px dashed var(--line-soft); border-radius: var(--r-sm);
+}
+.admin-row__prearticle-head { display: flex; gap: var(--s-2); align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.admin-row__prearticle-section { display: grid; gap: 4px; }
+.admin-row__prearticle ul { margin: 0; padding-left: 1.2em; display: grid; gap: 2px; }
 .admin-override { font-size: var(--fs-xxs); color: var(--ink-3); font-family: var(--font-mono); }
 
 .admin-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }

@@ -5,7 +5,8 @@
  *
  * Ações: `claim` (assumir), `override` (sobrepor score), `create-article`
  * (virar matéria), `ai-suggestion` (pré-preencher o formulário com um rascunho
- * gerado por modelo de linguagem) e `dismiss` (descartar).
+ * gerado por modelo de linguagem), `prearticle` (gerar a pré-matéria estruturada
+ * do REDATOR-CHEFE, via DeepSeek) e `dismiss` (descartar).
  *
  * TODA ação é registrada em `AuditLog` com autor, valor anterior, valor novo e
  * justificativa. Isso não é burocracia: é o que permite, semanas depois,
@@ -28,6 +29,13 @@ import {
 } from '@subcarioca/core';
 
 import { generateArticleDraft, isAiDraftConfigured } from '@/server/ai-draft';
+import {
+  DEFAULT_REFERENCE_SOURCES,
+  detectLanguage,
+  generatePreArticle,
+  isPreArticleConfigured,
+  preArticleModel,
+} from '@/server/ai/prearticle';
 import { parseArticleInput } from '@/server/article-input';
 import { editorialRiskGate } from '@/server/editorial-risk-gate';
 import { syncArticleTaxonomy } from '@/server/article-taxonomy';
@@ -341,6 +349,152 @@ export async function POST(
         ok: true,
         message: 'Rascunho gerado. Revise tudo antes de publicar.',
         draft: resultado.draft,
+      });
+    }
+
+    // -------------------------------------------------------------------------
+    case 'prearticle': {
+      /**
+       * PRÉ-MATÉRIA DO REDATOR-CHEFE — a pauta vira um pacote editorial
+       * estruturado (contextualização, análise do hype, modelo de popularidade,
+       * pré-matéria e otimização de captação) via DeepSeek.
+       *
+       * -----------------------------------------------------------------------
+       * COMO ISTO SE RELACIONA COM `ai-suggestion`
+       * -----------------------------------------------------------------------
+       * São duas funcionalidades vizinhas e INTENCIONALMENTE separadas. A
+       * sugestão preenche o formulário de matéria com um rascunho e devolve o
+       * conteúdo que o editor edita no MESMO formulário de sempre. A pré-matéria
+       * devolve um JSON ESTRUTURADO — com análise de hype, modelo de
+       * popularidade e otimização de captação — que o editor revisa na PRÓPRIA
+       * fila, antes de decidir abrir o formulário. A permissão é a mesma (quem
+       * vê a fila pode pedir), mas o custo, o contrato de saída e o raio de
+       * injeção de prompt são diferentes o bastante para justificar duas ações.
+       */
+      if (!isPreArticleConfigured()) {
+        // A tela já esconde o botão neste caso. Isto é a verificação que vale:
+        // esconder botão nunca foi proteção.
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              'A pré-matéria por IA não está configurada neste servidor. ' +
+              'Use "Criar matéria" e escreva normalmente.',
+          },
+          { status: 503 },
+        );
+      }
+
+      // Tópico já coberto não deve gastar uma chamada paga: a pré-matéria seria
+      // descartada no salvamento pela trava de matéria duplicada.
+      if (topic.status === 'published') {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: 'Este tópico já virou matéria. Edite a matéria existente em Matérias.',
+          },
+          { status: 409 },
+        );
+      }
+
+      /**
+       * LIMITE DE VOLUME — o MESMO teto da sugestão (8 a cada 10 minutos), porém
+       * com CHAVE PRÓPRIA. Pedir pré-matéria e pedir sugestão são gestos de
+       * custo independentes: um não deve comer a cota do outro, e somar os dois
+       * no mesmo contador puniria justamente quem está testando os dois fluxos.
+       */
+      const limite = checkRateLimit(`prearticle:${guard.user.id}`, {
+        maxRequests: 8,
+        windowSeconds: 600,
+      });
+
+      if (!limite.allowed) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              `Você já pediu várias pré-matérias seguidas. Espere ${Math.ceil(limite.resetInSeconds / 60)} ` +
+              'minuto(s) ou escreva a matéria pelo formulário.',
+          },
+          { status: 429 },
+        );
+      }
+
+      // Contexto mínimo da pauta — título, resumo, fonte e categoria. Só é
+      // buscado AQUI, nesta ação, porque as outras cinco não usam esses campos.
+      const contexto = await prisma.topic.findUnique({
+        where: { id },
+        select: {
+          title: true,
+          summary: true,
+          sourceName: true,
+          category: { select: { name: true } },
+        },
+      });
+
+      if (!contexto) {
+        return NextResponse.json({ ok: false, message: 'Tópico não encontrado.' }, { status: 404 });
+      }
+
+      // A fonte original encabeça a lista de referência (é ela quem deu a
+      // pauta), seguida dos portais de referência padrão. Entradas vazias/nulas
+      // são descartadas para não sujar o prompt.
+      const fontes = [contexto.sourceName, ...DEFAULT_REFERENCE_SOURCES]
+        .filter((fonte): fonte is string => typeof fonte === 'string' && fonte.trim().length > 0)
+        .join(', ');
+
+      const resultado = await generatePreArticle({
+        pauta: contexto.summary ?? contexto.title,
+        tituloOriginal: contexto.title,
+        idiomaOriginal: detectLanguage(contexto.title),
+        scorePopularidade: Math.round(topic.currentScore),
+        nicho: contexto.category?.name ?? 'Cultura pop/geek',
+        fontesReferencia: fontes,
+      });
+
+      if (!resultado.ok) {
+        // O status vem do módulo, e nunca é 401: ver o comentário de
+        // `DeepSeekFailure` em `deepseek.ts`.
+        return NextResponse.json(
+          { ok: false, message: resultado.message },
+          { status: resultado.status },
+        );
+      }
+
+      const dados = resultado.data;
+      const caracteres =
+        dados.contextualizacao.length +
+        dados.analise_hype.join('').length +
+        dados.pre_materia.titulo.length +
+        dados.pre_materia.subtitulo.length +
+        dados.pre_materia.abertura.length +
+        dados.pre_materia.corpo.join('').length +
+        dados.pre_materia.fechamento_cta.length;
+
+      // Registro da geração, no mesmo espírito de `topic.ai_suggestion`: o TEXTO
+      // GERADO NÃO É GRAVADO (ainda é rascunho na tela de alguém), mas o volume
+      // e o modelo são — é o que permite cruzar custo com o que de fato virou
+      // matéria no fim do mês.
+      await prisma.auditLog.create({
+        data: {
+          action: 'topic.ai_prearticle',
+          entityType: 'Topic',
+          entityId: id,
+          actorId: guard.user.id,
+          after: {
+            model: preArticleModel(),
+            corpo: dados.pre_materia.corpo.length,
+            caracteres,
+            modelo_popularidade: dados.modelo_popularidade.categoria,
+          },
+          ipHash,
+        },
+      });
+
+      return NextResponse.json({
+        ok: true,
+        message: 'Pré-matéria gerada. Revise tudo antes de publicar.',
+        prearticle: dados,
       });
     }
 

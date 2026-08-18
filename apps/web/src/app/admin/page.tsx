@@ -36,6 +36,7 @@ import { CuratorRunButton } from '@/components/admin/curator-run-button';
 import { TopicCreateForm } from '@/components/admin/topic-create-form';
 import { TopicRow } from '@/components/admin/topic-row';
 import { isAiDraftConfigured } from '@/server/ai-draft';
+import { isPreArticleConfigured } from '@/server/ai/prearticle';
 import { getHotPublishRateSafe } from '@/server/admin-metrics';
 import { requireStaffPage } from '@/server/staff-auth';
 import {
@@ -184,6 +185,11 @@ export default async function AdminPage() {
    * booleano, nunca o valor).
    */
   const aiEnabled = isAiDraftConfigured();
+  // Mesma pergunta, para a pré-matéria via DeepSeek. Uma variável separada de
+  // propósito: cada funcionalidade tem sua própria chave e pode estar ligada
+  // ou desligada sozinha — exibir as duas sob o mesmo booleano mentiria sobre
+  // qual delas está disponível.
+  const preArticleEnabled = isPreArticleConfigured();
 
   /**
    * KPI "QUENTES na fila".
@@ -317,6 +323,18 @@ export default async function AdminPage() {
           </p>
         )}
 
+        {/* Pré-matéria desligada: aviso próprio, porque a chave é outra
+            (DeepSeek). Um administrador pode ter configurado uma e não a outra —
+            fundir os dois avisos num só diria que as duas estão no mesmo estado,
+            que é justamente o que o par de chaves separadas desmente. */}
+        {!preArticleEnabled && can(user.accessLevel, 'gerenciarContas') && (
+          <p className="form-hint">
+            Pré-matéria por IA desligada: falta a variável{' '}
+            <code>DEEPSEEK_API_KEY</code> no ambiente do servidor. A fila funciona
+            normalmente sem ela — só o botão “Gerar pré-matéria” não aparece.
+          </p>
+        )}
+
         {topics.length === 0 ? (
           /* A instrução daqui era "rode `npm run curator:once`", que só serve a
              quem tem um terminal no monorepo. Em produção — hospedagem
@@ -341,6 +359,7 @@ export default async function AdminPage() {
                 canCurate={podeCurar}
                 canLowerSensitivity={podeAfrouxarConteudo}
                 aiEnabled={aiEnabled}
+                preArticleEnabled={preArticleEnabled}
                 topic={{
                   origin: toTopicOrigin(topic.origin),
                   id: topic.id,

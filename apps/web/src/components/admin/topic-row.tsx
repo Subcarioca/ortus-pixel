@@ -35,6 +35,7 @@ import { ArticleCreateForm } from './article-create-form';
 // Só o TIPO do rascunho: `import type` some na compilação e nenhuma linha do
 // módulo de servidor entra no pacote do navegador. Ver `article-create-form`.
 import type { AiDraft } from '@/server/ai-draft';
+import type { PreArticleOutput } from '@/server/ai/prearticle-types';
 
 interface TopicRowProps {
   categories: { slug: string; name: string }[];
@@ -64,6 +65,14 @@ interface TopicRowProps {
    * Esconder o botão não é a proteção: a rota recusa a ação por conta própria.
    */
   aiEnabled: boolean;
+  /**
+   * O servidor tem a chave do DeepSeek configurada? Mesmo contrato de
+   * `aiEnabled` — sem chave, o botão "Gerar pré-matéria" não existe em vez de
+   * existir e falhar em todo clique. A explicação do porquê some aparece UMA
+   * vez no topo da fila (ver `page.tsx`), e a rota recusa a ação por conta
+   * própria — esconder o botão é cortesia, não segurança.
+   */
+  preArticleEnabled: boolean;
   topic: {
     id: string;
     title: string;
@@ -108,6 +117,7 @@ export function TopicRow({
   canCurate,
   canLowerSensitivity,
   aiEnabled,
+  preArticleEnabled,
 }: TopicRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [creatingArticle, setCreatingArticle] = useState(false);
@@ -126,6 +136,17 @@ export function TopicRow({
    */
   const [aiDraft, setAiDraft] = useState<AiDraft | null>(null);
   const [generating, setGenerating] = useState(false);
+
+  /**
+   * Pré-matéria estruturada, quando gerada. `null` = nada a mostrar. Vive em
+   * memória até o usuário recarregar a fila: o resultado é conteúdo transiente
+   * para revisão, não um novo estado do tópico no banco — então recarregar a
+   * página no sucesso (como `callAction` faz) jogaria fora justamente o que
+   * acabou de chegar.
+   */
+  const [prearticle, setPrearticle] = useState<PreArticleOutput | null>(null);
+  const [generatingPreArticle, setGeneratingPreArticle] = useState(false);
+  const [prearticleCopied, setPrearticleCopied] = useState(false);
 
   /** Minutos restantes da meta de 30 min. Negativo = estourou. */
   const minutesLeft = topic.becameHotAt
@@ -201,6 +222,59 @@ export function TopicRow({
       setCreatingArticle(true);
     } finally {
       setGenerating(false);
+    }
+  }
+
+  /**
+   * GERA A PRÉ-MATÉRIA ESTRUTURADA (REDATOR-CHEFE) para esta pauta.
+   *
+   * Diferente de `generateSuggestion`, NÃO abre o formulário de matéria: a
+   * pré-matéria é o pacote completo (análise do hype, modelo de popularidade,
+   * SEO) que o editor revisa NA FILA, antes de decidir abrir o formulário. Por
+   * isso também não recarrega a página no sucesso — o resultado fica em memória
+   * até o usuário recarregar, para poder copiar o JSON ou reler sem perder a
+   * geração.
+   */
+  async function generatePreArticle() {
+    if (generatingPreArticle) return;
+
+    setFeedback('');
+    setPrearticle(null);
+    setPrearticleCopied(false);
+    setGeneratingPreArticle(true);
+
+    try {
+      const response = await fetch(`/api/admin/topics/${topic.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'prearticle' }),
+      });
+
+      const data = await readAdminResponse(response);
+
+      // `prearticle` chega como `unknown` (a resposta do painel é genérica). A
+      // forma é conferida no servidor; aqui basta não renderizar um objeto que
+      // não é a pré-matéria.
+      if (data.ok && isPreArticle(data.prearticle)) {
+        setPrearticle(data.prearticle);
+      } else {
+        setFeedback(data.message);
+      }
+    } catch {
+      setFeedback('Não foi possível falar com o servidor para gerar a pré-matéria.');
+    } finally {
+      setGeneratingPreArticle(false);
+    }
+  }
+
+  /** Copia o JSON completo para a área de transferência — o editor cola onde quiser. */
+  async function copyPreArticle() {
+    if (!prearticle) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(prearticle, null, 2));
+      setPrearticleCopied(true);
+    } catch {
+      setFeedback('Não foi possível copiar.');
     }
   }
 
@@ -374,6 +448,24 @@ export function TopicRow({
           </button>
         )}
 
+        {/* ---------- PRÉ-MATÉRIA POR IA (REDATOR-CHEFE) ---------- */}
+        {/* Fica ao lado da sugestão, e não no lugar dela: são dois produtos
+            diferentes — a sugestão preenche o formulário, a pré-matéria devolve
+            o pacote estruturado para revisão na fila. Some enquanto o formulário
+            está aberto pela mesma razão da sugestão: gerar conteúdo novo com
+            texto já digitado aberto é como se perde texto. */}
+        {preArticleEnabled && !creatingArticle && topic.status !== 'published' && topic.status !== 'dismissed' && (
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            onClick={() => void generatePreArticle()}
+            disabled={generatingPreArticle}
+            aria-busy={generatingPreArticle}
+          >
+            {generatingPreArticle ? 'Gerando pré-matéria…' : 'Gerar pré-matéria'}
+          </button>
+        )}
+
         <button
           type="button"
           className="btn btn--ghost btn--sm"
@@ -425,6 +517,96 @@ export function TopicRow({
               setAiDraft(null);
             }}
           />
+        </div>
+      )}
+
+      {/* ---------- PRÉ-MATÉRIA GERADA POR IA ---------- */}
+      {/* É conteúdo transiente: some ao recarregar a fila. As seções refletem o
+          JSON do REDATOR-CHEFE (contextualização, hype, popularidade, texto e
+          otimização), e o botão "Copiar JSON" permite levar o pacote inteiro
+          para o formulário de matéria sem perda de estrutura. */}
+      {prearticle && (
+        <div className="admin-row__detail admin-row__prearticle">
+          <div className="admin-row__prearticle-head">
+            <h4 className="admin-row__title">Pré-matéria (rascunho de IA)</h4>
+            <button
+              type="button"
+              className="btn btn--ghost btn--sm"
+              onClick={() => void copyPreArticle()}
+            >
+              {prearticleCopied ? 'Copiado ✓' : 'Copiar JSON'}
+            </button>
+          </div>
+
+          <p className="admin-row__summary">{prearticle.contextualizacao}</p>
+
+          {prearticle.analise_hype.length > 0 && (
+            <div className="admin-row__prearticle-section">
+              <h5 className="admin-row__summary">Análise do hype</h5>
+              <ul>
+                {prearticle.analise_hype.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          <div className="admin-row__prearticle-section">
+            <h5 className="admin-row__summary">
+              Modelo de popularidade — {prearticle.modelo_popularidade.categoria}
+            </h5>
+            <p className="form-hint">{prearticle.modelo_popularidade.justificativa}</p>
+            <p className="form-hint">
+              Pico: {prearticle.modelo_popularidade.momento_pico} · Janela:{' '}
+              {prearticle.modelo_popularidade.janela_publicacao} · Risco:{' '}
+              {prearticle.modelo_popularidade.risco_timing}
+            </p>
+            <p className="form-hint">
+              {prearticle.modelo_popularidade.estrategia_posicionamento}
+            </p>
+          </div>
+
+          <div className="admin-row__prearticle-section">
+            <h5 className="admin-row__summary">{prearticle.pre_materia.titulo}</h5>
+            {prearticle.pre_materia.subtitulo && (
+              <p className="admin-row__summary">{prearticle.pre_materia.subtitulo}</p>
+            )}
+            {prearticle.pre_materia.abertura && (
+              <p className="form-hint">{prearticle.pre_materia.abertura}</p>
+            )}
+            {prearticle.pre_materia.corpo.map((block, i) => (
+              <p key={i} className="form-hint">
+                {block}
+              </p>
+            ))}
+            {prearticle.pre_materia.fechamento_cta && (
+              <p className="form-hint">{prearticle.pre_materia.fechamento_cta}</p>
+            )}
+            {prearticle.pre_materia.extras_retencao.length > 0 && (
+              <ul>
+                {prearticle.pre_materia.extras_retencao.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className="admin-row__prearticle-section">
+            <h5 className="admin-row__summary">SEO & captação</h5>
+            <p className="form-hint">
+              Palavra-chave: {prearticle.otimizacao.palavra_chave_principal} ·{' '}
+              {prearticle.otimizacao.palavras_chave_secundarias.join(', ')}
+            </p>
+            <p className="form-hint">Meta: {prearticle.otimizacao.meta_description}</p>
+            {prearticle.otimizacao.titulos_sociais.length > 0 && (
+              <ul>
+                {prearticle.otimizacao.titulos_sociais.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            )}
+            <p className="form-hint">#{prearticle.otimizacao.hashtags.join(' #')}</p>
+          </div>
         </div>
       )}
 
@@ -536,6 +718,26 @@ function isDraft(value: unknown): value is AiDraft {
     Array.isArray(draft.blocks) &&
     Array.isArray(draft.tldr) &&
     Array.isArray(draft.pendencias)
+  );
+}
+
+/**
+ * É mesmo uma pré-matéria?
+ *
+ * Mesmo espírito de `isDraft`: a resposta do painel é genérica, então este é o
+ * ponto em que o valor volta a ter forma. A checagem é mínima de propósito — a
+ * validação de verdade é do servidor (`parsePreArticle`). O que ela impede é
+ * renderizar `undefined` como se fosse a pré-matéria e estourar no primeiro
+ * `.map()` das seções.
+ */
+function isPreArticle(value: unknown): value is PreArticleOutput {
+  if (typeof value !== 'object' || value === null) return false;
+  const p = value as Partial<PreArticleOutput>;
+  return (
+    typeof p.contextualizacao === 'string' &&
+    typeof p.pre_materia === 'object' &&
+    p.pre_materia !== null &&
+    typeof (p.pre_materia as { titulo?: unknown }).titulo === 'string'
   );
 }
 

@@ -114,7 +114,7 @@
         "transform": "lodash/{{member}}"
       }
     },
-    "outputFileTracingRoot": "R:\\Claudio",
+    "outputFileTracingRoot": "/home/runner/work/ortus-pixel/ortus-pixel/src",
     "experimental": {
       "useSkewCookie": false,
       "cacheLife": {
@@ -173,7 +173,7 @@
       "middlewarePrefetch": "flexible",
       "optimisticClientCache": true,
       "manualClientBasePath": false,
-      "cpus": 15,
+      "cpus": 1,
       "memoryBasedWorkersCount": false,
       "imgOptConcurrency": null,
       "imgOptTimeoutInSeconds": 7,
@@ -312,7 +312,7 @@
       "@subcarioca/scoring"
     ],
     "turbopack": {
-      "root": "R:\\Claudio"
+      "root": "/home/runner/work/ortus-pixel/ortus-pixel/src"
     },
     "_originalRedirects": [
       {
@@ -327,29 +327,29 @@
       }
     ]
   },
-  "appDir": "R:\\Claudio\\apps\\web",
-  "relativeAppDir": "apps\\web",
+  "appDir": "/home/runner/work/ortus-pixel/ortus-pixel/src/apps/web",
+  "relativeAppDir": "apps/web",
   "files": [
-    ".next\\routes-manifest.json",
-    ".next\\server\\pages-manifest.json",
-    ".next\\build-manifest.json",
-    ".next\\prerender-manifest.json",
-    ".next\\server\\functions-config-manifest.json",
-    ".next\\server\\middleware-manifest.json",
-    ".next\\server\\middleware-build-manifest.js",
-    ".next\\server\\middleware-react-loadable-manifest.js",
-    ".next\\react-loadable-manifest.json",
-    ".next\\server\\app-paths-manifest.json",
-    ".next\\app-path-routes-manifest.json",
-    ".next\\app-build-manifest.json",
-    ".next\\server\\server-reference-manifest.js",
-    ".next\\server\\server-reference-manifest.json",
-    ".next\\BUILD_ID",
-    ".next\\server\\next-font-manifest.js",
-    ".next\\server\\next-font-manifest.json",
-    ".next\\required-server-files.json"
+    ".next/routes-manifest.json",
+    ".next/server/pages-manifest.json",
+    ".next/build-manifest.json",
+    ".next/prerender-manifest.json",
+    ".next/server/functions-config-manifest.json",
+    ".next/server/middleware-manifest.json",
+    ".next/server/middleware-build-manifest.js",
+    ".next/server/middleware-react-loadable-manifest.js",
+    ".next/react-loadable-manifest.json",
+    ".next/server/app-paths-manifest.json",
+    ".next/app-path-routes-manifest.json",
+    ".next/app-build-manifest.json",
+    ".next/server/server-reference-manifest.js",
+    ".next/server/server-reference-manifest.json",
+    ".next/BUILD_ID",
+    ".next/server/next-font-manifest.js",
+    ".next/server/next-font-manifest.json",
+    ".next/required-server-files.json"
   ],
   "ignore": [
-    "node_modules\\next\\dist\\compiled\\@ampproject\\toolbox-optimizer\\**\\*"
+    "../../node_modules/next/dist/compiled/@ampproject/toolbox-optimizer/**/*"
   ]
 }

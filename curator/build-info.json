@@ -1,6 +1,6 @@
 {
-  "geradoEm": "2026-08-15T16:18:49.528Z",
-  "nodeDoBuild": "v24.19.0",
+  "geradoEm": "2026-08-19T20:38:09.442Z",
+  "nodeDoBuild": "v20.20.2",
   "alvoDeTranspilacao": "node20",
   "engines": [
     "libquery_engine-debian-openssl-1.1.x.so.node"

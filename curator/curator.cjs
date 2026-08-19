@@ -164,7 +164,7 @@
 
 "use strict";
 
-// ../../packages/core/src/taxonomy.ts
+// packages/core/src/taxonomy.ts
 var CATEGORIES = [
   {
     slug: "games",
@@ -241,7 +241,7 @@ var CATEGORY_BY_SLUG = Object.fromEntries(
   CATEGORIES.map((c) => [c.slug, c])
 );
 
-// ../../packages/core/src/signals.ts
+// packages/core/src/signals.ts
 var SIGNAL_DIMENSIONS = [
   /** (1) Volume de busca absoluto — tamanho potencial da audiência. */
   "searchVolume",
@@ -263,7 +263,7 @@ var SIGNAL_DIMENSIONS = [
   "emotionalTrigger"
 ];
 
-// ../../packages/core/src/scoring-types.ts
+// packages/core/src/scoring-types.ts
 var SCORE_BANDS = [
   {
     band: "HOT",
@@ -334,7 +334,7 @@ var TRIGGERS_REQUIRING_REVIEW = [
   "cancellation"
 ];
 
-// ../../packages/core/src/domain.ts
+// packages/core/src/domain.ts
 var SOURCE_TIERS = {
   /** Anúncio do próprio estúdio/dev/ator. Máxima confiança e máxima urgência. */
   official: 1,
@@ -350,7 +350,7 @@ var SOURCE_TIERS = {
   unverified: 0.15
 };
 
-// ../../packages/core/src/utils.ts
+// packages/core/src/utils.ts
 function clamp(value, min = 0, max = 1) {
   if (Number.isNaN(value)) return min;
   return Math.min(max, Math.max(min, value));
@@ -384,7 +384,7 @@ function weightedMean(samples) {
   return samples.reduce((acc, s) => acc + s.value * s.weight, 0) / totalWeight;
 }
 
-// ../../packages/core/src/editorial-risk-terms.ts
+// packages/core/src/editorial-risk-terms.ts
 var DISCRIMINATORY_RULES = [
   // --- Homofobia e transfobia -----------------------------------------------
   {
@@ -680,7 +680,7 @@ var ALL_RISK_RULES = [
   ...PERSONAL_DATA_RULES
 ];
 
-// ../../packages/core/src/editorial-risk.ts
+// packages/core/src/editorial-risk.ts
 function compileRule(rule) {
   return new RegExp(`(?<![\\p{L}\\p{N}])(?:${rule.pattern.source})(?![\\p{L}\\p{N}])`, "giu");
 }
@@ -690,7 +690,7 @@ var COMPILED_RULES = ALL_RISK_RULES.map((rule) => ({
 }));
 var ACCUSATION_RULE_SET = new Set(ACCUSATION_RULES);
 
-// src/connectors/http.ts
+// services/curator/src/connectors/http.ts
 var ConnectorHttpError = class extends Error {
   constructor(message, status, isRetryable = false) {
     super(message);
@@ -792,7 +792,7 @@ function deterministicRandom(seed, min = 0, max = 1) {
   return min + normalized * (max - min);
 }
 
-// src/connectors/google-trends.ts
+// services/curator/src/connectors/google-trends.ts
 function resolveProvider() {
   const configured = process.env.TRENDS_PROVIDER?.toLowerCase();
   if (configured === "official" && process.env.GOOGLE_TRENDS_API_KEY) return "official";
@@ -932,7 +932,7 @@ var googleTrendsConnector = {
   }
 };
 
-// src/connectors/reddit.ts
+// services/curator/src/connectors/reddit.ts
 var SUBREDDITS_BY_CATEGORY = {
   games: ["gaming", "Games", "pcgaming", "NintendoSwitch", "PS5", "xbox"],
   "cinema-e-series": ["movies", "television", "MarvelStudios", "StarWars", "DC_Cinematic"],
@@ -1077,7 +1077,7 @@ var redditConnector = {
   }
 };
 
-// src/connectors/youtube.ts
+// services/curator/src/connectors/youtube.ts
 var trendingCache = null;
 var TRENDING_TTL_MS = 15 * 60 * 1e3;
 async function getTrendingVideos(timeoutMs) {
@@ -1203,7 +1203,7 @@ function mockMeasurements(context, connectorId, observedAt, confidenceOverride) 
   ];
 }
 
-// src/connectors/x-twitter.ts
+// services/curator/src/connectors/x-twitter.ts
 var budget = {
   postsRead: 0,
   periodStart: /* @__PURE__ */ new Date()
@@ -1327,7 +1327,7 @@ var xConnectorMock = {
   }
 };
 
-// src/connectors/source-authority.ts
+// services/curator/src/connectors/source-authority.ts
 var DOMAIN_AUTHORITY = {
   // --- Oficiais: estúdios, publishers, plataformas ---
   "rockstargames.com": "official",
@@ -1470,7 +1470,7 @@ var sourceAuthorityConnector = {
   }
 };
 
-// ../../packages/db/src/client.ts
+// packages/db/src/client.ts
 var import_client = require("@prisma/client");
 var import_client2 = require("@prisma/client");
 var globalForPrisma = globalThis;
@@ -1484,7 +1484,7 @@ if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
-// ../../packages/db/src/json.ts
+// packages/db/src/json.ts
 var import_client3 = require("@prisma/client");
 function toStringArray(value) {
   if (!Array.isArray(value)) return [];
@@ -1492,7 +1492,7 @@ function toStringArray(value) {
 }
 var JSON_COLUMN_NULL = import_client3.Prisma.DbNull;
 
-// ../../packages/db/src/password.ts
+// packages/db/src/password.ts
 var import_node_crypto = require("node:crypto");
 var import_node_util = require("node:util");
 var scrypt = (0, import_node_util.promisify)(import_node_crypto.scrypt);
@@ -1500,7 +1500,7 @@ var SCRYPT_N = 32768;
 var SCRYPT_R = 8;
 var MAX_MEM = 128 * SCRYPT_N * SCRYPT_R * 2;
 
-// src/connectors/release-calendar.ts
+// services/curator/src/connectors/release-calendar.ts
 function proximityValue(daysUntil) {
   if (daysUntil >= 0) {
     if (daysUntil <= 3) return { value: 1, label: "lan\xE7a em at\xE9 3 dias" };
@@ -1573,7 +1573,7 @@ var releaseCalendarConnector = {
   }
 };
 
-// src/connectors/serp-competition.ts
+// services/curator/src/connectors/serp-competition.ts
 var COMPETITOR_FEEDS = [
   { name: "Omelete", url: "https://www.omelete.com.br/rss", weight: 1 },
   { name: "JovemNerd", url: "https://jovemnerd.com.br/feed", weight: 1 },
@@ -1698,7 +1698,7 @@ function mockMeasurement(context, connectorId, observedAt, confidenceOverride) {
   ];
 }
 
-// src/connectors/audience-affinity.ts
+// services/curator/src/connectors/audience-affinity.ts
 function affinityToSignal(index) {
   if (index <= 0) return 0;
   return clamp(1 / (1 + Math.exp(-1.6 * (index - 1))));
@@ -1738,7 +1738,7 @@ var audienceAffinityConnector = {
   }
 };
 
-// src/connectors/emotional-triggers.ts
+// services/curator/src/connectors/emotional-triggers.ts
 var TRIGGER_PATTERNS = {
   "character-death": {
     patterns: [
@@ -1849,7 +1849,7 @@ var emotionalTriggerConnector = {
   }
 };
 
-// src/connectors/registry.ts
+// services/curator/src/connectors/registry.ts
 var ALL_CONNECTORS = [
   // --- Estágio 1: descoberta (barato, roda para todos os candidatos) ---
   sourceAuthorityConnector,
@@ -1901,7 +1901,7 @@ function validateRegistry() {
   return { valid: errors.length === 0, errors };
 }
 
-// ../../packages/scoring/src/weights.ts
+// packages/scoring/src/weights.ts
 var WEIGHTS_V1 = {
   version: "v1.0.0-mvp",
   description: "Conjunto inicial do MVP (Games + Cinema & S\xE9ries). Prioriza velocidade de crescimento sobre volume absoluto. Pesos n\xE3o calibrados com dados reais ainda.",
@@ -1956,7 +1956,7 @@ function validateWeightSet(set) {
   return { valid: errors.length === 0, errors };
 }
 
-// ../../packages/scoring/src/engine.ts
+// packages/scoring/src/engine.ts
 function calculateScore(input) {
   const weightSet = input.weightSet ?? DEFAULT_WEIGHTS;
   const now = input.now ?? /* @__PURE__ */ new Date();
@@ -2112,7 +2112,7 @@ function isEligibleForAutomation(result, weightSet = DEFAULT_WEIGHTS) {
 var round1 = (n) => Math.round(n * 10) / 10;
 var round2 = (n) => Math.round(n * 100) / 100;
 
-// src/discovery/rss-sources.ts
+// services/curator/src/discovery/rss-sources.ts
 var NEWS_SOURCES = [
   // ---------- FASE 1: GAMES (prioridade 1) ----------
   {
@@ -2541,7 +2541,7 @@ async function discoverFromFeeds(options) {
   };
 }
 
-// src/pipeline/dedupe.ts
+// services/curator/src/pipeline/dedupe.ts
 var import_node_crypto2 = require("node:crypto");
 var STOPWORDS = /* @__PURE__ */ new Set([
   "a",
@@ -2697,7 +2697,7 @@ function findDuplicate(candidateTitle, candidateCategory, recentTopics) {
   return best;
 }
 
-// src/actions/instrumentation.ts
+// services/curator/src/actions/instrumentation.ts
 async function logPipelineEvent(input) {
   try {
     await prisma.pipelineEvent.create({
@@ -2734,7 +2734,7 @@ async function logPipelineEvents(inputs) {
   }
 }
 
-// src/pipeline/expire-topics.ts
+// services/curator/src/pipeline/expire-topics.ts
 var TOPIC_EXPIRY_DAYS = 7;
 var MAX_EXPIRE_PER_CYCLE = 500;
 function expiryCutoff(now = /* @__PURE__ */ new Date()) {
@@ -2791,7 +2791,7 @@ async function expireStaleTopics(options = {}) {
   }
 }
 
-// src/pipeline/rewrite-ptbr.ts
+// services/curator/src/pipeline/rewrite-ptbr.ts
 var API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 var DEFAULT_MODEL = "gemini-3.1-flash-lite";
 var TIMEOUT_MS = 2e4;
@@ -3140,7 +3140,7 @@ function logSafeError(context, detail) {
   console.warn(`[rewrite-ptbr] ${context}: ${safe}`);
 }
 
-// src/pipeline/orchestrator.ts
+// services/curator/src/pipeline/orchestrator.ts
 var CIRCUIT_CONFIG = {
   failureThreshold: 3,
   openDurationMs: 5 * 60 * 1e3
@@ -3264,7 +3264,7 @@ async function collectSignals(connectors, context) {
   };
 }
 
-// src/actions/newsroom-alert.ts
+// services/curator/src/actions/newsroom-alert.ts
 var adminUrl = (topicId) => {
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   return `${base}/admin/topicos/${topicId}`;
@@ -3368,7 +3368,7 @@ async function notifyNewsroom(alert) {
   });
 }
 
-// src/actions/revalidate.ts
+// services/curator/src/actions/revalidate.ts
 async function revalidateSurfaces(request) {
   const secret = process.env.REVALIDATE_SECRET;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
@@ -3406,7 +3406,7 @@ async function revalidateSurfaces(request) {
   }
 }
 
-// src/actions/dispatcher.ts
+// services/curator/src/actions/dispatcher.ts
 async function onScoreCalculated(input) {
   try {
     const { topicId, topicTitle, result, previousBand, becameHotNow, hasManualOverride } = input;
@@ -3493,7 +3493,7 @@ function surfacesForBand(band) {
   }
 }
 
-// src/pipeline/curate.ts
+// services/curator/src/pipeline/curate.ts
 var ENRICHMENT_THRESHOLD = 35;
 var MAX_ENRICHMENT_PER_CYCLE = 40;
 async function runCurationCycle(options) {
@@ -3848,7 +3848,7 @@ async function rescorePublished(options = {}) {
   return updated;
 }
 
-// src/main.ts
+// services/curator/src/main.ts
 var DISCOVERY_INTERVAL_MS = 15 * 60 * 1e3;
 var RESCORE_INTERVAL_MS = 5 * 60 * 1e3;
 function getActivePhase() {

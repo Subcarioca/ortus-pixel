@@ -1,1 +1,1 @@
-self.__NEXT_FONT_MANIFEST='{"pages":{},"app":{},"appUsingSizeAdjust":false,"pagesUsingSizeAdjust":false}';
+self.__NEXT_FONT_MANIFEST='{"pages":{},"app":{"/home/runner/work/ortus-pixel/ortus-pixel/src/apps/web/src/app/layout":["static/media/1a4aa50920b5315c-s.p.woff2","static/media/db234bd00cda6a96-s.p.woff2","static/media/558ca1a6aa3cb55e-s.p.woff2","static/media/e4af272ccee01ff0-s.p.woff2"]},"appUsingSizeAdjust":true,"pagesUsingSizeAdjust":false}';

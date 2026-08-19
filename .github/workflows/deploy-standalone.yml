@@ -1,0 +1,126 @@
+# =============================================================================
+# DEPLOY DA ORTUS PIXEL — build Linux -> push em `deploy-standalone`.
+#
+# POR QUE EXISTE: o site é servido pela Hostinger a partir da branch
+# `deploy-standalone`, que guarda o artefato COMPILADO do Next.js (`.next/`,
+# `next-server.js`, `node_modules/` traçado com sharp/engine Linux). A Hostinger
+# NÃO builda (o package.json da branch tem `"build":"echo already-built"`) —
+# ela só promove a árvore no push. O build precisa acontecer em LINUX porque o
+# Next/Prisma embarcam binários nativos; build no Windows gera binários Windows
+# (`.node` do sharp e `outputFileTracingRoot="R:\\Claudio"` no next-server.js)
+# que CRASHAM no Linux do servidor.
+#
+# DISPARO: manual (`workflow_dispatch`). O site só muda quando o editor chama
+# "Run workflow" aqui. Sem push automático (economiza minutos de Actions).
+# =============================================================================
+name: deploy-standalone
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ---------------------------------------------------------------- (1)
+      # Check-out do CÓDIGO-FONTE (main). É daqui que vem apps/, packages/,
+      # services/. Nome da pasta: `src`.
+      - name: Checkout fonte (main)
+        uses: actions/checkout@v4
+        with:
+          path: src
+          ref: main
+          fetch-depth: 1
+
+      # ---------------------------------------------------------------- (2)
+      # Node 20 = piso do projeto (mesmo NODE_ALVO do build do curator).
+      # cache: npm, lockfile raiz `src/package-lock.json`.
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+
+      # ---------------------------------------------------------------- (3)
+      # Instala conforme o lockfile. O postinstall de apps/web roda
+      # `npx prisma generate` e gera o client + engine debian-openssl-1.1.x
+      # (binaryTarget do schema) — base do `vendor/` e do curator.
+      - name: Instalar dependências
+        working-directory: src
+        env:
+          DATABASE_URL: ${{ secrets.ORTUS_DATABASE_URL }}
+        run: npm ci
+
+      # ---------------------------------------------------------------- (4)
+      # Build do WEB (Next standalone). NEXT_OUTPUT_STANDALONE=1 liga
+      # `output:'standalone'` no next.config.ts. As env de BUILD são:
+      #   DATABASE_URL (secret; necessário p/ rotas que tocam banco no build)
+      #   NEXT_PUBLIC_SITE_URL (senão canonical/sitemap sai com localhost)
+      # DEEPSEEK_API_KEY fica VAZIA no build de propósito: o botão de
+      # pré-matéria só aparece quando a key existe no runtime do hPanel.
+      - name: Build do web (Next standalone)
+        working-directory: src/apps/web
+        env:
+          DATABASE_URL: ${{ secrets.ORTUS_DATABASE_URL }}
+          NEXT_PUBLIC_SITE_URL: https://ortuspixel.com
+          NEXT_OUTPUT_STANDALONE: '1'
+        run: npx next build
+
+      # ---------------------------------------------------------------- (5)
+      # Build do CURATOR (bundle .cjs). O script embarca o engine PROD
+      # debian-openssl-1.1.x. Roda na raiz do monorepo.
+      - name: Build do curator
+        working-directory: src
+        env:
+          DATABASE_URL: ${{ secrets.ORTUS_DATABASE_URL }}
+        run: node services/curator/scripts/build.mjs
+
+      # ---------------------------------------------------------------- (6)
+      # Check-out da branch de DESTINO (deploy-standalone) numa pasta separada.
+      # É o artefato atual que recebe o overlay mínimo. Nome: `deploy`.
+      - name: Checkout destino (deploy-standalone)
+        uses: actions/checkout@v4
+        with:
+          path: deploy
+          ref: deploy-standalone
+          fetch-depth: 1
+
+      # ---------------------------------------------------------------- (7)
+      # Copia os artefatos do build para caminhos fixos que o script espera.
+      # O script (8) valida a existência de cada um antes de tocar na árvore.
+      - name: Preparar artefatos para overlay
+        run: |
+          cp -r src/apps/web/.next/standalone/apps/web  APPS_WEB_BUILD
+          cp -r src/services/curator/dist                  CURATOR_DIST
+          cp -r src/apps/web/public                         WEB_PUBLIC
+          mkdir -p PRISMA_SCHEMA
+          cp    src/packages/db/prisma/schema.prisma        PRISMA_SCHEMA/schema.prisma
+
+      # ---------------------------------------------------------------- (8)
+      # Monta a árvore final: overlay mínimo em cima da branch deploy.
+      # O script preserva vendor/, server.js, package.json e node_modules/.
+      - name: Montar árvore deploy-standalone
+        run: bash src/scripts/build-standalone-release.sh
+
+      # ---------------------------------------------------------------- (9)
+      # Commit + push na branch deploy-standalone. Usa o PAT (RELEASE_PAT,
+      # escopo repo+workflow) porque o GITHUB_TOKEN não re-dispara workflow.
+      # Commit NOVO (não force-push sobre o vivo).
+      - name: Commit e push do artefato
+        working-directory: deploy
+        run: |
+          git config user.name  "ortus-deploy-bot"
+          git config user.email "deploy@ortuspixel.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "sem mudanças — nada a commitar"
+            exit 0
+          fi
+          git commit -m "Deploy: artefato buildado em Linux (${{ github.run_id }})"
+          git push https://x-access-token:${{ secrets.RELEASE_PAT }}@github.com/Subcarioca/ortus-pixel.git deploy-standalone

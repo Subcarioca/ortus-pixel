@@ -40,7 +40,6 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
 import {
-  SUBCATEGORIES,
   catModifier,
   isValidSubcategoryPath,
   routes,
@@ -56,15 +55,14 @@ import { NewsletterForm } from '@/components/newsletter-form';
 import { feedAdSlot } from '@/lib/ads';
 import { getSubcategoryPage } from '@/server/queries';
 
-export const revalidate = 300;
-
 /**
- * Pré-renderiza todas as sub-seções no build. São poucas e fixas: custa quase
- * nada e garante que a primeira visita já venha da CDN.
+ * Renderização sob demanda (SSR). A query obrigatória desta página
+ * (`subcategory:lookup`) precisa do banco, e pré-renderizar no build exige um
+ * MariaDB acessível do runner — que `<host>` interno `localhost` do hPanel não
+ * alcança a partir do GitHub Actions. Forçando dinâmico, a página não é
+ * gerada no build e a query roda só a cada request.
  */
-export function generateStaticParams() {
-  return SUBCATEGORIES.map((sub) => ({ slug: sub.parent, sub: sub.slug }));
-}
+export const dynamic = 'force-dynamic';
 
 /**
  * Copy de SEO das sub-seções que já têm protótipo de design

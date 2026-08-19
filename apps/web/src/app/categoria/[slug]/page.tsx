@@ -32,7 +32,6 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
 import {
-  CATEGORIES,
   type CategorySlug,
   type ContentFormat,
   catModifier,
@@ -52,17 +51,14 @@ import { NewsletterForm } from '@/components/newsletter-form';
 import { Pagination } from '@/components/pagination';
 import { getCategoryPage } from '@/server/queries';
 
-export const revalidate = 300;
-
 /**
- * Gera as rotas estáticas no build.
- *
- * Como as categorias são poucas e fixas, pré-renderizar todas custa quase nada
- * e garante que a primeira visita já venha da CDN — sem cold start, sem query.
+ * Renderização sob demanda (SSR). A query obrigatória desta página
+ * (`category:lookup`) precisa do banco, e pré-renderizar no build exige um
+ * MariaDB acessível do runner — que o host interno `localhost` do hPanel não
+ * alcança a partir do GitHub Actions. Forçando dinâmico, a página não é
+ * gerada no build e a query roda só a cada request.
  */
-export function generateStaticParams() {
-  return CATEGORIES.map((category) => ({ slug: category.slug }));
-}
+export const dynamic = 'force-dynamic';
 
 /**
  * SEO editorial por categoria, com o texto homologado no protótipo de design.

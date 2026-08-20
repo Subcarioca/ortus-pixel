@@ -50,13 +50,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 
-import { catClass, heatClass, routes, type ContentCardData } from '@subcarioca/core';
+import { catClass, heatClass, routes } from '@subcarioca/core';
 
 import { ArticleCard } from '@/components/article-card';
 import { HeatBadge } from '@/components/heat-badge';
 import { HeatBar, TrendTag } from '@/components/heat-bar';
 import { NewsletterForm } from '@/components/newsletter-form';
 import { PushOptIn } from '@/components/push-opt-in';
+import type { CardData } from '@/server/queries';
 import { RelativeTime } from '@/components/relative-time';
 import { getTrendingRanking } from '@/server/queries';
 
@@ -324,7 +325,7 @@ function minutesSince(date: Date): number {
  * sozinha. A POSIÇÃO vem por parâmetro, e não do índice do `map`, justamente
  * porque o segundo trecho não recomeça do 1.
  */
-function RankRow({ item, position }: { item: ContentCardData; position: number }) {
+function RankRow({ item, position }: { item: CardData; position: number }) {
   return (
     <li>
       <Link href={item.url} className={heatClass('rank', item.heat)}>

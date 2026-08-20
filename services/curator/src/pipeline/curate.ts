@@ -5,10 +5,13 @@
  *
  * Fluxo completo:
  *
- *   [0] EXPIRAÇÃO         pauta parada há mais de 7 dias sai da fila
+ *   [0] EXPIRAÇÃO         pauta parada há mais de 7 dias sai da fila (mas volta a
+ *                         entrar sozinha se o mesmo assunto reaparecer nos feeds —
+ *                         ver o "REVIVAL" em `upsertTopicFromItem`)
  *   [1] DESCOBERTA        feeds RSS -> itens candidatos
  *   [1.5] REESCRITA pt-BR itens de fonte estrangeira -> português do Brasil
  *   [2] DEDUPLICAÇÃO      5 veículos noticiando o mesmo fato -> 1 tópico
+ *                         (+ os tetos de volume: 20 por ciclo, 5 por editoria)
  *   [3] TRIAGEM (barata)  conectores 'discovery' -> score preliminar
  *   [4] CORTE             só quem passa do limiar segue para o estágio caro
  *   [5] ENRIQUECIMENTO    conectores 'enrichment' -> score final
@@ -43,6 +46,11 @@ import { classifyDomain } from '../connectors/source-authority';
 import { discoverFromFeeds, type DiscoveredItem } from '../discovery/rss-sources';
 import { canonicalHash, findDuplicate } from './dedupe';
 import { expireStaleTopics, TOPIC_EXPIRY_DAYS } from './expire-topics';
+import {
+  createTopicQuota,
+  MAX_NEW_TOPICS_PER_CATEGORY_PER_CYCLE,
+  MAX_NEW_TOPICS_PER_CYCLE,
+} from './topic-quota';
 import { isRewriteConfigured, rewriteItemsToPtBr } from './rewrite-ptbr';
 import { collectSignals } from './orchestrator';
 import { onScoreCalculated } from '../actions/dispatcher';
@@ -61,6 +69,27 @@ const ENRICHMENT_THRESHOLD = 35;
 /** Teto de tópicos enriquecidos por ciclo. Trava dura contra estouro de custo. */
 const MAX_ENRICHMENT_PER_CYCLE = 40;
 
+/**
+ * OS OUTROS DOIS TETOS DO CICLO — e por que não moram aqui.
+ *
+ * `MAX_NEW_TOPICS_PER_CYCLE` (20 pautas novas por ciclo) e
+ * `MAX_NEW_TOPICS_PER_CATEGORY_PER_CYCLE` (5 por editoria) são importados de
+ * `topic-quota.ts`, junto com a lógica de contagem que eles governam. A razão de
+ * não estarem declarados aqui, ao lado do teto acima, é que o LAÇO da etapa [2]
+ * é E/S pura e não tem teste — a decisão "este item ainda cabe no ciclo?" foi
+ * extraída para um módulo sem banco justamente para poder ser testada, e número
+ * separado da regra que ele governa é número que muda sem o teste perceber.
+ *
+ * E, principalmente, ELES NÃO SÃO A MESMA COISA QUE O TETO ACIMA, apesar de
+ * parecerem: `MAX_ENRICHMENT_PER_CYCLE` é uma trava de CUSTO, que age DEPOIS da
+ * criação (o tópico já existe, já está na fila; o que se economiza é a segunda
+ * rodada de API paga). Os tetos da cota são de VOLUME EDITORIAL: quantas pautas
+ * a redação consegue absorver por rodada. Mudam por motivos diferentes — um
+ * quando o preço da API muda, o outro quando o tamanho da redação muda. O
+ * racional completo (inclusive a decisão editorial de que "tema" = editoria)
+ * está no cabeçalho de `topic-quota.ts`.
+ */
+
 export interface CurationCycleOptions {
   phase: 1 | 2 | 3;
   /** `true` = só descobre e pontua, sem gravar. Útil para depuração. */
@@ -73,6 +102,12 @@ export interface CurationCycleResult {
   discovered: number;
   /** Pautas retiradas da fila por idade na etapa [0]. Ver `expire-topics.ts`. */
   expiredTopics: number;
+  /**
+   * Pautas expiradas que REAPARECERAM nos feeds e voltaram para a fila
+   * (`status: 'dismissed'` -> `'new'`) neste ciclo. Ver o "REVIVAL" em
+   * `upsertTopicFromItem`.
+   */
+  revived: number;
   /** Itens de fonte estrangeira efetivamente reescritos para pt-BR na etapa [1.5]. */
   rewrittenToPtBr: number;
   deduplicated: number;
@@ -102,6 +137,7 @@ export async function runCurationCycle(
     runId: run.id,
     discovered: 0,
     expiredTopics: 0,
+    revived: 0,
     rewrittenToPtBr: 0,
     deduplicated: 0,
     screened: 0,
@@ -128,6 +164,13 @@ export async function runCurationCycle(
     //
     // O custo é uma consulta indexada por ciclo — desprezível perto do resto.
     // A rotina não lança em nenhuma hipótese; ver o cabeçalho de expire-topics.
+    //
+    // UMA PAUTA EXPIRADA NÃO ESTÁ MORTA PARA SEMPRE: se o mesmo assunto
+    // reaparecer nos feeds depois de expirado (hype que esfriou e voltou —
+    // ex.: um jogo adiado que vira notícia de novo no lançamento), o
+    // `dedupeHash` único faz o item bater no tópico já existente, e o
+    // "REVIVAL" em `upsertTopicFromItem`, mais abaixo, o traz de volta a
+    // 'new' — ele não fica preso em 'dismissed' só porque envelheceu uma vez.
     const expiry = await expireStaleTopics({ dryRun });
     result.expiredTopics = expiry.expired;
 
@@ -196,30 +239,172 @@ export async function runCurationCycle(
       take: 500,
     });
 
-    const dedupeWindow = recentTopics.map((t) => ({
-      id: t.id,
-      title: t.title,
-      categorySlug: t.category?.slug ?? null,
-    }));
+    /**
+     * SEGUNDA JANELA: os tópicos que JÁ VIRARAM TRABALHO, sem limite de tempo.
+     *
+     * O BURACO QUE ISTO TAPA: a janela de 48h acima é a janela do "assunto ainda
+     * está circulando". Mas uma pauta com matéria em rascunho há dez dias
+     * (reportagem grande, apuração longa) já saiu dela — e quando o mesmo fato
+     * reaparece num feed com a manchete reformulada, o `dedupeHash` exato não
+     * bate (as palavras mudaram) e a similaridade não é nem calculada (o tópico
+     * não está na janela). Resultado: nasce um tópico duplicado do zero, a
+     * redação recebe na fila uma pauta que ela já está escrevendo, e o pipeline
+     * gasta orçamento de API paga para pontuar um assunto já coberto. É
+     * exatamente o desperdício que o requisito manda evitar — e a checagem por
+     * hash exato, sozinha, não o pega.
+     *
+     * POR QUE "SEM LIMITE DE TEMPO" AQUI É SEGURO, e não seria na fila geral:
+     * este conjunto é limitado pelo número de MATÉRIAS REAIS que a redação
+     * escreveu — dezenas por semana, não centenas por dia. A fila geral, não:
+     * ampliar os 48h dela para "sempre" faria a comparação O(n) rodar contra
+     * milhares de títulos por item descoberto e, pior, aumentaria a chance de
+     * FUNDIR indevidamente assuntos recorrentes ("One Piece capítulo 1120" com
+     * "One Piece capítulo 1121"), que é o erro silencioso que o limiar de 0,6 foi
+     * calibrado para evitar (ver `dedupe.ts`). Por isso o prazo dos outros
+     * tópicos fica intocado: só o conjunto pequeno e caro de errar ganha memória
+     * longa.
+     *
+     * O `take: 500` com `orderBy` decrescente existe porque "sem limite de tempo"
+     * cresce para sempre: em dois anos de operação são milhares de matérias, e a
+     * janela viraria um custo crescente por ciclo, sem teto. Com o corte, a
+     * memória longa é das 500 coberturas MAIS RECENTES — que é onde mora
+     * praticamente toda a chance de reincidência.
+     */
+    const coveredTopics = await prisma.topic.findMany({
+      where: { articles: { some: { status: { in: ['draft', 'published'] } } } },
+      select: { id: true, title: true, category: { select: { slug: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+    });
+
+    /**
+     * União das duas janelas, SEM repetir id.
+     *
+     * A interseção é grande e previsível (matéria escrita hoje está nas duas
+     * listas). Duplicar a entrada não daria resultado errado — a similaridade
+     * seria a mesma, o `best` continuaria apontando para o mesmo tópico —, mas
+     * dobraria comparações à toa em cima do laço mais quente do ciclo. O `Map`
+     * por id é a forma mais direta de deduplicar preservando a ordem em que os
+     * itens foram inseridos.
+     */
+    const dedupeWindow = [
+      ...new Map(
+        [...recentTopics, ...coveredTopics].map((t) => [
+          t.id,
+          { id: t.id, title: t.title, categorySlug: t.category?.slug ?? null },
+        ]),
+      ).values(),
+    ];
 
     const topicIds: string[] = [];
 
-    for (const item of items) {
-      const topicId = await upsertTopicFromItem(item, dedupeWindow, dryRun);
-      if (topicId) {
-        topicIds.push(topicId);
-        // Alimenta a janela para que duplicatas DENTRO do mesmo ciclo também
-        // sejam detectadas (5 veículos no mesmo lote é o caso mais comum).
-        dedupeWindow.push({
-          id: topicId,
-          title: item.title,
-          categorySlug: item.source.categorySlug,
-        });
+    /**
+     * OS TETOS DE VOLUME DO REQUISITO (20 por ciclo, 5 por editoria).
+     *
+     * A cota é criada AQUI, dentro do ciclo, e morre com ele — ver por que na
+     * fábrica em `topic-quota.ts`. Ela não sabe nada de banco: quem decide o que
+     * é "criação de verdade" é este laço, informando-a com `registerCreated()`.
+     *
+     * NOTA SOBRE `dryRun`: como nada é gravado, nada é "criado", e portanto os
+     * tetos nunca chegam a apertar numa execução de teste. É consequência direta
+     * (e antiga) de `upsertTopicFromItem` devolver vazio em `dryRun`, não um
+     * descuido: medir quantas pautas os tetos cortariam exigiria simular a
+     * criação, e simulação de escrita é justamente o que `dryRun` não faz aqui.
+     */
+    const quota = createTopicQuota();
+    let ignoradosPorTetoDeCategoria = 0;
+    let ignoradosPorTetoDoCiclo = 0;
+
+    for (const [index, item] of items.entries()) {
+      const decision = quota.evaluate(item.source.categorySlug);
+
+      if (!decision.allowed && decision.reason === 'cycle_limit') {
+        // TETO GLOBAL: não há mais vaga para NENHUMA editoria neste ciclo, então
+        // continuar varreria centenas de itens só para recusar todos. Sair do
+        // laço aqui é o que o requisito descreve como "o ciclo para de criar
+        // tópicos novos" — e repare que só a CRIAÇÃO para: as etapas [3] a [6]
+        // seguem normalmente sobre os tópicos que já entraram.
+        ignoradosPorTetoDoCiclo = items.length - index;
+        break;
       }
+
+      if (!decision.allowed) {
+        // TETO POR EDITORIA: este item não vira pauta, mas o laço CONTINUA. É
+        // literalmente o "o buscador passará para o próximo, mesmo que tenham
+        // outros assuntos em alta" do requisito — a editoria cheia não pode
+        // bloquear as outras, que ainda têm vaga.
+        ignoradosPorTetoDeCategoria++;
+        continue;
+      }
+
+      const outcome = await upsertTopicFromItem(item, dedupeWindow, dryRun);
+      if (!outcome) continue;
+
+      topicIds.push(outcome.topicId);
+
+      // SÓ CRIAÇÃO DE VERDADE CONSOME VAGA. Um item que apenas reencontrou um
+      // tópico já existente (mesmo hash, ainda sem matéria) devolve
+      // `created: false` e não gasta cota: ele não aumentou a fila da redação em
+      // nada, e cobrá-lo faria 20 reposts do dia anterior consumirem o ciclo
+      // inteiro sem uma pauta nova sequer aparecer.
+      if (outcome.created) {
+        quota.registerCreated(item.source.categorySlug);
+      }
+      if (outcome.revived) {
+        result.revived++;
+      }
+
+      // Alimenta a janela para que duplicatas DENTRO do mesmo ciclo também
+      // sejam detectadas (5 veículos no mesmo lote é o caso mais comum).
+      dedupeWindow.push({
+        id: outcome.topicId,
+        title: item.title,
+        categorySlug: item.source.categorySlug,
+      });
     }
 
-    result.deduplicated = items.length - topicIds.length;
-    console.log(`[curate] ${topicIds.length} tópicos únicos (${result.deduplicated} duplicatas).`);
+    const ignoradosPorTeto = ignoradosPorTetoDeCategoria + ignoradosPorTetoDoCiclo;
+
+    // `deduplicated` continua significando O MESMO DE ANTES: itens que não
+    // viraram tópico por serem repetição (hash igual, similaridade alta ou
+    // assunto já coberto por rascunho/matéria). Os barrados pelos tetos são
+    // descontados de propósito — eles não eram duplicata de nada, só chegaram
+    // depois de a vaga acabar, e somá-los aqui inflaria a métrica de duplicação
+    // do pipeline com um número que não tem nada a ver com deduplicação.
+    result.deduplicated = items.length - topicIds.length - ignoradosPorTeto;
+    console.log(
+      `[curate] ${topicIds.length} tópicos únicos (${result.deduplicated} duplicatas` +
+        (ignoradosPorTeto > 0 ? `, ${ignoradosPorTeto} fora dos tetos do ciclo` : '') +
+        (result.revived > 0 ? `, ${result.revived} revivida(s)` : '') +
+        `) — ${quota.created}/${MAX_NEW_TOPICS_PER_CYCLE} pauta(s) nova(s) criada(s).`,
+    );
+
+    if (ignoradosPorTeto > 0 && !dryRun) {
+      /**
+       * UM evento agregado por ciclo, e não um por item barrado.
+       *
+       * A tentação é registrar cada item recusado, como se faz com a duplicata.
+       * Seria um erro de escala: num dia agitado, 800 itens descobertos contra 20
+       * vagas geram centenas de recusas POR CICLO, ou seja, dezenas de milhares
+       * de linhas por dia numa tabela de auditoria — o log afogaria justamente os
+       * eventos que se quer encontrar nela. O que importa saber depois não é qual
+       * item específico ficou de fora (ele volta no próximo ciclo, se ainda for
+       * notícia), e sim SE E QUANTO os tetos estão apertando: é isso que diz se
+       * 20 e 5 são os números certos.
+       */
+      await logPipelineEvent({
+        eventType: 'topic.cap_reached',
+        payload: {
+          created: quota.created,
+          createdByCategory: quota.createdByCategory(),
+          skippedByCategoryCap: ignoradosPorTetoDeCategoria,
+          skippedByCycleCap: ignoradosPorTetoDoCiclo,
+          maxPerCycle: MAX_NEW_TOPICS_PER_CYCLE,
+          maxPerCategory: MAX_NEW_TOPICS_PER_CATEGORY_PER_CYCLE,
+          discovered: items.length,
+        },
+      });
+    }
 
     // -------------------------------------------------------------------------
     // [3] TRIAGEM BARATA
@@ -311,14 +496,43 @@ export async function runCurationCycle(
 }
 
 /**
+ * O que aconteceu com um item descoberto.
+ *
+ * POR QUE NÃO BASTA DEVOLVER O ID (como era até aqui): os tetos de volume do
+ * requisito contam PAUTAS CRIADAS, e `upsert` é justamente a operação que
+ * esconde se houve criação ou não — ele devolve a linha do mesmo jeito nos dois
+ * casos. Sem este `created`, um item que apenas reencontrou um tópico já
+ * existente consumiria uma das 20 vagas do ciclo sem ter aumentado a fila em
+ * nada, e o sintoma ("o curator parou de trazer pauta nova") não teria pista
+ * nenhuma no log. O dado sai de graça: a consulta que o requisito 4 obriga a
+ * fazer (existe matéria para este hash?) já responde se a linha existe.
+ */
+interface UpsertOutcome {
+  topicId: string;
+  /**
+   * `true` quando a linha nasceu AGORA **ou** foi revivida de 'dismissed'
+   * neste item. É o que consome cota (ver comentário do REVIVAL): das duas
+   * formas, é uma pauta a mais que a redação passa a ver na fila hoje.
+   */
+  created: boolean;
+  /** `true` só no caso específico de revival, para a instrumentação própria. */
+  revived: boolean;
+}
+
+/**
  * Cria ou atualiza um tópico a partir de um item descoberto.
- * Retorna o id, ou `null` se foi descartado como duplicata.
+ *
+ * Retorna `null` quando o item foi DESCARTADO — e são três os motivos possíveis,
+ * todos com o mesmo contrato de saída porque o chamador trata os três igual
+ * ("este item não vira pauta"): duplicata por similaridade, assunto que a
+ * redação JÁ está cobrindo (rascunho ou publicado) e `dryRun`. Qual dos três
+ * ocorreu fica registrado na instrumentação, não no tipo de retorno.
  */
 async function upsertTopicFromItem(
   item: DiscoveredItem,
   dedupeWindow: { id: string; title: string; categorySlug: string | null }[],
   dryRun: boolean,
-): Promise<string | null> {
+): Promise<UpsertOutcome | null> {
   const duplicate = findDuplicate(item.title, item.source.categorySlug, dedupeWindow);
 
   if (duplicate) {
@@ -342,6 +556,128 @@ async function upsertTopicFromItem(
   const hash = canonicalHash(item.title, item.source.categorySlug);
   if (dryRun) return null;
 
+  /**
+   * O ASSUNTO JÁ ESTÁ SENDO COBERTO PELA REDAÇÃO?
+   *
+   * O `upsert` logo abaixo, sozinho, tem um efeito colateral silencioso: quando
+   * o hash já existe, ele devolve o id do tópico existente — INCLUSIVE quando
+   * esse tópico já tem matéria em rascunho ou publicada. O id voltava para o
+   * laço, entrava em `topicIds` e era pontuado de novo nas etapas [3] a [5],
+   * gastando orçamento de API paga (X cobra por leitura) para redescobrir que um
+   * assunto que a redação já está escrevendo continua em alta. Dinheiro gasto
+   * para não mudar decisão nenhuma: a pauta já saiu da fila e já virou trabalho.
+   *
+   * A consulta é por `dedupeHash`, que é UNIQUE — ou seja, é uma busca por
+   * índice, do mesmo custo de uma leitura pontual, e o `take: 1` em `articles`
+   * impede que um tópico com muitas matérias traga uma lista inteira só para
+   * responder "existe pelo menos uma?".
+   *
+   * ESTA É A CAMADA DE HASH EXATO. A camada de SIMILARIDADE do mesmo requisito
+   * (título reformulado, que não bate hash) é resolvida na etapa [2], que agora
+   * carrega os tópicos já cobertos na janela de comparação sem limite de tempo —
+   * ver o comentário da segunda janela lá em cima. As duas juntas é que fecham o
+   * caso; nenhuma delas sozinha basta.
+   */
+  const existente = await prisma.topic.findUnique({
+    where: { dedupeHash: hash },
+    select: {
+      id: true,
+      status: true,
+      articles: {
+        where: { status: { in: ['draft', 'published'] } },
+        select: { id: true },
+        take: 1,
+      },
+    },
+  });
+
+  if (existente && existente.articles.length > 0) {
+    await logPipelineEvent({
+      eventType: 'topic.already_covered_skipped',
+      topicId: existente.id,
+      payload: {
+        title: item.title,
+        source: item.source.name,
+        url: item.url,
+        // O motivo escrito por extenso: daqui a seis meses, "por que esta
+        // notícia não apareceu na fila?" precisa ter resposta sem arqueologia
+        // no código.
+        reason: 'topic_already_has_draft_or_published_article',
+      },
+    });
+    return null;
+  }
+
+  if (existente && existente.status === 'dismissed') {
+    /**
+     * REVIVAL: o hash já existe, ninguém escreveu nada, e o tópico foi
+     * DESCARTADO POR IDADE (`expire-topics.ts`, 7 dias) numa execução anterior.
+     *
+     * SEM ISTO, A PAUTA FICARIA INVISÍVEL PARA SEMPRE. `dedupeHash` é único —
+     * então o mesmo fato nunca cria uma linha nova — e o `upsert` de baixo, se
+     * chegasse a rodar aqui, faria `update: {}` (no-op) sobre uma linha que
+     * continua 'dismissed', e o painel só lista `status` 'new'/'assigned'. Um
+     * assunto que esfriou e expirou, mas que volta a virar notícia semanas
+     * depois (ex.: um jogo adiado que vira pauta de novo no lançamento), nunca
+     * mais apareceria na fila — e é exatamente o oposto do que a curadoria
+     * deveria fazer com um tema que voltou a ficar quente.
+     *
+     * Reabrimos a fila para ele: `status` volta a 'new' e `firstSeenAt` é
+     * atualizado para AGORA — sem isso, o relógio dos 7 dias de
+     * `expire-topics.ts` continuaria contando da primeira vez que o assunto
+     * apareceu, e a pauta reviveria já quase vencida (ou já vencida, se tivesse
+     * ficado 'dismissed' por mais de 7 dias), sumindo nas próximas execuções sem
+     * a redação ter tido chance de vê-la.
+     *
+     * Título e fonte da PRIMEIRA aparição são preservados de propósito (mesmo
+     * raciocínio do `create` abaixo): o texto que a redação vê deve ser estável
+     * entre a descoberta original e a revivida, e comparar títulos entre feeds
+     * de novo não muda a identidade do assunto — só a idade dele.
+     */
+    const revivido = await prisma.topic.update({
+      where: { id: existente.id },
+      data: { status: 'new', firstSeenAt: item.publishedAt },
+    });
+
+    await logPipelineEvent({
+      eventType: 'topic.revived',
+      topicId: revivido.id,
+      payload: {
+        title: item.title,
+        source: item.source.name,
+        url: item.url,
+      },
+    });
+
+    // Conta como cota consumida: para a redação, uma pauta que reaparece na
+    // fila hoje é trabalho novo a considerar, do mesmo jeito que uma pauta
+    // nascida agora — ver o comentário de `UpsertOutcome.created`.
+    return { topicId: revivido.id, created: true, revived: true };
+  }
+
+  if (existente) {
+    /**
+     * REENCONTRO: o hash já existe, o tópico está ATIVO ('new' ou 'assigned'),
+     * e ninguém escreveu nada ainda.
+     *
+     * Devolvemos o id sem passar pelo `upsert` — e não é otimização gratuita: o
+     * `update: {}` do upsert original já era um NO-OP DELIBERADO (a primeira
+     * versão registrada é a que vale, ver o comentário na criação abaixo), então
+     * a leitura que acabamos de fazer torna a escrita inteiramente supérflua.
+     * O que ganhamos com o desvio é `created: false`, que é o que impede o
+     * reencontro de consumir cota do ciclo.
+     *
+     * MUDANÇA DE COMPORTAMENTO CONSCIENTE: o evento 'topic.discovered' deixa de
+     * ser registrado nesses reencontros. Ele descreve o NASCIMENTO de uma pauta;
+     * repeti-lo a cada reaparição do mesmo item no feed inflava a contagem de
+     * "pautas descobertas" com pautas que ninguém descobriu e enchia a linha do
+     * tempo do tópico de eventos idênticos. Na prática isso quase não ocorria — a
+     * deduplicação por similaridade já barrava a maioria dos reencontros antes de
+     * chegar aqui —, mas o "quase" é justamente o que fazia o número não fechar.
+     */
+    return { topicId: existente.id, created: false, revived: false };
+  }
+
   const category = await prisma.category.findUnique({
     where: { slug: item.source.categorySlug },
     select: { id: true },
@@ -354,6 +690,18 @@ async function upsertTopicFromItem(
 
   const franchises = await matchFranchises(`${item.title} ${item.summary}`);
 
+  // CONTINUA SENDO `upsert`, E NÃO `create`, mesmo depois de a consulta acima ter
+  // confirmado que a linha não existe. A confirmação vale para o instante em que
+  // foi feita: entre ela e esta escrita cabe outro processo (um segundo ciclo
+  // disparado por engano, um reprocessamento manual) gravando o mesmo hash — e
+  // `dedupeHash` é UNIQUE, então um `create` estouraria com violação de índice e
+  // derrubaria o ciclo inteiro por causa de uma corrida rara. O `upsert` absorve
+  // esse caso devolvendo a linha do outro processo, que é o resultado correto.
+  //
+  // (Nessa corrida a cota é contada como criação mesmo sem a linha ter nascido
+  // aqui. Desempatar exigiria uma terceira consulta POR ITEM só para acertar uma
+  // contagem que erraria por um, num evento que, com um único curator rodando,
+  // não deve acontecer nunca. Não vale o custo fixo.)
   const topic = await prisma.topic.upsert({
     where: { dedupeHash: hash },
     // Se o tópico já existe (mesmo hash), não sobrescrevemos título nem fonte:
@@ -393,7 +741,7 @@ async function upsertTopicFromItem(
     },
   });
 
-  return topic.id;
+  return { topicId: topic.id, created: true, revived: false };
 }
 
 /**

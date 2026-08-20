@@ -49,6 +49,8 @@ import {
 } from '@subcarioca/core';
 import { ARTICLE_INCLUDE, mapArticle, mapComment, prisma, toStringArray } from '@subcarioca/db';
 
+import { toCoverImageFit, type CoverImageFit } from '@/lib/cover-image';
+
 /**
  * `unstable_cache` serializa o valor de retorno via JSON ao gravar/ler do
  * cache. Todo `Date` que atravessa essa fronteira volta como string ISO em
@@ -172,6 +174,9 @@ const CARD_SELECT = {
   excerpt: true,
   coverImageUrl: true,
   coverImageAlt: true,
+  coverImageFit: true,
+  coverImageFocalX: true,
+  coverImageFocalY: true,
   currentScore: true,
   currentBand: true,
   scoreDelta1h: true,
@@ -196,6 +201,9 @@ type CardRow = {
   excerpt: string;
   coverImageUrl: string | null;
   coverImageAlt: string | null;
+  coverImageFit: string;
+  coverImageFocalX: number | null;
+  coverImageFocalY: number | null;
   currentScore: number;
   currentBand: string;
   scoreDelta1h: number;
@@ -218,12 +226,29 @@ type CardRow = {
 };
 
 /**
+ * `ContentCardData` (o contrato do design, definido em `core/presentation.ts`)
+ * mais os três campos de enquadramento da capa (`@/lib/cover-image`).
+ *
+ * POR QUE ESTA EXTENSÃO VIVE AQUI, E NÃO EM `core/presentation.ts`: o mesmo
+ * motivo do vocabulário em si — este campo nasceu com escopo deliberadamente
+ * restrito a `apps/web/` e ao schema do Prisma, para não tocar em
+ * `packages/core` enquanto outro trabalho roda em paralelo no monorepo. A
+ * interseção de tipos faz o mesmo papel de uma extensão de interface sem
+ * editar o arquivo de origem.
+ */
+export type CardData = ContentCardData & {
+  coverImageFit: CoverImageFit;
+  coverImageFocalX: number | null;
+  coverImageFocalY: number | null;
+};
+
+/**
  * Converte linha do banco no contrato de apresentação do design.
  *
  * O `heat` é calculado AQUI, no servidor — exigência explícita do design:
  * "o front-end só mapeia string -> classe CSS". Ver core/presentation.ts.
  */
-function toCardData(row: CardRow): ContentCardData {
+function toCardData(row: CardRow): CardData {
   const band = row.currentBand as ScoreBand;
   const categorySlug = isCategorySlug(row.category.slug) ? row.category.slug : 'games';
   const heat = heatForBand(band);
@@ -261,6 +286,12 @@ function toCardData(row: CardRow): ContentCardData {
     publishedAt: row.publishedAt,
     coverImageUrl: row.coverImageUrl,
     coverImageAlt: row.coverImageAlt,
+    // Normalizado aqui (e não confiado direto na coluna) pelo mesmo motivo de
+    // `contentSensitivity`/`tldr` no resto deste arquivo: uma migração malfeita
+    // ou uma linha anterior ao campo não pode virar `undefined` na tela.
+    coverImageFit: toCoverImageFit(row.coverImageFit),
+    coverImageFocalX: row.coverImageFocalX,
+    coverImageFocalY: row.coverImageFocalY,
     // "score >= 80 E fonte oficial confirmada" (design/README.md).
     // A checagem de fonte oficial mora no pipeline; aqui usamos a faixa como
     // condição necessária. O push efetivo passa por `isEligibleForAutomation`.
@@ -424,7 +455,7 @@ const getHomeDataCached = unstable_cache(
     const rise = scored.filter((c) => c.heat === 'rise').slice(0, MAX_HOT_ITEMS_ON_HOME);
 
     let heroKind: HomeHeroKind = 'none';
-    let hero: ContentCardData[] = [];
+    let hero: CardData[] = [];
 
     if (hot.length > 0) {
       heroKind = 'hot';
@@ -989,6 +1020,14 @@ async function loadArticleBundle(
      * descrevendo conteúdo, e quem decide sobre anúncio e aviso é a página.
      */
     contentSensitivity: toContentSensitivity(article.contentSensitivity),
+    /**
+     * ENQUADRAMENTO DA CAPA — mesmo raciocínio de `contentSensitivity`, logo
+     * acima: viaja fora de `mapArticle` porque é contrato de APRESENTAÇÃO
+     * ("como a capa é recortada"), não o que a matéria É. Ver `@/lib/cover-image`.
+     */
+    coverImageFit: toCoverImageFit(article.coverImageFit),
+    coverImageFocalX: article.coverImageFocalX,
+    coverImageFocalY: article.coverImageFocalY,
     // Coluna `Json` desde a migração para o MySQL: normalizamos AQUI, no
     // servidor, para que a página do artigo continue recebendo `string[]` e
     // possa fazer `.length` e `.map` sem checagem defensiva na view.
@@ -1216,7 +1255,7 @@ const SEARCH_MIN_LENGTH = 2;
 export interface SearchResults {
   /** Termo já normalizado — é ele que a página exibe de volta ao leitor. */
   term: string;
-  articles: ContentCardData[];
+  articles: CardData[];
   franchises: { slug: string; name: string; logoUrl: string | null }[];
   categories: { slug: string; name: string; description: string }[];
 }

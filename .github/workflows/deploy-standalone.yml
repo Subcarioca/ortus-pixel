@@ -94,9 +94,14 @@ jobs:
       # ---------------------------------------------------------------- (7)
       # Copia os artefatos do build para caminhos fixos que o script espera.
       # O script (8) valida a existência de cada um antes de tocar na árvore.
+      # WEB_STATIC é separado de APPS_WEB_BUILD porque o output standalone do
+      # Next NÃO inclui `.next/static/` (comportamento documentado — CSS/JS
+      # ficam de fora do bundle standalone de propósito); sem este passo os
+      # chunks/CSS somem no deploy e o navegador recebe 404 no lugar deles.
       - name: Preparar artefatos para overlay
         run: |
           cp -r src/apps/web/.next/standalone/apps/web  APPS_WEB_BUILD
+          cp -r src/apps/web/.next/static                   WEB_STATIC
           cp -r src/services/curator/dist                  CURATOR_DIST
           cp -r src/apps/web/public                         WEB_PUBLIC
           mkdir -p PRISMA_SCHEMA

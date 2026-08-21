@@ -135,25 +135,44 @@ jobs:
           mkdir -p PRISMA_SCHEMA
           cp    src/packages/db/prisma/schema.prisma        PRISMA_SCHEMA/schema.prisma
 
-          find_real_client() {
-            # $1 = padrão de caminho a procurar (ex.: '*/.prisma/client').
-            # `-printf '%s %p'` (não `ls -la` + `awk`) de propósito: o
-            # formato de coluna do `ls` varia por sistema/locale, e um script
-            # que depende da posição exata de uma coluna é frágil bem quando
-            # menos se espera. `-printf` do GNU find imprime tamanho e
-            # caminho direto, sem parsing de texto de outro programa.
-            find src/apps/web/.next/standalone -type f -path "$1/index.js" -printf '%s %p\n' \
+          # Só `.prisma/client` (o "dot-prisma") é procurado de forma
+          # independente: é ali que mora o DMMF (o schema inteiro embutido em
+          # `index.js`), e é o único dos dois com um sinal confiável de
+          # "isto é stub ou é de verdade" (tamanho do `index.js`).
+          #
+          # `@prisma/client` NÃO tem `index.js` nesta versão do Prisma — o
+          # ponto de entrada real é `default.js`, que é um repasse fino para
+          # `.prisma/client` e por isso é PEQUENO mesmo quando correto. Não dá
+          # para diferenciar stub de real pelo conteúdo dele sozinho (as
+          # primeiras duas tentativas desta automação erraram exatamente
+          # aqui: a primeira não filtrava nada e pegou um stub; a segunda
+          # exigia `index.js`, que `@prisma/client` nunca tem, e não achava
+          # candidato nenhum).
+          #
+          # A saída: `.prisma/client` e `@prisma/client` são SEMPRE instalados
+          # como IRMÃOS, dentro do mesmo `node_modules/` (é assim que o npm
+          # organiza um pacote com escopo ao lado de um com ponto). Uma vez
+          # validado ONDE fica o `.prisma/client` de verdade, o `@prisma/client`
+          # certo é simplesmente o irmão dele — não precisa de busca própria,
+          # e não tem como pegar um par desencontrado de dois lugares
+          # diferentes da árvore.
+          DOT_PRISMA_SRC="$(
+            find src/apps/web/.next/standalone -type f -path '*/.prisma/client/index.js' -printf '%s %p\n' \
               | sort -rn \
               | head -n1 \
               | cut -d' ' -f2- \
               | xargs -r dirname
-          }
+          )"
 
-          DOT_PRISMA_SRC="$(find_real_client '*/.prisma/client')"
-          AT_PRISMA_SRC="$(find_real_client '*/@prisma/client')"
+          if [ -z "$DOT_PRISMA_SRC" ]; then
+            echo "::error::Nenhum .prisma/client com index.js encontrado no output standalone."
+            exit 1
+          fi
 
-          if [ -z "$DOT_PRISMA_SRC" ] || [ -z "$AT_PRISMA_SRC" ]; then
-            echo "::error::Nenhum Prisma Client com index.js encontrado no output standalone (só stub, ou nada). DOT='$DOT_PRISMA_SRC' AT='$AT_PRISMA_SRC'"
+          AT_PRISMA_SRC="$(dirname "$(dirname "$DOT_PRISMA_SRC")")/@prisma/client"
+
+          if [ ! -f "${AT_PRISMA_SRC}/package.json" ]; then
+            echo "::error::@prisma/client não encontrado ao lado do .prisma/client validado (esperado em ${AT_PRISMA_SRC})."
             exit 1
           fi
 

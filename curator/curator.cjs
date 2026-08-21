@@ -2791,6 +2791,40 @@ async function expireStaleTopics(options = {}) {
   }
 }
 
+// services/curator/src/pipeline/topic-quota.ts
+var MAX_NEW_TOPICS_PER_CYCLE = 20;
+var MAX_NEW_TOPICS_PER_CATEGORY_PER_CYCLE = 5;
+var UNCATEGORIZED_QUOTA_KEY = "(sem-categoria)";
+function createTopicQuota(limits = {}) {
+  const perCycle = limits.perCycle ?? MAX_NEW_TOPICS_PER_CYCLE;
+  const perCategory = limits.perCategory ?? MAX_NEW_TOPICS_PER_CATEGORY_PER_CYCLE;
+  let total = 0;
+  const porCategoria = /* @__PURE__ */ new Map();
+  const chave = (categorySlug) => categorySlug ?? UNCATEGORIZED_QUOTA_KEY;
+  return {
+    evaluate(categorySlug) {
+      if (total >= perCycle) {
+        return { allowed: false, reason: "cycle_limit", limit: perCycle };
+      }
+      if ((porCategoria.get(chave(categorySlug)) ?? 0) >= perCategory) {
+        return { allowed: false, reason: "category_limit", limit: perCategory };
+      }
+      return { allowed: true };
+    },
+    registerCreated(categorySlug) {
+      total++;
+      const k = chave(categorySlug);
+      porCategoria.set(k, (porCategoria.get(k) ?? 0) + 1);
+    },
+    get created() {
+      return total;
+    },
+    createdByCategory() {
+      return Object.fromEntries(porCategoria);
+    }
+  };
+}
+
 // services/curator/src/pipeline/rewrite-ptbr.ts
 var API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 var DEFAULT_MODEL = "gemini-3.1-flash-lite";
@@ -3506,6 +3540,7 @@ async function runCurationCycle(options) {
     runId: run.id,
     discovered: 0,
     expiredTopics: 0,
+    revived: 0,
     rewrittenToPtBr: 0,
     deduplicated: 0,
     screened: 0,
@@ -3544,25 +3579,68 @@ async function runCurationCycle(options) {
       select: { id: true, title: true, category: { select: { slug: true } } },
       take: 500
     });
-    const dedupeWindow = recentTopics.map((t) => ({
-      id: t.id,
-      title: t.title,
-      categorySlug: t.category?.slug ?? null
-    }));
+    const coveredTopics = await prisma.topic.findMany({
+      where: { articles: { some: { status: { in: ["draft", "published"] } } } },
+      select: { id: true, title: true, category: { select: { slug: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 500
+    });
+    const dedupeWindow = [
+      ...new Map(
+        [...recentTopics, ...coveredTopics].map((t) => [
+          t.id,
+          { id: t.id, title: t.title, categorySlug: t.category?.slug ?? null }
+        ])
+      ).values()
+    ];
     const topicIds = [];
-    for (const item of items) {
-      const topicId = await upsertTopicFromItem(item, dedupeWindow, dryRun);
-      if (topicId) {
-        topicIds.push(topicId);
-        dedupeWindow.push({
-          id: topicId,
-          title: item.title,
-          categorySlug: item.source.categorySlug
-        });
+    const quota = createTopicQuota();
+    let ignoradosPorTetoDeCategoria = 0;
+    let ignoradosPorTetoDoCiclo = 0;
+    for (const [index, item] of items.entries()) {
+      const decision = quota.evaluate(item.source.categorySlug);
+      if (!decision.allowed && decision.reason === "cycle_limit") {
+        ignoradosPorTetoDoCiclo = items.length - index;
+        break;
       }
+      if (!decision.allowed) {
+        ignoradosPorTetoDeCategoria++;
+        continue;
+      }
+      const outcome = await upsertTopicFromItem(item, dedupeWindow, dryRun);
+      if (!outcome) continue;
+      topicIds.push(outcome.topicId);
+      if (outcome.created) {
+        quota.registerCreated(item.source.categorySlug);
+      }
+      if (outcome.revived) {
+        result.revived++;
+      }
+      dedupeWindow.push({
+        id: outcome.topicId,
+        title: item.title,
+        categorySlug: item.source.categorySlug
+      });
     }
-    result.deduplicated = items.length - topicIds.length;
-    console.log(`[curate] ${topicIds.length} t\xF3picos \xFAnicos (${result.deduplicated} duplicatas).`);
+    const ignoradosPorTeto = ignoradosPorTetoDeCategoria + ignoradosPorTetoDoCiclo;
+    result.deduplicated = items.length - topicIds.length - ignoradosPorTeto;
+    console.log(
+      `[curate] ${topicIds.length} t\xF3picos \xFAnicos (${result.deduplicated} duplicatas` + (ignoradosPorTeto > 0 ? `, ${ignoradosPorTeto} fora dos tetos do ciclo` : "") + (result.revived > 0 ? `, ${result.revived} revivida(s)` : "") + `) \u2014 ${quota.created}/${MAX_NEW_TOPICS_PER_CYCLE} pauta(s) nova(s) criada(s).`
+    );
+    if (ignoradosPorTeto > 0 && !dryRun) {
+      await logPipelineEvent({
+        eventType: "topic.cap_reached",
+        payload: {
+          created: quota.created,
+          createdByCategory: quota.createdByCategory(),
+          skippedByCategoryCap: ignoradosPorTetoDeCategoria,
+          skippedByCycleCap: ignoradosPorTetoDoCiclo,
+          maxPerCycle: MAX_NEW_TOPICS_PER_CYCLE,
+          maxPerCategory: MAX_NEW_TOPICS_PER_CATEGORY_PER_CYCLE,
+          discovered: items.length
+        }
+      });
+    }
     const discoveryConnectors = await getAvailableConnectors("discovery");
     const enrichmentConnectors = await getAvailableConnectors("enrichment");
     console.log(
@@ -3642,6 +3720,53 @@ async function upsertTopicFromItem(item, dedupeWindow, dryRun) {
   }
   const hash = canonicalHash(item.title, item.source.categorySlug);
   if (dryRun) return null;
+  const existente = await prisma.topic.findUnique({
+    where: { dedupeHash: hash },
+    select: {
+      id: true,
+      status: true,
+      articles: {
+        where: { status: { in: ["draft", "published"] } },
+        select: { id: true },
+        take: 1
+      }
+    }
+  });
+  if (existente && existente.articles.length > 0) {
+    await logPipelineEvent({
+      eventType: "topic.already_covered_skipped",
+      topicId: existente.id,
+      payload: {
+        title: item.title,
+        source: item.source.name,
+        url: item.url,
+        // O motivo escrito por extenso: daqui a seis meses, "por que esta
+        // notícia não apareceu na fila?" precisa ter resposta sem arqueologia
+        // no código.
+        reason: "topic_already_has_draft_or_published_article"
+      }
+    });
+    return null;
+  }
+  if (existente && existente.status === "dismissed") {
+    const revivido = await prisma.topic.update({
+      where: { id: existente.id },
+      data: { status: "new", firstSeenAt: item.publishedAt }
+    });
+    await logPipelineEvent({
+      eventType: "topic.revived",
+      topicId: revivido.id,
+      payload: {
+        title: item.title,
+        source: item.source.name,
+        url: item.url
+      }
+    });
+    return { topicId: revivido.id, created: true, revived: true };
+  }
+  if (existente) {
+    return { topicId: existente.id, created: false, revived: false };
+  }
   const category = await prisma.category.findUnique({
     where: { slug: item.source.categorySlug },
     select: { id: true }
@@ -3686,7 +3811,7 @@ async function upsertTopicFromItem(item, dedupeWindow, dryRun) {
       ...item.originalTitle ? { originalTitle: item.originalTitle } : {}
     }
   });
-  return topic.id;
+  return { topicId: topic.id, created: true, revived: false };
 }
 async function matchFranchises(text) {
   const franchises = await prisma.franchise.findMany({

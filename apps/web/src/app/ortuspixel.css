@@ -528,6 +528,21 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 800; line-height
 @media (min-width: 560px) { .btn-hot-nav { display: inline-flex; } }
 .btn-hot-nav .ico { width: 14px; height: 14px; }
 
+/* Aba de conta do leitor no cabeçalho (site-header.tsx). Mesma mecânica de
+   `.btn-hot-nav` (ícone + rótulo, pílula, mesmo ponto de corte em 560px —
+   abaixo disso o rótulo de texto perderia espaço demais e a barra inferior
+   mobile já cobre "Conta"), mas NEUTRA: sem o vermelho de urgência, porque
+   login não é uma chamada à ação competindo com a manchete — é só a aba
+   sempre presente, do mesmo jeito que já é discreta na barra inferior. Cor e
+   hover herdam de `.icon-btn`, que já era o padrão do resto do cabeçalho. */
+.btn-account-nav {
+  display: none; align-items: center; gap: 6px; font-size: var(--fs-sm); font-weight: 600;
+  color: var(--ink-2); padding: 7px 12px; border-radius: var(--r-pill);
+}
+.btn-account-nav:hover { background: var(--surface-2); color: var(--ink); }
+.btn-account-nav .ico { width: 18px; height: 18px; }
+@media (min-width: 560px) { .btn-account-nav { display: inline-flex; } }
+
 /* --- Controle de tema ------------------------------------------------------
    Os RÁDIOS ficam em um lugar só (rodapé). O botão do header é só um <label>
    que aponta para eles — por isso o toggle funciona sem uma linha de JS.

@@ -5,6 +5,8 @@ import { usePathname } from 'next/navigation';
 
 import { ROUTE_PREFIXES, routes } from '@subcarioca/core';
 
+import { NavIcon, PersonIcon } from './nav-icons';
+
 /**
  * =============================================================================
  * ÍCONES DA BARRA INFERIOR (Tarefa B do relatório de UX 2026-08)
@@ -27,36 +29,15 @@ import { ROUTE_PREFIXES, routes } from '@subcarioca/core';
  * colorida da barra). Ver `.ico-hot` em ortuspixel.css: nada nela mudou.
  *
  * Os 5 símbolos são SVG inline (sem lib de ícone nova, como pedido) e
- * compartilham o mesmo "molde" (`NavIcon`, logo abaixo): mesmo viewBox, mesma
- * espessura de traço, mesmas pontas arredondadas, sem preenchimento. Isso é o
- * que garante peso visual igual entre eles — nenhum ícone "grita" mais que o
- * outro. A cor não é fixa no SVG: vem de `color` via `stroke="currentColor"`,
- * então o CSS que já existia (`.bottom-nav a[aria-current="page"] .ico`,
- * `.ico-hot`) continua controlando a cor sem precisar de nada novo.
+ * compartilham o mesmo "molde" (`NavIcon`, importado de `./nav-icons` — saiu
+ * daqui quando `site-header.tsx` passou a precisar do símbolo de "Conta" no
+ * desktop, ver o cabeçalho daquele módulo): mesmo viewBox, mesma espessura de
+ * traço, mesmas pontas arredondadas, sem preenchimento. Isso é o que garante
+ * peso visual igual entre eles — nenhum ícone "grita" mais que o outro. A cor
+ * não é fixa no SVG: vem de `color` via `stroke="currentColor"`, então o CSS
+ * que já existia (`.bottom-nav a[aria-current="page"] .ico`, `.ico-hot`)
+ * continua controlando a cor sem precisar de nada novo.
  */
-function NavIcon({
-  className,
-  children,
-}: {
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <svg
-      className={className}
-      aria-hidden="true"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      {children}
-    </svg>
-  );
-}
-
 /** Home — casa, o símbolo mais direto para "página inicial". */
 function HomeIcon({ className }: { className?: string }) {
   return (
@@ -105,16 +86,6 @@ function StarIcon({ className }: { className?: string }) {
   return (
     <NavIcon className={className}>
       <path d="M12 3.3 14.5 8.9 20.5 9.6 16 13.6 17.3 19.6 12 16.5 6.7 19.6 8 13.6 3.5 9.6 9.5 8.9Z" />
-    </NavIcon>
-  );
-}
-
-/** Conta — silhueta de pessoa (cabeça + ombros), leitura imediata de "perfil". */
-function PersonIcon({ className }: { className?: string }) {
-  return (
-    <NavIcon className={className}>
-      <circle cx="12" cy="8.2" r="3.4" />
-      <path d="M4.5 20.2a7.5 7.5 0 0 1 15 0" />
     </NavIcon>
   );
 }

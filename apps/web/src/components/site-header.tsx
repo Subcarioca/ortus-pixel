@@ -4,6 +4,7 @@ import { routes, type CategoryDefinition } from '@subcarioca/core';
 
 import { HeaderNav } from './header-nav';
 import { NavDrawer } from './nav-drawer';
+import { PersonIcon } from './nav-icons';
 import { SearchForm } from './search-form';
 
 /**
@@ -147,21 +148,40 @@ export function SiteHeader({ categories }: { categories: readonly CategoryDefini
           </Link>
 
           {/*
-            ENTRADA DA CONTA DO LEITOR — e o motivo de ela ser um ÍCONE NEUTRO,
-            e não um botão "Entrar" em destaque:
+            ENTRADA DA CONTA DO LEITOR — aba visível, e o motivo de ela ser
+            NEUTRA (não colorida, ao contrário de "Em alta" logo acima):
 
             ler o Ortus Pixel não exige conta, e um convite de login competindo
-            com a manchete comunicaria o contrário. Quem nunca vai logar não
-            precisa ser lembrado disso em toda página; quem já logou encontra a
-            própria área onde ela sempre esteve.
+            visualmente com a manchete comunicaria o contrário. A rodada
+            anterior desta decisão tinha ido longe demais na direção oposta,
+            porém: `.icon-btn .ico` sozinho é só uma caixa (ver `.ico` em
+            ortuspixel.css — sem `background`/`content`, não desenha nada), e
+            o SPAN vazio que este link continha não tinha NENHUM símbolo, só o
+            `aria-label`. Ou seja: quem enxerga não via ícone nem texto nenhum
+            aqui — o mesmo bug que a barra inferior mobile tinha antes de
+            ganhar os 5 traçados (ver `bottom-nav.tsx`). Pedido explícito do
+            dono do produto: uma aba de conta no desktop igual à que já existe
+            no mobile — ícone + rótulo "Conta", não mais um alvo de clique
+            invisível. `PersonIcon` é o MESMO símbolo da aba "Conta" da barra
+            inferior (`./nav-icons`), então as duas telas mostram a mesma
+            pessoa para o mesmo conceito.
 
             O rótulo é o mesmo nos dois estados (logado ou não) porque o header
             é CACHEADO junto do resto do HTML — descobrir aqui se há sessão
             tornaria todas as páginas do site dinâmicas. A página /minha-conta,
             essa sim, é dinâmica e mostra o estado real.
+
+            SEM `aria-label` agora: antes era obrigatório porque o link não
+            tinha nenhum texto visível para nomeá-lo. Com "Conta" na tela,
+            adicionar `aria-label="Minha conta"` por cima criaria um NOME
+            ACESSÍVEL diferente do texto visível — quem usa comando de voz e
+            tenta "clicar em Conta" (o que está na tela) não acharia o alvo,
+            porque para a árvore de acessibilidade o link se chama "Minha
+            conta". O `<Link>` já tem nome próprio: o texto que ele contém.
           */}
-          <Link href={routes.account()} className="icon-btn" aria-label="Minha conta">
-            <span className="ico" aria-hidden="true" />
+          <Link href={routes.account()} className="btn-account-nav">
+            <PersonIcon className="ico" />
+            Conta
           </Link>
         </div>
       </div>

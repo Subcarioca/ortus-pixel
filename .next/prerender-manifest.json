@@ -113,6 +113,35 @@
         "x-next-revalidate-tag-token"
       ]
     },
+    "/ads.txt": {
+      "initialStatus": 404,
+      "initialHeaders": {
+        "content-type": "text/plain;charset=UTF-8",
+        "x-next-cache-tags": "_N_T_/layout,_N_T_/ads.txt/layout,_N_T_/ads.txt/route,_N_T_/ads.txt"
+      },
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/ads.txt",
+      "dataRoute": null,
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
     "/robots.txt": {
       "initialHeaders": {
         "cache-control": "public, max-age=0, must-revalidate",
@@ -172,12 +201,7 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/ads.txt": {
-      "initialStatus": 404,
-      "initialHeaders": {
-        "content-type": "text/plain;charset=UTF-8",
-        "x-next-cache-tags": "_N_T_/layout,_N_T_/ads.txt/layout,_N_T_/ads.txt/route,_N_T_/ads.txt"
-      },
+    "/editorias": {
       "experimentalBypassFor": [
         {
           "type": "header",
@@ -190,8 +214,8 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/ads.txt",
-      "dataRoute": null,
+      "srcRoute": "/editorias",
+      "dataRoute": "/editorias.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -249,37 +273,13 @@
         "x-next-revalidated-tags",
         "x-next-revalidate-tag-token"
       ]
-    },
-    "/editorias": {
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "next-action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/editorias",
-      "dataRoute": "/editorias.rsc",
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
     }
   },
   "dynamicRoutes": {},
   "notFoundRoutes": [],
   "preview": {
-    "previewModeId": "312433c7410714f57017f03d597bf5e3",
-    "previewModeSigningKey": "3417dc103ff4064800db1b6c98c13c30f8635bcd34b8a9a8f99e4b9d175ead83",
-    "previewModeEncryptionKey": "71bd93603dee8973a558ae5aad6a196de318e0852a349e59811b766514c1d88a"
+    "previewModeId": "fa5b03f838821b4e491a5d18974b802f",
+    "previewModeSigningKey": "55cb9aad9b13d6a676b47b0094a843544c188f5e1836916b13affb9487ce85b8",
+    "previewModeEncryptionKey": "1f4f366f5839039f4e9399c4fdd0949ac3848f006147f01ddb557b128adac409"
   }
 }

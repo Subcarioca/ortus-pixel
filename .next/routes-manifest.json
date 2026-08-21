@@ -223,6 +223,12 @@
       "namedRegex": "^/admin/contas(?:/)?$"
     },
     {
+      "page": "/admin/franquias",
+      "regex": "^/admin/franquias(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/franquias(?:/)?$"
+    },
+    {
       "page": "/admin/materias",
       "regex": "^/admin/materias(?:/)?$",
       "routeKeys": {},

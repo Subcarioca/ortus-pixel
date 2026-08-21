@@ -1667,118 +1667,20 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
 .header__search .input::-webkit-search-cancel-button { display: none; }
 
 /* --------------------------------------------------------------------------
-   17.2 PAINEL EDITORIAL (/admin) — não prototipado, é ferramenta interna
+   17.2 PAINEL EDITORIAL (/admin) — AS REGRAS MUDARAM DE ARQUIVO
+   --------------------------------------------------------------------------
+   Elas vivem agora em `apps/web/src/app/admin/admin.css`, importada por
+   `app/admin/layout.tsx` e carregada SÓ nas rotas do painel.
+
+   O motivo (achado "CSS não utilizado" do PageSpeed na home) e a verificação
+   de cascata estão no cabeçalho daquele arquivo. O resumo: nenhuma página
+   pública usava uma linha destas, e elas viajavam em toda visita ao site,
+   dentro do CSS que bloqueia a primeira pintura.
+
+   ⚠ NÃO recoloque regra de `/admin` aqui. Esta folha é a cópia do design
+   system, e o painel não é prototipado — é justamente por isso que ele pôde
+   sair sem tocar em nada que o design define.
    -------------------------------------------------------------------------- */
-.admin { display: grid; gap: var(--s-5); }
-.admin__head { display: grid; gap: var(--s-2); padding-block: var(--s-4); }
-.admin__kpis { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-.admin__list { display: grid; gap: var(--s-3); }
-.admin__legend { display: flex; gap: var(--s-3); flex-wrap: wrap; font-size: var(--fs-xs); color: var(--ink-3); }
-.admin__legend-item { display: inline-flex; align-items: center; gap: 6px; }
-.admin-login { max-width: 26rem; margin-inline: auto; display: grid; gap: var(--s-3); padding-block: var(--s-7); }
-
-.admin-row {
-  display: grid; gap: var(--s-3); padding: var(--s-4);
-  background: var(--surface-1); border: 1px solid var(--line-soft); border-radius: var(--r-md);
-}
-.admin-row--hot { border-color: var(--heat-hot-line); background: var(--heat-hot-soft); }
-.admin-row__main { display: flex; gap: var(--s-4); align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
-.admin-row__body { min-width: 0; display: grid; gap: 6px; }
-.admin-row__title { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; }
-.admin-row__summary { font-size: var(--fs-sm); color: var(--ink-2); }
-.admin-row__meta { display: flex; gap: var(--s-2); flex-wrap: wrap; align-items: center; }
-.admin-row__score { display: grid; justify-items: end; gap: 6px; }
-.admin-row__detail { font-size: var(--fs-xs); color: var(--ink-3); }
-.admin-row__actions { display: flex; gap: var(--s-2); flex-wrap: wrap; align-items: center; }
-.admin-row__override { display: flex; gap: var(--s-2); align-items: center; flex-wrap: wrap; }
-.admin-row__confidence { font-family: var(--font-mono); font-size: var(--fs-xxs); color: var(--ink-3); }
-/* Confiança baixa trava o push automático: precisa saltar aos olhos do editor. */
-.admin-row__confidence--low { color: var(--heat-rise-text); font-weight: 700; }
-.admin-row__timer { font-family: var(--font-mono); font-size: var(--fs-xxs); color: var(--ink-3); }
-.admin-row__timer--late { color: var(--heat-hot-text); font-weight: 700; }
-.admin-row__warning {
-  font-size: var(--fs-xs); color: var(--ink); background: var(--heat-rise-soft);
-  border: 1px solid var(--heat-rise); border-radius: var(--r-sm); padding: 6px var(--s-3);
-}
-/* PRÉ-MATÉRIA POR IA: bloco estruturado dentro da linha da fila. O estilo é
-   discreto de propósito — o conteúdo é rascunho, e um rascunho não deve
-   competir visualmente com a pauta confirmada ao lado. */
-.admin-row__prearticle {
-  display: grid; gap: var(--s-3); padding: var(--s-3);
-  border: 1px dashed var(--line-soft); border-radius: var(--r-sm);
-}
-.admin-row__prearticle-head { display: flex; gap: var(--s-2); align-items: center; justify-content: space-between; flex-wrap: wrap; }
-.admin-row__prearticle-section { display: grid; gap: 4px; }
-.admin-row__prearticle ul { margin: 0; padding-left: 1.2em; display: grid; gap: 2px; }
-.admin-override { font-size: var(--fs-xxs); color: var(--ink-3); font-family: var(--font-mono); }
-
-.admin-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
-.admin-table th, .admin-table td {
-  border-bottom: 1px solid var(--line-soft); padding: 10px var(--s-3);
-  text-align: left; vertical-align: top;
-}
-.admin-table thead th {
-  background: var(--surface-2); font-family: var(--font-display);
-  text-transform: uppercase; letter-spacing: .08em; font-size: var(--fs-xs);
-}
-.admin-form { display: grid; gap: var(--s-3); }
-@media (min-width: 768px) { .admin-form--cols { grid-template-columns: repeat(2, 1fr); } }
-.admin-form label { display: grid; gap: 4px; font-size: var(--fs-xs); color: var(--ink-2); }
-.admin-form input, .admin-form select, .admin-form textarea {
-  background: var(--surface-1); color: var(--ink);
-  border: 1px solid var(--line); border-radius: var(--r-sm); padding: 9px var(--s-3);
-  font: inherit; font-size: var(--fs-sm); min-height: 40px;
-}
-.admin-form textarea { resize: vertical; min-height: 120px; width: 100%; }
-/* Campo que deve ocupar as duas colunas do grid desktop (título, corpo,
-   TL;DR) — em telas < 768px o grid já é 1 coluna, então isto não faz nada. */
-.admin-form__full { grid-column: 1 / -1; }
-.admin-tldr { display: grid; gap: var(--s-2); }
-.admin-tldr__row { display: flex; gap: var(--s-2); align-items: center; }
-.admin-tldr__row input { flex: 1; }
-.admin-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
-.input--sm { padding: 6px var(--s-2); min-height: 34px; max-width: 7rem; font-size: var(--fs-sm); }
-
-/* Chip compacto: SÓ no painel. O `.chip` público tem 44px de altura porque é
-   alvo de toque; aqui ele é etiqueta de leitura (categoria, fonte, tipo de
-   termo), aparece de 6 em 6 numa linha e nunca é clicado. Manter os 44px
-   transformaria a fila de pautas numa parede de pílulas. */
-.chip--sm { min-height: 24px; padding: 2px 8px; font-size: var(--fs-xxs); border-radius: var(--r-sm); }
-/* Sinal não disponível na tabela de contribuições: some do primeiro plano sem
-   sumir da tabela — o editor precisa ver que o sinal existe e não veio. */
-.admin-table__row--na td, .admin-table__row--na th { opacity: .55; }
-
-/* CONFIABILIDADE DA FONTE (`tier--*`). Só os dois extremos ganham tratamento:
-   fonte oficial (o editor pode publicar com segurança) e rumor não verificado
-   (precisa de checagem antes). Os quatro tiers do meio ficam neutros de
-   propósito — se todos tivessem cor, nenhum saltaria aos olhos, que é o mesmo
-   erro do "teto de 3 quentes" da home. Usamos as cores de temperatura aqui
-   porque isto é tela INTERNA: a proibição de §7 (vermelho/laranja só para
-   temperatura) protege a leitura do LEITOR, e o painel não tem leitor. */
-.tier--official   { border-color: var(--heat-ever); color: var(--heat-ever-text); }
-.tier--unverified { border-color: var(--heat-rise); color: var(--heat-rise-text); }
-
-/* SCORE NUMÉRICO: SÓ no painel editorial (ADR 0009).
-   Estilo propositalmente "de ferramenta", e não de conteúdo: mono, contorno
-   fino, sem cor de temperatura. Se um dia este bloco aparecer numa página
-   pública, ele vai parecer deslocado — o que é exatamente a intenção. */
-.score-value { display: inline-flex; align-items: baseline; gap: 8px; font-family: var(--font-mono); }
-.score-value__num {
-  font-size: 1.35rem; font-weight: 700; color: var(--ink);
-  border: 1px solid var(--line); border-radius: var(--r-sm); padding: 2px 8px;
-}
-.score-value--lg .score-value__num { font-size: 1.75rem; }
-.score-value__original, .score-value__conf { font-size: var(--fs-xxs); color: var(--ink-3); }
-
-/* Frescor de preço no painel: três estados para um dado que, sem destaque,
-   ninguém olha — fresco (discreto), a conferir (âmbar) e vencido (contornado). */
-.freshness { display: grid; gap: 2px; }
-.price-age { font-family: var(--font-mono); font-size: var(--fs-xxs); color: var(--ink-3); }
-.price-age--warning { color: var(--heat-rise-text); font-weight: 700; }
-.price-age--stale {
-  color: var(--heat-hot-text); font-weight: 700;
-  border: 1px solid var(--heat-hot-line); border-radius: var(--r-sm); padding: 1px 6px;
-}
 
 /* --------------------------------------------------------------------------
    17.3 COMPONENTES DE DADO REAL
@@ -2066,53 +1968,13 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
 .toc__sub { margin-left: var(--s-4); }
 
 /* --------------------------------------------------------------------------
-   18.2 EDITOR DE BLOCOS (/admin) — ferramenta interna, sem protótipo
+   18.2 EDITOR DE BLOCOS (/admin) e 18.3 BARRA DO PAINEL — MUDARAM DE ARQUIVO
+   --------------------------------------------------------------------------
+   Foram para `apps/web/src/app/admin/admin.css` junto com a antiga seção 17.2,
+   pelo mesmo motivo e com a mesma verificação de cascata. Ver o cabeçalho de
+   lá. A numeração 18.4 e 18.5 abaixo foi mantida de propósito: renumerar
+   inutilizaria todas as referências "§18.x" espalhadas pelos componentes.
    -------------------------------------------------------------------------- */
-.block-editor { display: grid; gap: var(--s-3); margin-top: var(--s-2); }
-.block-editor--empty {
-  border: 1px dashed var(--line); border-radius: var(--r-md);
-  padding: var(--s-4); background: var(--surface-1);
-  display: grid; gap: var(--s-3);
-}
-.block-editor__list { list-style: none; padding: 0; display: grid; gap: var(--s-3); margin: 0; }
-.block-editor__add { display: flex; gap: var(--s-2); flex-wrap: wrap; }
-
-.block-card {
-  border: 1px solid var(--line); border-radius: var(--r-md);
-  background: var(--surface-1); padding: var(--s-3);
-  display: grid; gap: var(--s-3);
-}
-.block-card__head {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: var(--s-2); flex-wrap: wrap;
-}
-.block-card__type {
-  font-family: var(--font-mono); font-size: var(--fs-xxs); font-weight: 700;
-  letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3);
-}
-/* Os controles de ordem e remoção ficam compactos e neutros: numa lista de 30
-   blocos, botões com o alvo de toque padrão (48px) transformariam o editor numa
-   parede de botões, e a ação principal — digitar — sumiria no meio deles. */
-.block-card__tools { display: flex; gap: 4px; flex-wrap: wrap; }
-.block-card__tools .btn { min-height: 32px; padding: 4px 10px; }
-.block-card .admin-form { gap: var(--s-2); }
-
-/* --------------------------------------------------------------------------
-   18.3 BARRA DO PAINEL — identidade da conta logada
-   -------------------------------------------------------------------------- */
-/* A navegação usa `.tabs` (componente do design); esta regra só posiciona a
-   barra e o bloco de identidade ao lado dela. Em telas estreitas os dois
-   empilham, e as abas continuam rolando na horizontal como `.tabs` já faz. */
-.admin-bar { display: grid; gap: var(--s-2); }
-@media (min-width: 900px) {
-  .admin-bar {
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center; gap: var(--s-4);
-  }
-  .admin-bar .tabs { margin-bottom: 0; }
-}
-.admin-bar__me { display: flex; align-items: center; gap: var(--s-3); justify-content: flex-end; }
-
 /* --------------------------------------------------------------------------
    18.4 PAGINAÇÃO — listagem de editoria
    -------------------------------------------------------------------------- */
@@ -2550,148 +2412,13 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
 }
 
 /* ==========================================================================
+   20. REVISÃO DE RISCO EDITORIAL (/admin) — MUDOU DE ARQUIVO
    ==========================================================================
-   20. REVISÃO DE RISCO EDITORIAL (/admin) — ferramenta interna, sem protótipo
-   ==========================================================================
-   ==========================================================================
+   As regras de `.risk-panel` foram para `apps/web/src/app/admin/admin.css`.
+   Ver o cabeçalho daquele arquivo para o motivo e para a verificação de que a
+   ordem da cascata não mudou.
 
-   O painel que aparece quando o verificador de palavras-chave encontra trecho
-   com risco jurídico ou reputacional antes de publicar (ver
-   `components/admin/editorial-risk-panel.tsx`).
-
-   POR QUE ELE PODE USAR VERMELHO E ÂMBAR: a proibição do §7 do design — cor
-   quente reservada à TEMPERATURA da notícia — existe para proteger a leitura de
-   quem visita o site. Esta tela não tem visitante: é ferramenta de redação, e
-   aqui o vermelho tem o significado universal de "pare e leia". Mesmo argumento
-   já usado em `.tier--unverified` e `.price-age--stale`.
-
-   Nenhum token novo: tudo sai das custom properties da seção 1.
+   Esta seção era o exemplo mais claro do problema que a separação resolve: ela
+   é a mais recente do arquivo, tem ~4,8 KB, é usada por UMA tela interna — e
+   até aqui era baixada por todo leitor que abrisse a home no celular.
    ========================================================================== */
-
-.risk-panel {
-  display: grid;
-  gap: var(--s-3);
-  padding: var(--s-4);
-  border: 1px solid var(--heat-rise);
-  border-radius: var(--r-md);
-  background: var(--heat-rise-soft);
-}
-
-/* O modo que INTERROMPEU a publicação tem contorno mais forte que o modo de
-   aviso passivo: são dois estados com urgências diferentes, e a tela precisa
-   distinguir os dois antes de a pessoa ler qualquer palavra. */
-.risk-panel--decisao {
-  border-width: 2px;
-  border-color: var(--heat-hot);
-  background: var(--heat-hot-soft);
-}
-
-.risk-panel__title {
-  display: flex;
-  align-items: baseline;
-  gap: var(--s-3);
-  flex-wrap: wrap;
-  margin: 0;
-  font-size: var(--fs-md);
-  font-weight: 800;
-  color: var(--ink);
-}
-
-.risk-panel__count {
-  font-family: var(--font-mono);
-  font-size: var(--fs-xxs);
-  color: var(--ink-2);
-}
-
-.risk-panel__lead { margin: 0; font-size: var(--fs-sm); color: var(--ink-2); }
-
-.risk-list { display: grid; gap: var(--s-3); margin: 0; padding: 0; list-style: none; }
-
-/* Cada achado é um cartão sobre a superfície normal: o fundo colorido é do
-   painel, não do item — senão o texto do trecho ficaria ilegível sobre cor. */
-.risk-item {
-  display: grid;
-  gap: 6px;
-  padding: var(--s-3);
-  border-radius: var(--r-sm);
-  border-left: 3px solid var(--heat-rise);
-  background: var(--surface-1);
-}
-.risk-item--alto { border-left-color: var(--heat-hot); }
-
-.risk-item__head {
-  display: flex;
-  align-items: center;
-  gap: var(--s-2);
-  flex-wrap: wrap;
-  margin: 0;
-  font-size: var(--fs-xxs);
-}
-
-/* A etiqueta de gravidade NUNCA é só cor: ela carrega a palavra ("Alto risco",
-   "Atenção"). Cor sozinha não chega a quem não a enxerga — e é a mesma regra já
-   aplicada em `.form-hint--error`. */
-.risk-item__badge {
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  padding: 2px 8px;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--heat-rise);
-  color: var(--heat-rise-text);
-}
-.risk-item--alto .risk-item__badge {
-  border-color: var(--heat-hot-line);
-  color: var(--heat-hot-text);
-}
-
-.risk-item__cat { font-weight: 700; color: var(--ink); }
-.risk-item__field { color: var(--ink-3); }
-
-/* O TRECHO SINALIZADO. Mono e com fundo próprio para deixar claro que é uma
-   citação do texto da matéria, e não mais uma frase do painel falando sobre
-   ele — a confusão entre as duas coisas é o que faria a pessoa procurar no
-   lugar errado. */
-.risk-item__quote {
-  margin: 0;
-  padding: var(--s-2);
-  border-radius: var(--r-sm);
-  background: var(--surface-2);
-  font-family: var(--font-mono);
-  font-size: var(--fs-xs);
-  line-height: 1.6;
-  color: var(--ink-2);
-  overflow-wrap: anywhere;
-}
-.risk-item__quote mark {
-  background: var(--heat-hot);
-  color: var(--heat-hot-ink);
-  padding: 1px 4px;
-  border-radius: 3px;
-  font-weight: 700;
-}
-
-.risk-item__reason { margin: 0; font-size: var(--fs-sm); color: var(--ink-2); }
-.risk-item__fix { margin: 0; font-size: var(--fs-sm); color: var(--heat-ever-text); }
-
-.risk-panel__disclaimer {
-  margin: 0;
-  font-size: var(--fs-xxs);
-  color: var(--ink-3);
-  line-height: 1.5;
-}
-
-.risk-panel__foot { display: grid; gap: var(--s-3); }
-.risk-panel__reason { display: grid; gap: 4px; font-size: var(--fs-xs); color: var(--ink-2); }
-.risk-panel__reason textarea {
-  width: 100%;
-  min-height: 64px;
-  resize: vertical;
-  background: var(--surface-1);
-  color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: var(--r-sm);
-  padding: var(--s-2);
-  font: inherit;
-  font-size: var(--fs-sm);
-}

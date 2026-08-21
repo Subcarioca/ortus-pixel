@@ -169,6 +169,83 @@ export default async function HomePage() {
 
   const [leadStory, ...secondaryHot] = home.hero;
 
+  /**
+   * O HERO TEM COLUNA LATERAL NESTA RENDERIZAÇÃO?
+   *
+   * Extraído para uma constante porque a resposta governa DUAS coisas que
+   * precisam concordar, e que até aqui eram decididas em pontos distantes do
+   * JSX: a classe `.hero-layout` (que divide a linha em 1.62fr / 1fr a partir
+   * de 1024px) e o `sizes` da foto do hero. Ver o comentário do `<Image>`
+   * adiante para o bug que a discordância entre as duas causava.
+   */
+  const heroHasSideColumn = secondaryHot.length > 0;
+
+  /**
+   * ===========================================================================
+   * QUAL IMAGEM DESTA PÁGINA É A CANDIDATA A LCP — resolvido UMA vez
+   * ===========================================================================
+   *
+   * O ACHADO DO PAGESPEED: "Prioridade da imagem LCP inconsistente", com o
+   * seletor `article.hero > div.hero__media > div.thumb > img` aparecendo sem
+   * `fetchpriority=high`. Auditando os quatro degraus de `heroKind` ('hot',
+   * 'rise', 'latest', 'none'), o resultado foi este:
+   *
+   *   - os TRÊS primeiros degraus renderizam o MESMO `<article class="hero">`, e
+   *     ele sempre passou `priority`. Nenhum deles é o buraco.
+   *   - o buraco é ORTOGONAL ao `heroKind`: é `leadStory.coverImageUrl` vazio.
+   *     Uma matéria publicada sem capa (acontece: nota rápida, texto de agência,
+   *     capa que o editor ainda vai trocar) faz o `.hero__media` inteiro deixar
+   *     de existir — e aí a primeira imagem da página passa a ser a do card
+   *     seguinte, que NUNCA recebia `priority` de ninguém.
+   *
+   * Ou seja: existe um estado real em que a home carrega sem UMA ÚNICA imagem
+   * prioritária, e o elemento de LCP entra na fila com prioridade baixa e
+   * `loading` preguiçoso — exatamente o sintoma relatado.
+   *
+   * A CORREÇÃO É ESCOLHER O ALVO, E NÃO ESPALHAR `priority`. Marcar vários
+   * `<Image>` anularia o efeito: o navegador baixaria tudo ao mesmo tempo e o
+   * LCP pioraria. Então resolvemos aqui, uma vez, QUAL id ganha a prioridade —
+   * e o JSX abaixo só compara. A ordem da busca é a ordem VISUAL da página, de
+   * cima para baixo, considerando apenas os blocos que renderizam foto:
+   *
+   *   1. o hero (quando tem capa) — o caso normal;
+   *   2. o primeiro "quente" secundário — no desktop ele fica na coluna da
+   *      direita, na mesma altura do hero, portanto acima da dobra;
+   *   3. "Mais popular da semana" — o primeiro card com foto depois do hero;
+   *   4. o primeiro card de "Mais repercutido agora".
+   *
+   * `undefined` (nenhum candidato) é um resultado legítimo e não um erro: é a
+   * home do dia zero, ou um dia inteiro sem nenhuma capa. Como a comparação é
+   * `item.id === lcpCandidateId`, um `undefined` simplesmente não casa com
+   * nada — nenhum `priority` é emitido, que é o correto quando não há imagem.
+   *
+   * "Guias e essenciais" e "Acabou de sair" não entram na busca porque, por
+   * construção, nenhum dos dois renderiza imagem (ver `ArticleCard` na variante
+   * `ever` e a lista `.just-out__list`).
+   */
+  /*
+    GENÉRICA E COM A RESTRIÇÃO MÍNIMA (`id` + `coverImageUrl`), em vez de
+    tipada em `ContentCardData`: as três listas que ela recebe vêm de origens
+    diferentes de `queries.ts` e nem todas são declaradas com aquele nome exato
+    (a lista pontuada, por exemplo, é `ContentCardData` mais o campo `heat`
+    recalculado). Amarrar a função ao nome do tipo faria uma refatoração
+    inofensiva lá quebrar esta página aqui, por uma exigência que a função não
+    tem: ela só precisa saber ler dois campos.
+  */
+  function firstCardWithCover<T extends { id: string; coverImageUrl?: string | null }>(
+    items: readonly T[],
+  ): T | undefined {
+    return items.find((item) => Boolean(item.coverImageUrl));
+  }
+
+  const lcpCandidateId: string | undefined = leadStory?.coverImageUrl
+    ? leadStory.id
+    : (firstCardWithCover(secondaryHot)?.id ??
+      (popularWeek && popularWeek.id !== leadStory?.id && popularWeek.coverImageUrl
+        ? popularWeek.id
+        : undefined) ??
+      firstCardWithCover(home.feed)?.id);
+
   // Resolvido uma vez, no topo: a política comercial da home não muda no meio
   // da renderização, e consultá-la em dois pontos do JSX abriria espaço para
   // aplicar metade dela.
@@ -216,7 +293,7 @@ export default async function HomePage() {
           // ocuparia 62% da largura com um buraco ao lado. Sem os secundários,
           // o hero simplesmente ocupa a linha inteira.
           <section
-            className={secondaryHot.length > 0 ? 'hero-layout' : undefined}
+            className={heroHasSideColumn ? 'hero-layout' : undefined}
             aria-labelledby="hero-titulo"
           >
             <article className="hero">
@@ -236,10 +313,45 @@ export default async function HomePage() {
                       alt={leadStory.coverImageAlt ?? ''}
                       width={1280}
                       height={720}
-                      // ÚNICA imagem com `priority` na página: é o elemento de LCP.
-                      // Marcar outras competiria por banda e pioraria a métrica.
+                      // ÚNICA imagem com `priority` na página: é o elemento de
+                      // LCP. Marcar outras competiria por banda e pioraria a
+                      // métrica. Quando o hero NÃO tem capa, quem herda esta
+                      // prioridade é o próximo card com foto — ver
+                      // `lcpCandidateId`, no topo do componente.
                       priority
-                      sizes="(max-width: 1024px) 100vw, 66vw"
+                      // O `sizes` ACOMPANHA O LAYOUT — e antes ele não acompanhava.
+                      //
+                      // O valor anterior era fixo em `66vw` acima de 1024px, o
+                      // que descreve o hero DENTRO da grade de duas colunas
+                      // (`.hero-layout`, 1.62fr de 2.62fr ≈ 62% da linha). Só
+                      // que essa grade só existe quando há "quentes"
+                      // secundários — e o comentário logo acima registra que o
+                      // estado NORMAL do site é ter uma única matéria quente.
+                      // Nesse estado o hero ocupa a LINHA INTEIRA do container
+                      // (teto de 1280px, `--maxw`), e o navegador continuava
+                      // ouvindo "isto vai ocupar 66% da janela": numa tela de
+                      // 1440px ele pedia ~950px para um espaço de ~1232px e
+                      // esticava o resultado em 1,3×. Esta é a SEGUNDA causa da
+                      // queixa de imagem pixelada, e ela vivia justamente na
+                      // foto mais visível do site.
+                      //
+                      // Agora são dois valores, um por layout:
+                      //   · com coluna lateral → 62vw (a fração real da grade;
+                      //     66 era arredondamento para cima);
+                      //   · sem coluna lateral → 100vw até a janela alcançar o
+                      //     teto do container e 1232px daí para cima (`--maxw`
+                      //     de 1280 menos os 2×24px de recuo do `.container` a
+                      //     partir de 768px). Abaixo de 1280 o `100vw`
+                      //     superestima em ~48px, e superestimar é o lado
+                      //     seguro de errar: sobra nitidez, não falta.
+                      //
+                      // Abaixo de 1024px a grade colapsa em uma coluna nos dois
+                      // casos, e os dois valores dizem `100vw` — que é o certo.
+                      sizes={
+                        heroHasSideColumn
+                          ? '(max-width: 1024px) 100vw, 62vw'
+                          : '(max-width: 1280px) 100vw, 1232px'
+                      }
                     />
                   </div>
                   <div className="hero__overlay" aria-hidden="true" />
@@ -317,10 +429,18 @@ export default async function HomePage() {
             {/* Demais "quentes" (o teto de 3 já foi aplicado no servidor).
                 No protótipo esta coluna é `.stack` — o utilitário de empilhar
                 com espaçamento do design. `.hero-secondary` não existia. */}
-            {secondaryHot.length > 0 && (
+            {heroHasSideColumn && (
               <div className="stack">
                 {secondaryHot.map((item) => (
-                  <ArticleCard key={item.id} item={item} variant="grid" />
+                  <ArticleCard
+                    key={item.id}
+                    item={item}
+                    variant="grid"
+                    // Normalmente `false` — o hero é quem carrega a prioridade.
+                    // Só vira `true` quando o hero saiu sem capa e este card é
+                    // a primeira foto da página (ver `lcpCandidateId`).
+                    priority={item.id === lcpCandidateId}
+                  />
                 ))}
               </div>
             )}
@@ -376,7 +496,14 @@ export default async function HomePage() {
                 </p>
               </div>
             </div>
-            <ArticleCard item={popularWeek} variant="lead" showReactionCount />
+            <ArticleCard
+              item={popularWeek}
+              variant="lead"
+              showReactionCount
+              // Ver `lcpCandidateId`: só entra em cena quando nem o hero nem os
+              // quentes secundários renderizaram foto nenhuma acima daqui.
+              priority={popularWeek.id === lcpCandidateId}
+            />
           </section>
         )}
 
@@ -518,7 +645,15 @@ export default async function HomePage() {
                 protótipo. */}
             <div className="grid g-sm-2 g-md-3">
               {home.feed.map((item) => (
-                <ArticleCard key={item.id} item={item} variant="grid" />
+                <ArticleCard
+                  key={item.id}
+                  item={item}
+                  variant="grid"
+                  // Último degrau da cascata de prioridade (ver
+                  // `lcpCandidateId`): num dia em que NENHUM bloco acima tenha
+                  // foto, o primeiro card desta grade é o elemento de LCP.
+                  priority={item.id === lcpCandidateId}
+                />
               ))}
             </div>
 

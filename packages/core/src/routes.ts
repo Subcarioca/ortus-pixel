@@ -162,6 +162,15 @@ export const routes = {
   adminComments: () => `${ROUTE_PREFIXES.admin}/comentarios`,
   /** Gestão de contas da redação. Só administrador. */
   adminAccounts: () => `${ROUTE_PREFIXES.admin}/contas`,
+  /**
+   * Catálogo de franquias — a tela onde GTA, Zelda e Marvel nascem.
+   *
+   * Aberta a administrador E redator (capacidade `criarFranquia`, ver
+   * core/staff.ts): até ela existir, uma franquia nova só podia ser criada
+   * escrevendo direto no banco, e etiquetar matéria com franquia inexistente
+   * simplesmente não era possível pelo painel.
+   */
+  adminFranchises: () => `${ROUTE_PREFIXES.admin}/franquias`,
 
   // --- APIs públicas ---
   apiTrending: () => '/api/trending',

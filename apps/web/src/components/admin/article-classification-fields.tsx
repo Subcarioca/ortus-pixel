@@ -44,6 +44,7 @@ import {
   CONTENT_SENSITIVITY_LABELS,
   CONTENT_SENSITIVITY_LEVELS,
   SUBCATEGORIES,
+  routes,
   sensitivityRank,
   toContentSensitivity,
   type ContentSensitivity,
@@ -143,6 +144,29 @@ export function ArticleClassificationFields({
         <span className="form-hint">
           Segure Ctrl (ou Cmd) para escolher mais de uma. É o que faz a matéria aparecer no
           hub da franquia — sem isso, ela só existe na editoria.
+        </span>
+        {/*
+          A SAÍDA PARA "A FRANQUIA QUE EU PRECISO NÃO ESTÁ NA LISTA".
+
+          Até existir a tela de catálogo, este `<select>` era um beco sem saída:
+          a única resposta possível era publicar sem etiqueta (perdendo hub,
+          relacionadas por franquia e o botão de seguir). O link aparece aqui, e
+          não só na navegação do painel, porque é NESTE momento — com o
+          formulário aberto e a lista à vista — que a pessoa descobre a falta.
+
+          `target="_blank"` de propósito, e é a única razão pela qual ele é
+          aceitável: o formulário de matéria pode ter texto não salvo, e navegar
+          para outra tela do painel o perderia. Ao voltar, basta recarregar a
+          página da matéria para a franquia nova aparecer na lista. `rel` é
+          obrigatório junto — sem `noopener`, a aba nova ganha uma referência à
+          nossa via `window.opener`.
+        */}
+        <span className="form-hint">
+          Não achou a franquia?{' '}
+          <a href={routes.adminFranchises()} target="_blank" rel="noopener noreferrer">
+            Cadastre em Franquias
+          </a>{' '}
+          (abre em outra aba, para não perder o que está escrito aqui) e recarregue esta página.
         </span>
       </label>
 

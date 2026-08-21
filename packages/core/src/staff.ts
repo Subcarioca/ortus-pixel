@@ -90,6 +90,36 @@ export interface StaffCapabilities {
   criarPauta: boolean;
 
   /**
+   * Cadastrar uma FRANQUIA nova no catálogo (GTA, Zelda, Marvel...).
+   *
+   * POR QUE UMA CHAVE PRÓPRIA E NÃO O REAPROVEITAMENTO DE `criarPauta`:
+   * as duas são "acrescentar uma linha", mas a semelhança para aí. Pauta é um
+   * item de FILA INTERNA — nasce, é assumida, vira matéria e some. Franquia é
+   * item de CATÁLOGO: ela ganha uma página pública permanente (`/franquia/gta`),
+   * entra no sitemap, aparece em "Seus universos" na home e passa a ser
+   * seguível. Escondê-la atrás do nome "criarPauta" faria a resposta à pergunta
+   * "quem pode criar página nova no site?" depender de alguém lembrar que aquela
+   * chave também servia para outra coisa — que é exatamente o que esta tabela
+   * existe para evitar (ver o cabeçalho de `StaffCapabilities`).
+   *
+   * POR QUE É `true` PARA OS DOIS NÍVEIS, mesmo criando página pública: pelo
+   * mesmo critério que já vale em `criarPauta` — ACRESCENTAR não tira nada de
+   * ninguém. Uma franquia nova não reordena a home, não despublica nada e não
+   * altera o que já existe; ela só passa a existir. E o custo de NÃO dar isso ao
+   * redator é concreto: hoje não há tela nenhuma de criação de franquia no
+   * produto, e etiquetar uma matéria com uma franquia inexistente exige abrir o
+   * banco — que é onde acontecem os acidentes que ninguém audita (o mesmo
+   * argumento que justificou a tela de matérias).
+   *
+   * ⚠ O QUE ESTA CHAVE **NÃO** AUTORIZA: editar ou apagar franquia existente.
+   * Isso é uma ação de consequência oposta — mudar o slug quebra toda URL já
+   * indexada e todo link compartilhado; apagar leva junto os seguidores e as
+   * relações com matérias publicadas. Quando existir, é outra capacidade, e a
+   * decisão de quem pode precisa ser tomada em separado, não herdada desta.
+   */
+  criarFranquia: boolean;
+
+  /**
    * Ver a aba de audiência (visualizações, cliques).
    *
    * O RECORTE muda por nível e NÃO está aqui: esta chave responde "a tela
@@ -160,6 +190,7 @@ export const STAFF_CAPABILITIES: Record<AccessLevel, StaffCapabilities> = {
     gerenciarContas: true,
     atribuirOutroAutor: true,
     criarPauta: true,
+    criarFranquia: true,
     verAnalytics: true,
     verAnalyticsDoSite: true,
     reduzirRestricaoDeConteudo: true,
@@ -186,6 +217,13 @@ export const STAFF_CAPABILITIES: Record<AccessLevel, StaffCapabilities> = {
     // Propor pauta É o trabalho. Acrescentar uma linha à fila não tira nada de
     // ninguém — ao contrário de descartar ou repontuar, que reordenam o site.
     criarPauta: true,
+
+    // Mesmo critério: cadastrar a franquia que ele acabou de cobrir é
+    // acrescentar, não alterar. A alternativa real não era "só o admin cria" —
+    // era "ninguém cria pelo painel, edita-se o banco na mão". Ver o comentário
+    // longo da chave em `StaffCapabilities`, inclusive o que ela NÃO autoriza
+    // (editar e apagar continuam fora do alcance de todo mundo, por ora).
+    criarFranquia: true,
 
     // A tela existe; o que ela mostra é só o que ele assina (recorte na consulta).
     verAnalytics: true,

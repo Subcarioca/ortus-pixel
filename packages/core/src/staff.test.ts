@@ -56,6 +56,13 @@ const TODA_A_REDACAO: (keyof StaffCapabilities)[] = [
   'verFilaDePautas',
   'verMaterias',
   'criarPauta',
+  // Cadastrar franquia nova no catálogo. Decisão explícita, e não herdada de
+  // `criarPauta`: ela cria uma PÁGINA PÚBLICA permanente (`/franquia/x`), o que
+  // é mais do que acrescentar uma linha numa fila interna. Continua liberada
+  // para o redator porque acrescentar não altera nem remove nada do que já
+  // existe — e porque a alternativa era editar o banco na mão. Editar e apagar
+  // franquia NÃO estão incluídos; ver o comentário da chave em core/staff.ts.
+  'criarFranquia',
   'verAnalytics',
 ];
 

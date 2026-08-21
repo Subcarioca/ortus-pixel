@@ -46,8 +46,24 @@
  * segurança: ele não roda antes das rotas de API e não é reexecutado em toda
  * navegação, então uma checagem feita só aqui daria uma sensação de proteção que
  * não corresponde ao que o framework garante.
+ *
+ * -----------------------------------------------------------------------------
+ * ELE GANHOU UMA SEGUNDA RESPONSABILIDADE: A FOLHA DE ESTILO DO PAINEL
+ * -----------------------------------------------------------------------------
+ * O import de `./admin.css` logo abaixo é o que faz as regras de `/admin`
+ * chegarem SÓ às rotas de `/admin`. Elas moraram até aqui dentro de
+ * `app/ortuspixel.css` (a folha do design system, importada pelo layout RAIZ),
+ * e portanto eram baixadas por todo leitor do site público — ~8 KB de CSS que
+ * nenhuma página pública usa, dentro do arquivo que bloqueia a primeira
+ * pintura. Ver o cabeçalho de `admin.css` para o racional completo, para o que
+ * NÃO foi separado e por quê, e para a verificação de ordem de cascata.
+ *
+ * O layout é o lugar certo deste import pelo mesmo motivo que já valia para o
+ * `<AdsPaused>`: ele cobre a subárvore inteira, inclusive as telas do painel
+ * que ainda não existem.
  */
 
+import './admin.css';
 import { AdsPaused } from '@/components/ads-paused';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

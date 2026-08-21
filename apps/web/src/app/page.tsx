@@ -122,11 +122,25 @@ import { getHomeData, getTickerItems, getTopFranchises } from '@/server/queries'
 const GRID_END_AD_MIN_CARDS = 4;
 
 /**
- * A home é dinâmica por natureza (o score muda), mas servida de cache.
- * `revalidate` aqui é a rede de segurança; o caminho principal de atualização
- * é a invalidação por evento disparada pelo curator. Ver server/queries.ts.
+ * Renderização sob demanda (SSR), pelo mesmo motivo de `categoria/[slug]`:
+ * sem rota dinâmica nos parâmetros, a home é uma das páginas SEMPRE incluídas
+ * no pré-render do `next build` — e esse build roda no GitHub Actions, que
+ * não alcança o MariaDB interno da Hostinger (`localhost:3306`, só acessível
+ * de dentro da rede da Hostinger). Toda consulta de `getHomeData()` falhava
+ * no build, `safeQuery` (queries.ts) engolia o erro e devolvia listas vazias,
+ * e essa home ESTÁTICA E VAZIA — "Estamos preparando as primeiras matérias" —
+ * era o HTML que ia para produção, sem nenhum aviso: o estado vazio de
+ * verdade e o estado de build-sem-banco são visualmente idênticos de
+ * propósito (é o "site novo" da página), o que tornou o bug invisível.
+ *
+ * Forçar dinâmico tira a home do pré-render: a query só roda a cada request,
+ * já dentro da rede da Hostinger, onde o banco responde normalmente. O cache
+ * de DADOS continua existindo — é o `unstable_cache({ revalidate: 60 })` de
+ * `getHomeData` em server/queries.ts, uma camada independente da renderização
+ * da página. `force-dynamic` não substitui aquele cache; só impede que a
+ * PÁGINA em si fique congelada no HTML gerado no build.
  */
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 /**
  * Metadados da home.

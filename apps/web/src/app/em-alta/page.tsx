@@ -60,7 +60,17 @@ import { PushOptIn } from '@/components/push-opt-in';
 import { RelativeTime } from '@/components/relative-time';
 import { getTrendingRanking } from '@/server/queries';
 
-export const revalidate = 60;
+/**
+ * Renderização sob demanda (SSR) — mesmo motivo de `app/page.tsx` (a home):
+ * sem parâmetro dinâmico, esta página é sempre incluída no pré-render do
+ * `next build`, que roda no GitHub Actions e não alcança o MariaDB interno
+ * da Hostinger (`localhost:3306`). `getTrendingRanking()` falhava no build,
+ * `safeQuery` devolvia listas vazias, e essa versão estática e vazia era o
+ * HTML publicado. `force-dynamic` tira a página do pré-render; o cache de
+ * dados (`unstable_cache({ revalidate: 60 })`, dentro de `getTrendingRanking`
+ * em server/queries.ts) continua valendo, independente disto.
+ */
+export const dynamic = 'force-dynamic';
 
 /**
  * O título NÃO leva sufixo de marca escrito à mão: o template do layout raiz

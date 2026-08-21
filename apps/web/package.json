@@ -11,8 +11,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "//test": [
-      "Módulos de SERVIDOR e de LÓGICA COMPARTILHADA (`src/lib/`) testáveis fora",
-      "do Next — regras de upload, vocabulário de enquadramento de imagem, etc.",
+      "Só os módulos de SERVIDOR que são testáveis fora do Next — hoje as regras",
+      "de upload (onde o arquivo é gravado e que caminho pode ser lido).",
       "",
       "O runner é o do Node, igual ao de `core`, `scoring` e `curator`: sem",
       "framework de teste novo no projeto por causa de um arquivo.",
@@ -22,7 +22,7 @@
       "existe como módulo comum), e componentes React precisariam de DOM. Testar",
       "esses exigiria outra ferramenta — decisão que ainda não se paga."
     ],
-    "test": "node --import tsx --test src/server/*.test.ts src/lib/*.test.ts"
+    "test": "node --import tsx --test src/server/*.test.ts"
   },
   "dependencies": {
     "@subcarioca/core": "^0.1.0",

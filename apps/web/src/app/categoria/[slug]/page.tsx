@@ -298,6 +298,7 @@ export default async function CategoryPage({
   function groupHeaderBefore(index: number): string | null {
     if (!showGroupHeaders) return null;
     const item = articles[index];
+    if (!item) return null;
     const prev = articles[index - 1];
     if (prev && prev.subsection === item.subsection) return null;
     if (item.subsection) {

@@ -911,7 +911,7 @@ const config = {
       "value": "prisma-client-js"
     },
     "output": {
-      "value": "R:\\Claudio\\node_modules\\@prisma\\client",
+      "value": "/home/runner/work/ortus-pixel/ortus-pixel/src/node_modules/@prisma/client",
       "fromEnvVar": null
     },
     "config": {
@@ -920,7 +920,7 @@ const config = {
     "binaryTargets": [
       {
         "fromEnvVar": null,
-        "value": "windows",
+        "value": "debian-openssl-3.0.x",
         "native": true
       },
       {
@@ -937,11 +937,10 @@ const config = {
       }
     ],
     "previewFeatures": [],
-    "sourceFilePath": "R:\\Claudio\\packages\\db\\prisma\\schema.prisma"
+    "sourceFilePath": "/home/runner/work/ortus-pixel/ortus-pixel/src/packages/db/prisma/schema.prisma"
   },
   "relativeEnvPaths": {
-    "rootEnvPath": null,
-    "schemaEnvPath": "../../../packages/db/.env"
+    "rootEnvPath": null
   },
   "relativePath": "../../../packages/db/prisma",
   "clientVersion": "6.19.3",
@@ -950,6 +949,8 @@ const config = {
     "db"
   ],
   "activeProvider": "mysql",
+  "postinstall": false,
+  "ciName": "GitHub Actions",
   "inlineDatasources": {
     "db": {
       "url": {
@@ -996,10 +997,6 @@ warnEnvConflicts({
 const PrismaClient = getPrismaClient(config)
 exports.PrismaClient = PrismaClient
 Object.assign(exports, Prisma)
-
-// file annotations for bundling tools to include these files
-path.join(__dirname, "query_engine-windows.dll.node");
-path.join(process.cwd(), "../../node_modules/.prisma/client/query_engine-windows.dll.node")
 
 // file annotations for bundling tools to include these files
 path.join(__dirname, "libquery_engine-debian-openssl-3.0.x.so.node");

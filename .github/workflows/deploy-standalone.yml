@@ -98,6 +98,25 @@ jobs:
       # Next NÃO inclui `.next/static/` (comportamento documentado — CSS/JS
       # ficam de fora do bundle standalone de propósito); sem este passo os
       # chunks/CSS somem no deploy e o navegador recebe 404 no lugar deles.
+      #
+      # DOT_PRISMA_CLIENT / AT_PRISMA_CLIENT: o Prisma Client de verdade que a
+      # Hostinger serve não vem do `node_modules` normal — ele é restaurado a
+      # cada processo a partir de `vendor/dot-prisma-client/` e
+      # `vendor/at-prisma-client/` na branch deploy-standalone (ver o
+      # cabeçalho de `server.js` NAQUELA branch para o porquê: o `npm install`
+      # da Hostinger não roda `prisma generate` e deixaria só stubs). Até esta
+      # mudança, esse `vendor/` NUNCA era atualizado por este workflow — só o
+      # `schema.prisma` mudava a cada deploy, o Client gerado a partir dele,
+      # não. Toda vez que o schema ganhava um campo novo, o site inteiro
+      # continuava consultando com um Client que não conhecia esse campo:
+      # Prisma recusa o `select`/`where` na hora, ANTES de tocar o banco, e
+      # esse erro ficava escondido atrás do `safeQuery` da home — o sintoma
+      # era "a home não mostra nenhuma matéria", sem pista nenhuma de que a
+      # causa era um Client desatualizado. A busca é por `find` (e não um
+      # caminho fixo) porque a posição exata dentro do standalone depende de
+      # como o tracer do Next resolveu o hoisting do monorepo, e um caminho
+      # hardcoded quebraria em silêncio se essa resolução mudar de versão
+      # para versão do Next.
       - name: Preparar artefatos para overlay
         run: |
           cp -r src/apps/web/.next/standalone/apps/web  APPS_WEB_BUILD
@@ -106,6 +125,18 @@ jobs:
           cp -r src/apps/web/public                         WEB_PUBLIC
           mkdir -p PRISMA_SCHEMA
           cp    src/packages/db/prisma/schema.prisma        PRISMA_SCHEMA/schema.prisma
+
+          DOT_PRISMA_SRC="$(find src/apps/web/.next/standalone -type d -path '*/.prisma/client' | head -n1)"
+          AT_PRISMA_SRC="$(find src/apps/web/.next/standalone -type d -path '*/@prisma/client' | head -n1)"
+
+          if [ -z "$DOT_PRISMA_SRC" ] || [ -z "$AT_PRISMA_SRC" ]; then
+            echo "::error::Prisma Client não encontrado no output standalone (procurado em src/apps/web/.next/standalone). DOT='$DOT_PRISMA_SRC' AT='$AT_PRISMA_SRC'"
+            exit 1
+          fi
+
+          echo "[overlay] Prisma Client traçado encontrado: DOT=$DOT_PRISMA_SRC AT=$AT_PRISMA_SRC"
+          cp -r "$DOT_PRISMA_SRC" DOT_PRISMA_CLIENT
+          cp -r "$AT_PRISMA_SRC"  AT_PRISMA_CLIENT
 
       # ---------------------------------------------------------------- (8)
       # Monta a árvore final: overlay mínimo em cima da branch deploy.

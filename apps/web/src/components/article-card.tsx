@@ -26,11 +26,10 @@
  * linha flex cinza, era texto solto herdando o corpo.
  */
 
-import type { CSSProperties } from 'react';
-
 import Image from 'next/image';
 import Link from 'next/link';
 
+import type { ContentCardData } from '@subcarioca/core';
 import {
   catClass,
   catToken,
@@ -40,14 +39,12 @@ import {
   routes,
 } from '@subcarioca/core';
 
-import type { CardData } from '@/server/queries';
-
 import { HeatBadge } from './heat-badge';
 import { HeatBar, TrendTag } from './heat-bar';
 import { RelativeTime } from './relative-time';
 
 interface ArticleCardProps {
-  item: CardData;
+  item: ContentCardData;
   /**
    * `ever` força a anatomia de evergreen independentemente da temperatura.
    *
@@ -170,12 +167,7 @@ export function ArticleCard({
       {item.coverImageUrl && (
         <Link
           href={item.url}
-          // `.thumb--contain` é a ÚNICA classe extra que existe: 'cover' (o
-          // padrão) e 'focal' usam a mesma `.thumb` de sempre — 'focal' só
-          // muda a POSIÇÃO do recorte (via `style`), não o `object-fit`. Ver
-          // o comentário de `coverImageThumbStyle`, abaixo, e a regra em
-          // `ortuspixel.css` ao lado de `.thumb > img`.
-          className={item.coverImageFit === 'contain' ? 'thumb thumb--contain' : 'thumb'}
+          className="thumb"
           data-c={catToken(item.category.slug)}
           tabIndex={-1}
           aria-hidden="true"
@@ -191,7 +183,6 @@ export function ArticleCard({
             priority={priority}
             // `sizes` evita baixar imagem de 640px numa tela de 360px.
             sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-            style={coverImageObjectPosition(item)}
           />
           {/* Posição do ranking sobre a capa (página Em Alta). No protótipo é
               um `style=""` inline sobre o hero; aqui reaproveitamos
@@ -252,27 +243,4 @@ export function ArticleCard({
       </div>
     </article>
   );
-}
-
-/**
- * `object-position` do card, quando `coverImageFit === 'focal'`.
- *
- * SÓ 'focal' PRECISA DE `style`: 'cover' é a regra de sempre em `.thumb > img`
- * (sem posição declarada, ou seja, centro geométrico) e 'contain' muda só o
- * `object-fit`, via `.thumb--contain` no CSS — nenhum dos dois precisa de
- * valor inline. 'focal' é diferente porque a posição é um PERCENTUAL POR
- * MATÉRIA (`coverImageFocalX/Y`), não uma constante que caiba numa classe.
- *
- * Coordenada ausente (matéria em 'focal' sem ponto gravado — não deveria
- * acontecer, `parseCoverImageFocus` no servidor recusa esse par, mas dado do
- * banco é sempre tratado com desconfiança) cai no centro, que é exatamente o
- * que 'cover' já faria: a falha degrada para o comportamento de sempre, nunca
- * para uma posição inválida.
- */
-function coverImageObjectPosition(item: CardData): CSSProperties | undefined {
-  if (item.coverImageFit !== 'focal') return undefined;
-
-  const x = item.coverImageFocalX ?? 50;
-  const y = item.coverImageFocalY ?? 50;
-  return { objectPosition: `${x}% ${y}%` };
 }

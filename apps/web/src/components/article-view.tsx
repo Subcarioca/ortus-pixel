@@ -145,19 +145,8 @@ const SEM_COMENTARIOS: Awaited<ReturnType<typeof getArticleComments>> = [];
 export async function ArticleView({ data, mode = 'public' }: ArticleViewProps) {
   const preview = mode === 'preview';
 
-  const {
-    article,
-    liveUpdates,
-    isLive,
-    hasSpoiler,
-    tldr,
-    scoreDelta1h,
-    format,
-    contentSensitivity,
-    coverImageFit,
-    coverImageFocalX,
-    coverImageFocalY,
-  } = data;
+  const { article, liveUpdates, isLive, hasSpoiler, tldr, scoreDelta1h, format, contentSensitivity } =
+    data;
 
   // A categoria e o slug saem do próprio artigo, e não de props: são a mesma
   // informação, e recebê-las de fora abriria a porta para renderizar a matéria
@@ -459,16 +448,7 @@ export async function ArticleView({ data, mode = 'public' }: ArticleViewProps) {
               real entra pela ponte `.thumb > img` da seção 17 do CSS. */}
           {article.coverImageUrl && (
             <figure className="media media--full article__cover">
-              {/* ENQUADRAMENTO ESCOLHIDO PELO EDITOR (`coverImageFit`, ver
-                  `@/lib/cover-image` e o schema). 'cover' (o padrão) não muda
-                  NADA aqui — nenhuma classe extra, nenhum `style` — porque é
-                  exatamente a aparência que toda matéria já publicada tem
-                  hoje, e o objetivo desta funcionalidade é ACRESCENTAR opção,
-                  nunca alterar o que já está no ar sem que o editor peça. */}
-              <div
-                className={coverImageFit === 'contain' ? 'thumb thumb--contain' : 'thumb'}
-                data-c={catToken(categoria)}
-              >
+              <div className="thumb" data-c={catToken(categoria)}>
                 <Image
                   src={article.coverImageUrl}
                   alt={article.coverImageAlt ?? ''}
@@ -483,16 +463,6 @@ export async function ArticleView({ data, mode = 'public' }: ArticleViewProps) {
                   // este número é pedir ao navegador o arquivo errado — grande
                   // demais custa banda, pequeno demais borra a capa.
                   sizes="(min-width: 1136px) 1088px, 100vw"
-                  // Só 'focal' precisa de posição inline: é um percentual POR
-                  // MATÉRIA, não uma constante de CSS. Coordenada ausente cai
-                  // no centro — degrada para o que 'cover' já faria, nunca
-                  // para uma posição inválida (ver `article-card.tsx`, que
-                  // documenta o mesmo raciocínio para o card da listagem).
-                  style={
-                    coverImageFit === 'focal'
-                      ? { objectPosition: `${coverImageFocalX ?? 50}% ${coverImageFocalY ?? 50}%` }
-                      : undefined
-                  }
                 />
               </div>
               {article.coverImageAlt && <figcaption>{article.coverImageAlt}</figcaption>}

@@ -1473,20 +1473,6 @@ body:has(.push-prompt[data-open="true"]) .ad-anchor { display: none; }
 /* Com foto real, a textura do placeholder só sujaria a imagem. */
 .thumb:has(> img)::after { content: none; }
 
-/* ENQUADRAMENTO ESCOLHIDO PELO EDITOR (`Article.coverImageFit`, ver o schema e
-   `apps/web/src/lib/cover-image.ts`). Aplicado por `article-view.tsx`/`article-card.tsx`
-   conforme o campo salvo — o padrão ('cover', sem classe nenhuma) continua
-   sendo exatamente a regra acima, sem nenhuma mudança visual para o acervo
-   existente.
-
-   'contain': a foto aparece INTEIRA. Sem recorte, sobra área vazia nas bordas
-   (a moldura continua 16:9) — `--surface-2` faz de letterbox em vez de deixar
-   o gradiente de placeholder aparecendo atrás de uma foto de verdade. */
-.thumb--contain > img { object-fit: contain; background: var(--surface-2); }
-/* 'focal': mesmo recorte automático de sempre, ancorado no ponto que o editor
-   marcou. `object-position` vem inline (style) por ser um valor por MATÉRIA,
-   não uma constante de CSS. */
-
 /* `.thumb` COMO LINK.
    No protótipo o `.thumb` é sempre uma `<div>` dentro de um `<a>` que embrulha
    o card inteiro. No produto a capa é o próprio link (um card com dois links
@@ -1737,26 +1723,6 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
 .admin-tldr__row { display: flex; gap: var(--s-2); align-items: center; }
 .admin-tldr__row input { flex: 1; }
 .admin-actions { display: flex; gap: var(--s-2); flex-wrap: wrap; }
-
-/* MARCADOR DE PONTO FOCAL (`cover-image-fit-field.tsx`).
-   Prévia crua (mesmo motivo de `.admin-image-preview` em `image-url-field.tsx`:
-   é vista uma vez, pela redação, e não vale a pena arriscar o `next/image`
-   lançar num host ainda não autorizado). O clique dentro do contêiner vira
-   `%` no componente; aqui só posicionamos o marcador com o resultado. */
-.admin-focal-picker {
-  position: relative; max-width: 360px; aspect-ratio: 16/9; overflow: hidden;
-  border-radius: var(--r-sm); border: 1px solid var(--line); cursor: crosshair;
-  background: var(--surface-2);
-}
-.admin-focal-picker__img {
-  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
-  pointer-events: none; /* o clique é tratado pelo contêiner, não pela imagem */
-}
-.admin-focal-picker__marker {
-  position: absolute; width: 18px; height: 18px; margin: -9px 0 0 -9px;
-  border-radius: 50%; border: 2px solid #fff; background: var(--brand);
-  box-shadow: 0 0 0 1px rgba(0,0,0,.5); pointer-events: none;
-}
 .input--sm { padding: 6px var(--s-2); min-height: 34px; max-width: 7rem; font-size: var(--fs-sm); }
 
 /* Chip compacto: SÓ no painel. O `.chip` público tem 44px de altura porque é

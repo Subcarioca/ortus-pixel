@@ -43,7 +43,6 @@ import {
   type EditorialRiskFinding,
 } from '@subcarioca/core';
 
-import { isValidFocalCoordinate, toCoverImageFit, type CoverImageFit } from '@/lib/cover-image';
 import { ALLOWED_IMAGE_HOSTS_LABEL } from '@/lib/image-hosts';
 import { safeImageUrl } from '@/lib/safe-url';
 import { parseBlocksInput } from './blocks-input';
@@ -64,22 +63,6 @@ export interface ArticleInput {
   tldr: string[];
   coverImageUrl: string | null;
   coverImageAlt: string | null;
-  /**
-   * Como a capa é recortada — 'cover' (recorte automático, o de sempre),
-   * 'contain' (imagem completa) ou 'focal' (recorte automático ancorado no
-   * ponto marcado pelo editor). Ver `@/lib/cover-image` para o porquê dos
-   * três modos e `Article.coverImageFit` no schema para a decisão de manter
-   * 'cover' como padrão retrocompatível.
-   */
-  coverImageFit: CoverImageFit;
-  /**
-   * Ponto focal (percentual 0–100 nos dois eixos), só quando `coverImageFit`
-   * é 'focal'. `null` nos outros dois modos — ver o comentário de
-   * `parseCoverImageFocus`, abaixo, para o porquê de a ausência ser reforçada
-   * aqui e não só assumida.
-   */
-  coverImageFocalX: number | null;
-  coverImageFocalY: number | null;
   isBreaking: boolean;
   hasSpoiler: boolean;
   /**
@@ -250,22 +233,6 @@ export async function parseArticleInput(
       : null;
 
   /**
-   * ENQUADRAMENTO DA CAPA — modo mais coordenadas, validados JUNTOS.
-   *
-   * `toCoverImageFit` sozinho não bastaria: ele SEMPRE devolve um modo válido
-   * (cai em 'cover' para lixo), então usá-lo isolado deixaria passar um
-   * `coverImageFocalX` sem `coverImageFit: 'focal'` — dado órfão, que a
-   * RENDERIZAÇÃO teria de decidir se usa ou ignora. É melhor decidir aqui, uma
-   * vez, no formato final que vai para o banco: fora do modo 'focal', as
-   * coordenadas são SEMPRE `null` — nunca "o que sobrou de uma troca de modo
-   * anterior".
-   */
-  const coverImageFit = toCoverImageFit(payload.coverImageFit);
-  const focus = parseCoverImageFocus(coverImageFit, payload.coverImageFocalX, payload.coverImageFocalY);
-  if ('error' in focus) return fail(focus.error);
-  const { coverImageFocalX, coverImageFocalY } = focus;
-
-  /**
    * SUB-CATEGORIA — validada como PAR, nunca sozinha.
    *
    * `isValidSubcategoryPath` recusa "hardware dentro de games" mesmo sendo
@@ -371,9 +338,6 @@ export async function parseArticleInput(
       tldr,
       coverImageUrl,
       coverImageAlt,
-      coverImageFit,
-      coverImageFocalX,
-      coverImageFocalY,
       isBreaking: payload.isBreaking === true,
       hasSpoiler: payload.hasSpoiler === true,
       // Valor fora do vocabulário cai em 'none' (ver `toContentSensitivity`). A
@@ -411,45 +375,6 @@ export async function parseArticleInput(
 
 function fail(message: string): ArticleInputResult {
   return { ok: false, message };
-}
-
-/**
- * Valida o PAR modo + ponto focal.
- *
- * Fora do modo 'focal', as coordenadas são forçadas a `null` — mesmo que o
- * cliente tenha mandado um valor (resíduo de quando o editor esteve em modo
- * 'focal' e trocou de ideia, por exemplo). Não é erro de formulário, é
- * limpeza: gravar coordenadas que o modo atual não usa criaria um dado
- * inconsistente sem exigir NENHUM reenvio malicioso — bastaria trocar o
- * `<select>` sem limpar os campos escondidos.
- *
- * Dentro de 'focal', as coordenadas SÃO obrigatórias e VALIDADAS (número
- * 0–100 nos dois eixos, ver `isValidFocalCoordinate`): um "escolher
- * enquadramento" sem ponto marcado não é um estado válido — é a tela ter
- * mandado o modo sem terminar a interação, e gravar isso silenciosamente
- * como `null` faria a matéria renderizar com `object-position: null% null%`,
- * que os navegadores toleram mal.
- */
-function parseCoverImageFocus(
-  fit: CoverImageFit,
-  rawX: unknown,
-  rawY: unknown,
-): { coverImageFocalX: number | null; coverImageFocalY: number | null } | { error: string } {
-  if (fit !== 'focal') {
-    return { coverImageFocalX: null, coverImageFocalY: null };
-  }
-
-  const x = typeof rawX === 'number' ? rawX : Number(rawX);
-  const y = typeof rawY === 'number' ? rawY : Number(rawY);
-
-  if (!isValidFocalCoordinate(x) || !isValidFocalCoordinate(y)) {
-    return {
-      error:
-        'Para "Escolher enquadramento", clique num ponto da imagem de capa para marcar o que não pode ser cortado.',
-    };
-  }
-
-  return { coverImageFocalX: x, coverImageFocalY: y };
 }
 
 /**

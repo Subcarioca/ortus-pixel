@@ -350,6 +350,157 @@ var SOURCE_TIERS = {
   unverified: 0.15
 };
 
+// packages/core/src/comment-moderation-bot.ts
+function collapseRepeats(text) {
+  return text.replace(/(.)\1+/gu, "$1");
+}
+var HATE_TERMS = [
+  // Racismo
+  "crioulo",
+  "criolo",
+  "neguinho de merda",
+  "preto imundo",
+  "volta pra senzala",
+  "macaco de merda",
+  "favelado",
+  "favelada",
+  // Homofobia / transfobia
+  "viado",
+  "viadinho",
+  "viadao",
+  "bicha",
+  "bichinha",
+  "boiola",
+  "baitola",
+  "sapatao",
+  "traveco",
+  "travecao",
+  // Escritas por extenso, uma forma de gênero por linha: o sufixo automático
+  // cobre só plural, e "trans nojenta" com um `(?:a|o)` embutido seria a
+  // exceção ilegível que o cabeçalho da lista pediu para evitar.
+  "trans nojento",
+  "trans nojenta",
+  // Capacitismo
+  "mongoloide",
+  "retardado",
+  "retardada",
+  "retardados",
+  "debil mental",
+  // Xenofobia / intolerância religiosa
+  "nordestino imundo",
+  "macumbeiro de merda",
+  // Incitação ao suicídio e ameaça — frases inteiras de propósito: "se mata"
+  // solto aparece em "ele se mata de trabalhar", e o verbo isolado não pode
+  // derrubar comentário nenhum.
+  "vai se matar",
+  "se mata logo",
+  "se mate",
+  "morre logo",
+  "espero que voce morra",
+  "devia morrer",
+  "vou te matar",
+  "vou te achar"
+];
+var INSULT_TERMS = [
+  // Xingamentos de uma palavra
+  "idiota",
+  "imbecil",
+  "otario",
+  "otaria",
+  "babaca",
+  "arrombado",
+  "arrombada",
+  "escroto",
+  "escrota",
+  "cuzao",
+  "cuzona",
+  "desgracado",
+  "desgracada",
+  "energumeno",
+  "panaca",
+  "cretino",
+  "cretina",
+  "canalha",
+  "vagabundo",
+  "vagabunda",
+  "escoria",
+  "verme humano",
+  "lixo humano",
+  "trouxa",
+  "estupido",
+  "estupida",
+  "jumento ignorante",
+  "analfabeto funcional",
+  // Siglas — muito usadas justamente por escaparem de filtro ingênuo.
+  "fdp",
+  "vsf",
+  "vtnc",
+  "tnc",
+  // Frases. A normalização já colapsou hífen e espaço múltiplo, então elas
+  // casam mesmo escritas como "vai-se-foder".
+  "filho da puta",
+  "filha da puta",
+  "filhos da puta",
+  "filho de uma puta",
+  "vai se foder",
+  "va se foder",
+  "vao se foder",
+  "toma no cu",
+  "vai tomar no cu",
+  "enfia no cu",
+  "chupa meu pau",
+  "vai a merda",
+  "sua puta",
+  "seu merda",
+  "seu bosta",
+  "sua vaca",
+  "sua cadela",
+  "nojento de merda",
+  "burro de merda",
+  "cala a boca idiota"
+];
+var PROFANITY_TERMS = [
+  "caralho",
+  "carai",
+  "porra",
+  "merda",
+  "bosta",
+  "cacete",
+  "buceta",
+  "boceta",
+  "piroca",
+  "foda",
+  "fodase",
+  "foda se",
+  "foder",
+  "puta que pariu",
+  "puta merda",
+  "pqp",
+  "krl",
+  "cu"
+];
+function escapeRegex(input) {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function buildPattern(terms) {
+  const alternatives = [...terms].sort((a, b) => b.length - a.length).map(escapeRegex).join("|");
+  return new RegExp(`\\b(?:${alternatives})(?:s|es)?\\b`, "gu");
+}
+var PATTERNS = {
+  hate: {
+    plain: buildPattern(HATE_TERMS),
+    collapsed: buildPattern(HATE_TERMS.map(collapseRepeats))
+  },
+  insult: {
+    plain: buildPattern(INSULT_TERMS),
+    collapsed: buildPattern(INSULT_TERMS.map(collapseRepeats))
+  },
+  profanity: {
+    plain: buildPattern(PROFANITY_TERMS),
+    collapsed: buildPattern(PROFANITY_TERMS.map(collapseRepeats))
+  }
+};
+
 // packages/core/src/utils.ts
 function clamp(value, min = 0, max = 1) {
   if (Number.isNaN(value)) return min;
@@ -3822,12 +3973,12 @@ async function matchFranchises(text) {
     const terms = [franchise.name, ...toStringArray(franchise.aliases)];
     return terms.some((term) => {
       const normalized = term.toLowerCase();
-      const pattern = new RegExp(`\\b${escapeRegex(normalized)}\\b`, "i");
+      const pattern = new RegExp(`\\b${escapeRegex2(normalized)}\\b`, "i");
       return pattern.test(lower);
     });
   }).map((f) => ({ id: f.id, slug: f.slug }));
 }
-function escapeRegex(input) {
+function escapeRegex2(input) {
   return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 async function scoreTopic(topicId, connectors, dryRun) {

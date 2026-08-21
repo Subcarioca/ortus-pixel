@@ -144,6 +144,8 @@ model Category {
   topics   Topic[]
   franchises Franchise[]
   subcategories Subcategory[]
+  /// Leitores que seguem esta editoria. Ver `CategoryFollow`.
+  follows  CategoryFollow[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -889,6 +891,21 @@ model Article {
   scrollDepthAvg Float?
   shareCount     Int @default(0)
 
+  /// CURTIR + DESCURTIR SOMADOS — os dois têm O MESMO PESO na popularidade
+  /// (decisão de produto: não é "like menos deslike", é engajamento total,
+  /// incluindo polêmica). Ver model `ArticleReaction` logo abaixo.
+  ///
+  /// DESNORMALIZADO, e não um `COUNT(*)` em `ArticleReaction` na leitura: é o
+  /// MESMO raciocínio já aplicado a `viewCount`/`shareCount` acima e a
+  /// `Topic.currentScore`/`ScoreSnapshot` — a home e a página do artigo leem
+  /// este número em toda requisição não cacheada (inclusive na seção "mais
+  /// popular da semana"), e um `COUNT` por card seria caro justamente no pico
+  /// de tráfego. Mantido pela mesma TRANSAÇÃO que grava/troca/remove a linha em
+  /// `ArticleReaction` (ver `server/reactions.ts`) — sem transação, um erro no
+  /// meio do caminho deixaria o contador mentindo para sempre, e nada no
+  /// sistema o corrigiria depois (mesmo cuidado de `Franchise.followerCount`).
+  reactionCount  Int @default(0)
+
   publishedAt DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -909,6 +926,7 @@ model Article {
 
   pushNotifications PushNotification[]
   comments          Comment[]
+  reactions         ArticleReaction[]
 
   // ---------------------------------------------------------------------------
   // BUSCA — onde ficou o antigo `searchVector`
@@ -1389,6 +1407,85 @@ model FranchiseFollow {
   @@index([commentAuthorId])
 }
 
+/// Segue uma CATEGORIA (editoria — Games, Cinema, Anime...), em vez de uma
+/// franquia específica. ESPELHA `FranchiseFollow` DE PROPÓSITO: mesmos dois
+/// sujeitos possíveis (anônimo por cookie x conta logada), mesmo par de índices
+/// únicos e pela mesma razão — ver o comentário de `FranchiseFollow` acima para
+/// o racional completo. Não repetido aqui para não ter duas fontes de verdade
+/// sobre a mesma decisão de design.
+///
+/// POR QUE UM MODEL PRÓPRIO, E NÃO REUSAR `FranchiseFollow` COM UM CAMPO
+/// OPCIONAL A MAIS (`categoryId` ao lado de `franchiseId`, ambos nuláveis):
+/// um follow "solto" (nem franquia, nem categoria) seria um estado inválido que
+/// o schema permitiria e o código teria de vigiar em toda leitura e escrita.
+/// Dois models pequenos, cada um com sua FK obrigatória, tornam esse estado
+/// IRREPRESENTÁVEL — o banco garante a invariante, não um `if` esquecível.
+model CategoryFollow {
+  id         String @id @default(cuid())
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  /// Identificador anônimo do visitante (cookie primário). Ver o comentário
+  /// equivalente em `FranchiseFollow`.
+  visitorId String
+
+  /// Conta do leitor, quando ele está logado. `Cascade`: apagar a conta apaga
+  /// os follows junto (direito de eliminação da LGPD por construção).
+  commentAuthorId String?
+  commentAuthor   CommentAuthor? @relation(fields: [commentAuthorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([categoryId, visitorId])
+  @@unique([categoryId, commentAuthorId])
+  @@index([visitorId])
+  @@index([commentAuthorId])
+}
+
+// =============================================================================
+// REAÇÕES DE ARTIGO — curtir / descurtir, MESMO PESO
+// =============================================================================
+//
+// DECISÃO DE PRODUTO (dono do site): curtir e descurtir têm O MESMO PESO na
+// popularidade. Não é "like menos deslike" (que mediria consenso); os dois
+// SOMAM (que mede ENGAJAMENTO — inclusive polêmica, que também é sinal de que
+// a matéria importou). O agregado mora em `Article.reactionCount`, e o "por
+// quê desnormalizado" está documentado junto daquele campo, não aqui.
+
+/// Uma reação (curtir OU descurtir) de UM leitor logado em UMA matéria.
+///
+/// SÓ LEITOR LOGADO, ao contrário de `FranchiseFollow`/`CategoryFollow` (que
+/// aceitam visitante anônimo): reagir é uma ação de baixíssimo atrito onde o
+/// abuso por script (inflar reação de uma matéria) é barato demais sem uma
+/// identidade por trás — a mesma razão pela qual comentar exige login. Seguir
+/// uma franquia não tem esse risco (não altera nenhum ranking público),
+/// reagir tem.
+model ArticleReaction {
+  id        String @id @default(cuid())
+  articleId String
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  commentAuthorId String
+  commentAuthor   CommentAuthor @relation(fields: [commentAuthorId], references: [id], onDelete: Cascade)
+
+  /// 'like' | 'dislike'. Vocabulário fechado e curto — mesmo tratamento de
+  /// `Comment.status` e dos outros vocabulários pequenos deste schema.
+  type String @db.VarChar(8)
+
+  createdAt DateTime @default(now())
+
+  /// UMA reação por (matéria, leitor). A rota é TOGGLE/REPLACE sobre esta
+  /// restrição, nunca um `create` cego: curtir de novo quando já existe uma
+  /// linha TROCA o tipo (curtiu quem tinha descurtido) ou APAGA a linha (clicou
+  /// de novo no mesmo botão) — nunca acumula uma segunda linha para a mesma
+  /// pessoa. Ver `server/reactions.ts`.
+  @@unique([articleId, commentAuthorId])
+  // Índice da consulta "reações de uma matéria" (moderação/auditoria). A
+  // LEITURA de popularidade não usa este índice — ela lê o contador
+  // desnormalizado em `Article.reactionCount`, sem tocar esta tabela.
+  @@index([articleId])
+}
+
 // =============================================================================
 // COMENTÁRIOS COM IDENTIDADE SOCIAL (Discord / Google)
 // =============================================================================
@@ -1449,9 +1546,16 @@ model CommentAuthor {
 
   comments Comment[]
   sessions CommentSession[]
+  /// Denúncias feitas por esta conta. Ver `CommentReport`.
+  reports  CommentReport[]
   /// Franquias seguidas. É o único dado de PREFERÊNCIA que guardamos do leitor —
   /// e ele é declarado por ele, não inferido de comportamento.
   follows  FranchiseFollow[]
+  /// Categorias (editorias) seguidas — mesmo papel de `follows`, ver
+  /// `CategoryFollow`.
+  categoryFollows CategoryFollow[]
+  /// Curtidas/descurtidas em matéria — ver `ArticleReaction`.
+  reactions       ArticleReaction[]
 
   createdAt  DateTime @default(now())
   lastSeenAt DateTime @default(now())
@@ -1536,12 +1640,92 @@ model Comment {
   ipHash String?
   upvotes Int @default(0)
 
+  /// Denúncias recebidas. Ver `CommentReport`, logo abaixo.
+  reports CommentReport[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([articleId, status, createdAt(sort: Desc)])
   @@index([status, createdAt(sort: Desc)])
   @@index([authorAccountId])
+}
+
+/// DENÚNCIA DE COMENTÁRIO FEITA POR UM LEITOR.
+///
+/// -----------------------------------------------------------------------------
+/// POR QUE UMA TABELA, E NÃO UM CONTADOR `reportCount` EM `Comment`
+/// -----------------------------------------------------------------------------
+/// Um contador responde "quantas?" e não responde a única pergunta que muda a
+/// decisão da moderação: "quantas PESSOAS DIFERENTES?". Cinco denúncias de cinco
+/// leitores é sinal; cinco da mesma conta é a própria denúncia sendo abusada
+/// como arma para derrubar comentário alheio — e num contador as duas situações
+/// são o mesmo número 5.
+///
+/// A tabela também é o que torna a chave única abaixo possível, e é ela que
+/// impede o segundo caso de existir.
+///
+/// -----------------------------------------------------------------------------
+/// LGPD — o mesmo raciocínio de minimização do cabeçalho desta seção
+/// -----------------------------------------------------------------------------
+/// Guardamos o MÍNIMO para a funcionalidade existir: quem denunciou (para não
+/// contar duas vezes), o que foi denunciado e quando. Não há IP nem user-agent
+/// aqui, ao contrário de `Comment`: a denúncia já exige conta autenticada, então
+/// o antiabuso é feito por CONTA — o hash de IP seria dado pessoal guardado sem
+/// nenhuma pergunta que ele responda.
+///
+/// `Cascade` no denunciante, e não `SetNull`, pela MESMA razão de
+/// `Comment.authorAccountId` e `FranchiseFollow.commentAuthorId`: apagar a conta
+/// apaga o que ela produziu. É o direito de eliminação funcionando por
+/// construção, e não por alguém lembrar de limpar a tabela certa depois. O que
+/// se perde — a contagem histórica encolhe quando uma conta some — é
+/// irrelevante para o uso real, que é decidir sobre um comentário de agora.
+model CommentReport {
+  id String @id @default(cuid())
+
+  commentId String
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  /// Conta do leitor que denunciou.
+  ///
+  /// Opcional apenas pela mesma razão de `Comment.authorAccountId`: manter a
+  /// coluna nulável evita que uma futura denúncia de outra origem (um formulário
+  /// de contato, por exemplo) precise de tabela nova. Hoje a rota EXIGE sessão —
+  /// não existe caminho anônimo, e é isso que sustenta o limite por conta.
+  reporterAccountId String?
+  reporter          CommentAuthor? @relation(fields: [reporterAccountId], references: [id], onDelete: Cascade)
+
+  /// Motivo, em texto curto e OPCIONAL.
+  ///
+  /// Opcional de propósito: exigir justificativa faria o leitor desistir no meio
+  /// (é um clique contra um formulário), e a denúncia sem motivo já entrega o
+  /// que importa — o ponteiro para um comentário que alguém achou grave. Quando
+  /// vem preenchido, é o que a moderação lê primeiro.
+  ///
+  /// `VarChar(200)` e não `Text`: aqui o limite de produto e o do banco podem
+  /// coincidir, porque este campo não é conteúdo editorial que cresce — é uma
+  /// linha de justificativa. A rota corta antes de gravar.
+  reason String? @db.VarChar(200)
+
+  createdAt DateTime @default(now())
+
+  /// A MESMA CONTA NÃO DENUNCIA O MESMO COMENTÁRIO DUAS VEZES.
+  ///
+  /// Sem esta chave, o limite por conta da rota (um contador em memória, que se
+  /// perde a cada reinício e vive por instância) seria a única defesa contra
+  /// alguém inflar a contagem de denúncias em looping até chamar a atenção da
+  /// moderação. Aqui quem garante é o banco, para sempre.
+  ///
+  /// Ela também SERVE DE ÍNDICE por `commentId`: num índice composto, o banco
+  /// usa o prefixo mais à esquerda: as consultas por comentário (a contagem na
+  /// fila de moderação) passam por ela. Um `@@index([commentId])` separado seria
+  /// uma segunda estrutura para manter na escrita sem nenhuma leitura nova.
+  ///
+  /// As linhas com `reporterAccountId` nulo não colidem entre si — NULL é
+  /// distinto de NULL dentro de um índice único, tanto no MySQL quanto no
+  /// Postgres (ver a nota longa em `FranchiseFollow`).
+  @@unique([commentId, reporterAccountId])
+  @@index([reporterAccountId])
 }
 
 // =============================================================================

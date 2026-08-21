@@ -97,6 +97,14 @@
       "namedRegex": "^/api/admin/articles/(?<nxtPid>[^/]+?)(?:/)?$"
     },
     {
+      "page": "/api/admin/articles/[id]/review",
+      "regex": "^/api/admin/articles/([^/]+?)/review(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/articles/(?<nxtPid>[^/]+?)/review(?:/)?$"
+    },
+    {
       "page": "/api/admin/topics/[id]",
       "regex": "^/api/admin/topics/([^/]+?)(?:/)?$",
       "routeKeys": {
@@ -119,6 +127,14 @@
         "nxtPprovider": "nxtPprovider"
       },
       "namedRegex": "^/api/auth/(?<nxtPprovider>[^/]+?)/callback(?:/)?$"
+    },
+    {
+      "page": "/api/comments/[id]/report",
+      "regex": "^/api/comments/([^/]+?)/report(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/comments/(?<nxtPid>[^/]+?)/report(?:/)?$"
     },
     {
       "page": "/categoria/[slug]",

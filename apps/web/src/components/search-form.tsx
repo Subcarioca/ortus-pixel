@@ -50,19 +50,43 @@ export function SearchForm({
         Buscar no Ortus Pixel
       </label>
 
-      <input
-        id={isHeader ? 'busca-header' : 'busca-pagina'}
-        className="input"
-        type="search"
-        name="q"
-        defaultValue={defaultValue}
-        placeholder="Buscar matérias e universos"
-        // 80 = o mesmo teto aplicado no servidor (`normalizeSearchTerm`).
-        // Barrar aqui também é conveniência, não segurança: a validação que
-        // vale é sempre a do servidor, porque esta pode ser contornada.
-        maxLength={80}
-        autoComplete="off"
-      />
+      {/*
+        `.header__search-field` só existe na variante `header`: é o que dá ao
+        `<kbd>` abaixo uma âncora para se posicionar SOBRE o campo (canto
+        direito, dentro da pílula), em vez de flutuar como mais um item solto
+        na linha entre o campo e o botão de lupa.
+      */}
+      <div className={isHeader ? 'header__search-field' : undefined}>
+        <input
+          id={isHeader ? 'busca-header' : 'busca-pagina'}
+          className="input"
+          type="search"
+          name="q"
+          defaultValue={defaultValue}
+          placeholder="Buscar matérias e universos"
+          // 80 = o mesmo teto aplicado no servidor (`normalizeSearchTerm`).
+          // Barrar aqui também é conveniência, não segurança: a validação que
+          // vale é sempre a do servidor, porque esta pode ser contornada.
+          maxLength={80}
+          autoComplete="off"
+        />
+
+        {/*
+          DICA VISUAL DO ATALHO "/" — markup estático, sem JavaScript nenhum:
+          quem de fato ESCUTA a tecla é `search-shortcut.tsx`, montado à parte
+          em `site-header.tsx` (ver o cabeçalho daquele componente para o
+          motivo de não estar aqui dentro). Esta é só a pista visual de que o
+          atalho existe; sem o script, ela continua aparecendo — só deixa de
+          fazer nada ao ser pressionada, o que é exatamente o comportamento
+          de sempre. `aria-hidden`: um leitor de tela já está DENTRO do campo
+          quando chega aqui, não precisa ouvir "barra" no meio do formulário.
+        */}
+        {isHeader && (
+          <kbd className="header__search-hint" aria-hidden="true">
+            /
+          </kbd>
+        )}
+      </div>
 
       <button type="submit" className={isHeader ? 'icon-btn' : 'btn btn--primary'}>
         {isHeader ? <span className="ico" aria-hidden="true" /> : 'Buscar'}

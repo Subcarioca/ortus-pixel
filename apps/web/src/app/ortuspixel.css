@@ -1691,16 +1691,42 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
     display: flex; align-items: center; gap: var(--s-2);
     flex: 0 1 15rem; min-width: 0;
   }
-  .header__search .input { flex: 1 1 auto; min-width: 0; }
+  /* `.header__search-field` (não mais `.input` direto) é quem cresce agora:
+     o campo virou um `<div>` que embrulha `input` + `<kbd>` (ver
+     search-form.tsx) para o atalho "/" poder se ancorar DENTRO da pílula em
+     vez de flutuar como mais um item solto entre o campo e a lupa. */
+  .header__search-field { position: relative; flex: 1 1 auto; min-width: 0; }
+  .header__search-field .input { width: 100%; }
   /* Acima de 1024px o campo já tem um submit próprio (o `.icon-btn` dentro
      do form) e o atalho da lupa isolada (`.header__search-link`, ver
      site-header.tsx) ficaria redundante ao lado dele. */
   .header__search-link { display: none; }
 }
 .header__search .input { min-height: 38px; padding: 8px var(--s-4); font-size: var(--fs-sm); }
+/* Espaço à direita reservado para o `<kbd>` do atalho — sem isto, um termo de
+   busca comprido passaria POR BAIXO da dica em vez de parar antes dela. */
+.header__search-field .input { padding-right: 30px; }
 /* O X nativo do `type="search"` no WebKit desalinha a pílula e some no tema
    escuro; o `Esc` continua limpando o campo. */
 .header__search .input::-webkit-search-cancel-button { display: none; }
+
+/* Dica visual do atalho de teclado "/" (ver o comentário completo em
+   search-form.tsx e a lógica em search-shortcut.tsx). Estilo de "kbd" comum
+   — caixa rasa, monoespaçada, contida — sem competir com o texto digitado.
+   `pointer-events: none`: é decoração; um clique nela precisa cair no campo
+   por baixo, não ficar preso na dica. Some no foco: quem já está digitando
+   não precisa mais do lembrete, e a `type="search"` botão nativo de limpar
+   do WebKit nasce bem onde a dica fica — os dois brigariam pelo mesmo canto. */
+.header__search-hint {
+  position: absolute; top: 50%; right: 8px; transform: translateY(-50%);
+  font-family: var(--font-mono); font-size: 11px; line-height: 1; color: var(--ink-3);
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r-sm);
+  padding: 3px 6px; pointer-events: none;
+}
+.header__search-field .input:focus ~ .header__search-hint,
+.header__search-field .input:not(:placeholder-shown) ~ .header__search-hint {
+  display: none;
+}
 
 /* --------------------------------------------------------------------------
    17.2 PAINEL EDITORIAL (/admin) — AS REGRAS MUDARAM DE ARQUIVO

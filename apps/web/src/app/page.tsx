@@ -686,6 +686,14 @@ export default async function HomePage() {
                   // `lcpCandidateId`): num dia em que NENHUM bloco acima tenha
                   // foto, o primeiro card desta grade é o elemento de LCP.
                   priority={item.id === lcpCandidateId}
+                  // Esta é a única grade da home ordenada por repercussão
+                  // (ver `section-sub` acima: "Ordenado pela repercussão do
+                  // momento"), então é a que faz sentido mostrar O NÚMERO que
+                  // decide essa ordem — reforça o critério em vez de deixá-lo
+                  // implícito. "Guias e essenciais" (mais abaixo, variant
+                  // `ever`) é perene por FORMATO, não por popularidade: o
+                  // contador não ajudaria a entender aquela seção.
+                  showReactionCount
                 />
               ))}
             </div>

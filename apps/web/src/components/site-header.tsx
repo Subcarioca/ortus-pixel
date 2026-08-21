@@ -6,6 +6,7 @@ import { HeaderNav } from './header-nav';
 import { NavDrawer } from './nav-drawer';
 import { PersonIcon } from './nav-icons';
 import { SearchForm } from './search-form';
+import { SearchShortcut } from './search-shortcut';
 
 /**
  * Cabeçalho do site.
@@ -124,6 +125,10 @@ export function SiteHeader({ categories }: { categories: readonly CategoryDefini
         <HeaderNav categories={categories} />
 
         <div className="header__actions">
+          {/* Não renderiza nada — só liga o listener do atalho "/". Ver o
+              cabeçalho de search-shortcut.tsx para por que não vive dentro
+              de SearchForm (que continua zero JavaScript). */}
+          <SearchShortcut />
           <SearchForm variant="header" />
 
           {/* Abaixo de 768px não cabe campo de busca no cabeçalho (ver

@@ -534,9 +534,14 @@ export function TopicRow({
             authors={authors}
             franchises={franchises}
             canLowerSensitivity={canLowerSensitivity}
-            onDone={() => {
+            onDone={(message) => {
               setCreatingArticle(false);
               setAiDraft(null);
+              // Só a matéria que parou na fila de aprovação manda mensagem daqui
+              // (ver `ArticleCreateForm`). Ela vai para o mesmo lugar onde as
+              // outras ações desta linha já falam — o `feedback` logo acima do
+              // formulário —, e não some com o fechamento do formulário.
+              if (message) setFeedback(message);
             }}
           />
         </div>

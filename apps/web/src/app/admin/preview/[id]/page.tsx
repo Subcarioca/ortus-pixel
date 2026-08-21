@@ -123,6 +123,15 @@ export default async function ArticlePreviewPage({
 
   const { article, status } = data;
   const publicada = status === 'published';
+  /**
+   * "Em aprovação" é um terceiro estado, e a faixa precisa dizer isso.
+   *
+   * Sem essa distinção, a matéria sensível que um redator enviou para o
+   * editor-chefe apareceria aqui rotulada como "rascunho" — e a conclusão
+   * natural de quem lê é "esqueci de publicar", que leva a clicar em publicar de
+   * novo e a nada acontecer. Ver `requiresSensitiveApproval` em core/staff.ts.
+   */
+  const emAprovacao = status === 'in-review';
 
   /**
    * Camada 2: a matéria é desta pessoa?
@@ -178,14 +187,17 @@ export default async function ArticlePreviewPage({
       <div className="container">
         <div className="side-box" role="status">
           <h1 className="hub-stat__lbl">
-            Pré-visualização {publicada ? '· matéria publicada' : '· rascunho'}
+            Pré-visualização{' '}
+            {publicada ? '· matéria publicada' : emAprovacao ? '· aguardando aprovação' : '· rascunho'}
           </h1>
           <p className="form-hint">
             Esta é a aparência exata que a matéria tem (ou terá) para o leitor: mesmo template,
             mesmo CSS.{' '}
             {publicada
               ? 'Ela já está no ar — o que você vê aqui é a versão salva neste momento.'
-              : 'Ela ainda NÃO está publicada. Ninguém de fora consegue abrir esta página.'}{' '}
+              : emAprovacao
+                ? 'Ela está esperando a liberação de um administrador por ser conteúdo sensível. Até lá, ninguém de fora consegue abrir esta página.'
+                : 'Ela ainda NÃO está publicada. Ninguém de fora consegue abrir esta página.'}{' '}
             Não são carregados: anúncios (o espaço fica reservado), medição de audiência e
             comentários.
           </p>

@@ -129,6 +129,24 @@ export interface StaffCapabilities {
    * job, com segredo próprio.
    */
   dispararAlertaViral: boolean;
+
+  /**
+   * APROVAR (ou devolver) a matéria de conteúdo sensível que um redator mandou
+   * publicar — a fila de `status: 'in-review'`.
+   *
+   * É a outra metade da regra de `reduzirRestricaoDeConteudo`, e não uma
+   * repetição dela. Aquela responde "quem pode AFROUXAR a marca?"; esta
+   * responde "quem decide que uma matéria JÁ marcada pode ir ao ar?". São dois
+   * momentos distintos do mesmo problema: a primeira protege a conta de
+   * anúncios de uma classificação errada, a segunda protege a HOME de um tema
+   * pesado subir sem ninguém da chefia ter lido.
+   *
+   * Privativa de administrador pelo mesmo motivo de `moderarComentarios`: o que
+   * está em jogo aqui é responsabilidade editorial pelo que o site publica, e
+   * responsabilidade editorial não se delega para quem escreveu o texto — se o
+   * autor pudesse aprovar a si mesmo, a aprovação não existiria.
+   */
+  aprovarConteudoSensivel: boolean;
 }
 
 export const STAFF_CAPABILITIES: Record<AccessLevel, StaffCapabilities> = {
@@ -146,6 +164,7 @@ export const STAFF_CAPABILITIES: Record<AccessLevel, StaffCapabilities> = {
     verAnalyticsDoSite: true,
     reduzirRestricaoDeConteudo: true,
     dispararAlertaViral: true,
+    aprovarConteudoSensivel: true,
   },
   redator: {
     verFilaDePautas: true,
@@ -180,6 +199,10 @@ export const STAFF_CAPABILITIES: Record<AccessLevel, StaffCapabilities> = {
 
     // Escrever na caixa de entrada da redação inteira é ação de coordenação.
     dispararAlertaViral: false,
+
+    // Ele é quem PEDE a aprovação; aprovar a si mesmo anularia o passo. Ver
+    // `requiresSensitiveApproval`, no fim do arquivo.
+    aprovarConteudoSensivel: false,
   },
 };
 
@@ -238,4 +261,77 @@ export function canLowerSensitivity(
   // Manter ou subir é permitido a todos. Só a descida passa pela permissão.
   if (nextRank >= previousRank) return true;
   return can(viewer.accessLevel, 'reduzirRestricaoDeConteudo');
+}
+
+/**
+ * =============================================================================
+ * A TERCEIRA REGRA POR LINHA: esta publicação precisa parar em `'in-review'`?
+ * =============================================================================
+ *
+ * O PROBLEMA QUE ELA RESOLVE. `canLowerSensitivity` já impede o redator de
+ * AFROUXAR a marca de sensibilidade. O que faltava era o outro lado: marcar
+ * corretamente como 'sensitive'/'adult' e publicar assim mesmo, direto, sem
+ * ninguém da chefia ter lido. A marca protegia a conta de anúncios (o dinheiro)
+ * e não protegia a decisão EDITORIAL de subir um tema pesado na home.
+ *
+ * A resposta é um pedágio, não um bloqueio: quando esta função devolve `true`, a
+ * matéria é gravada com `status: 'in-review'` — fora do ar (nenhuma consulta
+ * pública lê algo que não seja 'published'), com o texto intacto, esperando um
+ * clique do administrador. Nada se perde e nada vai ao ar sozinho.
+ *
+ * -----------------------------------------------------------------------------
+ * AS QUATRO CONDIÇÕES, E POR QUE CADA UMA PRECISA ESTAR AQUI
+ * -----------------------------------------------------------------------------
+ *
+ *  1. `publishing` — salvar RASCUNHO nunca para na fila. Rascunho já não está no
+ *     ar; mandá-lo para revisão só encheria a fila do administrador de trabalho
+ *     inacabado que o próprio autor ainda vai mudar.
+ *
+ *  2. `nextRank > 0` (ou seja, acima de 'none') — matéria comum publica como
+ *     sempre publicou. O pedágio é para o conteúdo sensível, e só.
+ *
+ *  3. quem publica NÃO aprova — administrador vai direto ao ar. Ele é
+ *     exatamente a pessoa que aprovaria; obrigá-lo a aprovar a si mesmo em dois
+ *     cliques seria cerimônia sem revisão nenhuma no meio.
+ *
+ *  4. `liveRank` — a matéria JÁ ESTÁ NO AR com sensibilidade igual ou maior?
+ *     Então alguém já aprovou aquilo, e uma correção de vírgula não pode
+ *     derrubá-la do ar. Sem esta condição, todo save do redator numa matéria
+ *     sensível já publicada a despublicaria — quebrando link compartilhado e
+ *     posição no Google por causa de uma edição de texto.
+ *
+ *     A ESCALADA, POR OUTRO LADO, VOLTA PARA A FILA: 'none' publicado que vira
+ *     'sensitive', ou 'sensitive' que vira 'adult'. Duas razões, e a segunda é
+ *     a que importa: (a) se a classificação subiu, o conteúdo mudou de natureza
+ *     e é justamente o caso que a chefia precisa ver; (b) sem isso, a regra
+ *     inteira teria uma porta dos fundos de dois passos — publicar como 'none' e
+ *     editar para 'adult' em seguida.
+ *
+ * -----------------------------------------------------------------------------
+ * POR QUE ELA RECEBE `rank`s, e não `ContentSensitivity`
+ * -----------------------------------------------------------------------------
+ * Mesma razão de `canLowerSensitivity`, logo acima: `staff.ts` é o módulo de
+ * PERMISSÃO e não importa vocabulário editorial. Quem chama traduz o nível em
+ * rank com `sensitivityRank` (content-sensitivity.ts) e passa o número.
+ */
+export function requiresSensitiveApproval(params: {
+  viewer: { accessLevel: AccessLevel };
+  /** A intenção é ir AO AR agora? (`publish: true` do formulário.) */
+  publishing: boolean;
+  /** Rank da classificação que está sendo gravada. 0 = 'none'. */
+  nextRank: number;
+  /**
+   * Rank da versão que está NO AR neste momento, ou `null` quando a matéria não
+   * está publicada (rascunho, criação, matéria devolvida para ajuste).
+   */
+  liveRank: number | null;
+}): boolean {
+  const { viewer, publishing, nextRank, liveRank } = params;
+
+  if (!publishing) return false;
+  if (nextRank <= 0) return false;
+  if (can(viewer.accessLevel, 'aprovarConteudoSensivel')) return false;
+  if (liveRank !== null && nextRank <= liveRank) return false;
+
+  return true;
 }

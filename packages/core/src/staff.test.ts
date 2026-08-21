@@ -26,6 +26,7 @@ import {
   STAFF_CAPABILITIES,
   canEditArticleOf,
   can,
+  requiresSensitiveApproval,
   toAccessLevel,
   type StaffCapabilities,
 } from './staff';
@@ -47,6 +48,7 @@ const SOMENTE_ADMIN: (keyof StaffCapabilities)[] = [
   'verAnalyticsDoSite',
   'reduzirRestricaoDeConteudo',
   'dispararAlertaViral',
+  'aprovarConteudoSensivel',
 ];
 
 /** O que TODA conta ativa da redação pode. */
@@ -113,6 +115,75 @@ test('redator edita o que assina e nada além', () => {
 test('administrador edita matéria de qualquer pessoa', () => {
   const admin = { id: 'chefe', accessLevel: 'admin' as const };
   assert.equal(canEditArticleOf(admin, 'autor-2'), true);
+});
+
+// -----------------------------------------------------------------------------
+// APROVAÇÃO PRÉVIA DE CONTEÚDO SENSÍVEL
+// -----------------------------------------------------------------------------
+//
+// Os ranks são os de `content-sensitivity.ts`: 0 = 'none', 1 = 'sensitive',
+// 2 = 'adult'. Escritos como número aqui de propósito — o módulo de permissão
+// não importa vocabulário editorial, e o teste segue a mesma fronteira.
+
+const REDATOR = { accessLevel: 'redator' as const };
+const ADMIN = { accessLevel: 'admin' as const };
+
+test('redator publicando conteúdo sensível para na fila de aprovação', () => {
+  assert.equal(
+    requiresSensitiveApproval({ viewer: REDATOR, publishing: true, nextRank: 1, liveRank: null }),
+    true,
+  );
+  assert.equal(
+    requiresSensitiveApproval({ viewer: REDATOR, publishing: true, nextRank: 2, liveRank: null }),
+    true,
+  );
+});
+
+test('administrador publicando conteúdo sensível vai direto ao ar', () => {
+  // Ele é justamente quem aprovaria: mandá-lo para a própria fila seria
+  // cerimônia sem revisão nenhuma no meio.
+  assert.equal(
+    requiresSensitiveApproval({ viewer: ADMIN, publishing: true, nextRank: 2, liveRank: null }),
+    false,
+  );
+});
+
+test('matéria comum ("none") nunca passa pela fila', () => {
+  assert.equal(
+    requiresSensitiveApproval({ viewer: REDATOR, publishing: true, nextRank: 0, liveRank: null }),
+    false,
+  );
+});
+
+test('salvar RASCUNHO sensível não pede aprovação', () => {
+  // Rascunho já não está no ar. Mandá-lo para a fila só encheria a mesa do
+  // administrador de trabalho inacabado que o próprio autor ainda vai mudar.
+  assert.equal(
+    requiresSensitiveApproval({ viewer: REDATOR, publishing: false, nextRank: 2, liveRank: null }),
+    false,
+  );
+});
+
+test('editar matéria sensível JÁ no ar não a derruba de volta para a fila', () => {
+  // O caso que motivou a condição: sem ela, corrigir uma vírgula numa matéria
+  // sensível já aprovada a despublicaria — quebrando link e posição no Google.
+  assert.equal(
+    requiresSensitiveApproval({ viewer: REDATOR, publishing: true, nextRank: 1, liveRank: 1 }),
+    false,
+  );
+});
+
+test('ESCALAR a classificação de uma matéria no ar volta para a fila', () => {
+  // Fecha a porta dos fundos de dois passos: publicar como 'none' e, na edição
+  // seguinte, marcar 'adult' sem ninguém revisar.
+  assert.equal(
+    requiresSensitiveApproval({ viewer: REDATOR, publishing: true, nextRank: 1, liveRank: 0 }),
+    true,
+  );
+  assert.equal(
+    requiresSensitiveApproval({ viewer: REDATOR, publishing: true, nextRank: 2, liveRank: 1 }),
+    true,
+  );
 });
 
 test('papel desconhecido no banco vira redator, nunca admin', () => {

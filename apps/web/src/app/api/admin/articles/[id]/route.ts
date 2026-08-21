@@ -7,6 +7,12 @@
  * fila). Uma redação que só sabe criar obriga o editor a abrir o banco para
  * corrigir uma vírgula — que é exatamente onde acidentes acontecem.
  *
+ * A DECISÃO EDITORIAL sobre matéria de conteúdo sensível (aprovar ou devolver o
+ * que está em `status: 'in-review'`) NÃO mora aqui: ela tem rota própria, em
+ * `[id]/review/route.ts`, com capacidade própria. O motivo está no cabeçalho de
+ * lá — resumidamente, são duas autorizações diferentes sobre o mesmo recurso, e
+ * juntá-las num arquivo faria a mais frouxa valer para as duas.
+ *
  * -----------------------------------------------------------------------------
  * A DECISÃO MAIS IMPORTANTE DESTE ARQUIVO: O SLUG NUNCA MUDA NA EDIÇÃO
  * -----------------------------------------------------------------------------
@@ -31,6 +37,7 @@ import {
   canLowerSensitivity,
   estimateReadingMinutes,
   hasBlocks,
+  requiresSensitiveApproval,
   sensitivityRank,
   summarizeRisk,
   toAuditFindings,
@@ -162,6 +169,29 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const wasPublished = existing.status === 'published';
   const now = new Date();
 
+  /**
+   * PEDÁGIO DO CONTEÚDO SENSÍVEL — ver `requiresSensitiveApproval` (core/staff.ts).
+   *
+   * `liveRank` é o detalhe que faz esta rota se comportar diferente da criação:
+   * ele só é preenchido quando a matéria ESTÁ no ar agora. É o que separa os
+   * dois casos que não podem receber a mesma resposta:
+   *
+   *   - matéria sensível JÁ publicada e aprovada, recebendo uma correção de
+   *     texto → continua publicada. Derrubá-la a cada save quebraria link já
+   *     compartilhado e posição no Google por causa de uma vírgula.
+   *   - matéria no ar cuja classificação SOBE agora ('none' → 'sensitive', por
+   *     exemplo) → volta para a fila. Sem isso, a regra teria uma porta dos
+   *     fundos de dois passos: publica limpo, edita para adulto em seguida.
+   */
+  const needsApproval = requiresSensitiveApproval({
+    viewer: guard.user,
+    publishing: publish,
+    nextRank: sensitivityRank(input.contentSensitivity),
+    liveRank: wasPublished ? sensitivityRank(previousSensitivity) : null,
+  });
+  const goesLive = publish && !needsApproval;
+  const nextStatus = needsApproval ? 'in-review' : publish ? 'published' : 'draft';
+
   try {
     await prisma.$transaction(async (tx) => {
       await tx.article.update({
@@ -175,7 +205,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           // Markdown. É o caminho de volta, e ele precisa existir: sem ele, uma
           // conversão feita por engano seria irreversível pela interface.
           blocks: hasBlocks(input.blocks) ? toJsonColumn(input.blocks) : JSON_COLUMN_NULL,
-          status: publish ? 'published' : 'draft',
+          status: nextStatus,
           categoryId: category.id,
           subcategoryId: input.subcategoryId,
           authorId: input.authorId,
@@ -193,11 +223,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           // cada save faria uma correção de texto "republicar" a matéria: ela
           // pularia para o topo do feed cronológico e reapareceria como novidade
           // para quem já tinha lido.
-          publishedAt: publish ? (existing.publishedAt ?? now) : existing.publishedAt,
+          //
+          // Segue `goesLive`, e não `publish`: a matéria que parou na fila de
+          // aprovação não foi publicada, e datá-la agora a colocaria no topo do
+          // feed cronológico no dia em que ela ainda nem está no ar. Quem grava
+          // esses dois campos, nesse caminho, é a aprovação
+          // (`/api/admin/articles/[id]/review`).
+          publishedAt: goesLive ? (existing.publishedAt ?? now) : existing.publishedAt,
           // Mesma lógica para o score congelado: ele é o "previsto" do KPI de
           // precisão e, uma vez gravado, não pode ser reescrito (ver schema).
           scoreAtPublish:
-            publish && existing.scoreAtPublish === null
+            goesLive && existing.scoreAtPublish === null
               ? existing.currentScore
               : existing.scoreAtPublish,
         },
@@ -213,7 +249,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
       await tx.auditLog.create({
         data: {
-          action: publish ? 'article.updated_published' : 'article.updated_draft',
+          // Ação própria para o envio à fila — ver o comentário equivalente na
+          // rota de criação. A pergunta "o que está esperando aprovação, e há
+          // quanto tempo?" tem de ser consulta por índice, não varredura de Json.
+          action: needsApproval
+            ? 'article.submitted_for_review'
+            : publish
+              ? 'article.updated_published'
+              : 'article.updated_draft',
           entityType: 'Article',
           entityId: id,
           actorId: guard.user.id,
@@ -229,7 +272,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           },
           after: {
             title: input.title,
-            status: publish ? 'published' : 'draft',
+            status: nextStatus,
             categorySlug: category.slug,
             contentSensitivity: input.contentSensitivity,
           },
@@ -289,19 +332,30 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     ok: true,
     slug: existing.slug,
     categorySlug: category.slug,
+    /** Ver o mesmo campo na rota de criação: a tela precisa distinguir
+     *  "publicada" de "esperando aprovação" sem interpretar texto. */
+    status: nextStatus,
     /**
      * Os achados voltam mesmo no SUCESSO. É o caso do rascunho: nada foi
      * publicado, o portão deixou passar, e ainda assim quem está escrevendo
      * ganha o aviso agora em vez de ser surpreendido na hora de publicar.
      */
     riskFindings: input.riskFindings,
-    message: publish
+    message: needsApproval
       ? wasPublished
-        ? 'Matéria atualizada.'
-        : 'Matéria publicada.'
-      : wasPublished
-        ? 'Matéria despublicada e salva como rascunho.'
-        : 'Rascunho salvo.',
+        ? // O caso menos óbvio, e o que mais precisa ser dito em voz alta: a
+          // matéria SAIU do ar agora, porque a classificação subiu e ninguém da
+          // chefia viu a versão nova. Sem esta frase, o redator descobriria
+          // sozinho, procurando a matéria dele na home.
+          'A classificação de conteúdo subiu, então a matéria saiu do ar e voltou para aprovação. Ela volta assim que um administrador liberar.'
+        : 'Matéria enviada para aprovação. Por ser conteúdo sensível, ela só vai ao ar depois que um administrador liberar — o texto já está salvo.'
+      : publish
+        ? wasPublished
+          ? 'Matéria atualizada.'
+          : 'Matéria publicada.'
+        : wasPublished
+          ? 'Matéria despublicada e salva como rascunho.'
+          : 'Rascunho salvo.',
   });
 }
 

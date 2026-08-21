@@ -232,6 +232,20 @@ export function ArticleEditForm({
           return;
         }
 
+        /**
+         * MATÉRIA ENVIADA PARA APROVAÇÃO: o formulário também NÃO fecha.
+         *
+         * Mesma mecânica do caso acima e pelo mesmo motivo: o trabalho já está
+         * salvo (o `refresh` é prova), e o que se ganha é a pessoa LER que a
+         * matéria não foi ao ar — em vez de ver o formulário fechar, concluir
+         * "publicou" e descobrir o contrário só quando alguém perguntar por que
+         * a matéria não está no site.
+         *
+         * O sinal vem do campo `status` da resposta, e não da frase: texto é
+         * para gente, campo é para código (ver a rota PATCH).
+         */
+        if (data.status === 'in-review') return;
+
         onDone();
       }
     } catch {

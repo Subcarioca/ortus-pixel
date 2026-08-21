@@ -1449,6 +1449,8 @@ model CommentAuthor {
 
   comments Comment[]
   sessions CommentSession[]
+  /// Denúncias feitas por esta conta. Ver `CommentReport`.
+  reports  CommentReport[]
   /// Franquias seguidas. É o único dado de PREFERÊNCIA que guardamos do leitor —
   /// e ele é declarado por ele, não inferido de comportamento.
   follows  FranchiseFollow[]
@@ -1536,12 +1538,92 @@ model Comment {
   ipHash String?
   upvotes Int @default(0)
 
+  /// Denúncias recebidas. Ver `CommentReport`, logo abaixo.
+  reports CommentReport[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([articleId, status, createdAt(sort: Desc)])
   @@index([status, createdAt(sort: Desc)])
   @@index([authorAccountId])
+}
+
+/// DENÚNCIA DE COMENTÁRIO FEITA POR UM LEITOR.
+///
+/// -----------------------------------------------------------------------------
+/// POR QUE UMA TABELA, E NÃO UM CONTADOR `reportCount` EM `Comment`
+/// -----------------------------------------------------------------------------
+/// Um contador responde "quantas?" e não responde a única pergunta que muda a
+/// decisão da moderação: "quantas PESSOAS DIFERENTES?". Cinco denúncias de cinco
+/// leitores é sinal; cinco da mesma conta é a própria denúncia sendo abusada
+/// como arma para derrubar comentário alheio — e num contador as duas situações
+/// são o mesmo número 5.
+///
+/// A tabela também é o que torna a chave única abaixo possível, e é ela que
+/// impede o segundo caso de existir.
+///
+/// -----------------------------------------------------------------------------
+/// LGPD — o mesmo raciocínio de minimização do cabeçalho desta seção
+/// -----------------------------------------------------------------------------
+/// Guardamos o MÍNIMO para a funcionalidade existir: quem denunciou (para não
+/// contar duas vezes), o que foi denunciado e quando. Não há IP nem user-agent
+/// aqui, ao contrário de `Comment`: a denúncia já exige conta autenticada, então
+/// o antiabuso é feito por CONTA — o hash de IP seria dado pessoal guardado sem
+/// nenhuma pergunta que ele responda.
+///
+/// `Cascade` no denunciante, e não `SetNull`, pela MESMA razão de
+/// `Comment.authorAccountId` e `FranchiseFollow.commentAuthorId`: apagar a conta
+/// apaga o que ela produziu. É o direito de eliminação funcionando por
+/// construção, e não por alguém lembrar de limpar a tabela certa depois. O que
+/// se perde — a contagem histórica encolhe quando uma conta some — é
+/// irrelevante para o uso real, que é decidir sobre um comentário de agora.
+model CommentReport {
+  id String @id @default(cuid())
+
+  commentId String
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  /// Conta do leitor que denunciou.
+  ///
+  /// Opcional apenas pela mesma razão de `Comment.authorAccountId`: manter a
+  /// coluna nulável evita que uma futura denúncia de outra origem (um formulário
+  /// de contato, por exemplo) precise de tabela nova. Hoje a rota EXIGE sessão —
+  /// não existe caminho anônimo, e é isso que sustenta o limite por conta.
+  reporterAccountId String?
+  reporter          CommentAuthor? @relation(fields: [reporterAccountId], references: [id], onDelete: Cascade)
+
+  /// Motivo, em texto curto e OPCIONAL.
+  ///
+  /// Opcional de propósito: exigir justificativa faria o leitor desistir no meio
+  /// (é um clique contra um formulário), e a denúncia sem motivo já entrega o
+  /// que importa — o ponteiro para um comentário que alguém achou grave. Quando
+  /// vem preenchido, é o que a moderação lê primeiro.
+  ///
+  /// `VarChar(200)` e não `Text`: aqui o limite de produto e o do banco podem
+  /// coincidir, porque este campo não é conteúdo editorial que cresce — é uma
+  /// linha de justificativa. A rota corta antes de gravar.
+  reason String? @db.VarChar(200)
+
+  createdAt DateTime @default(now())
+
+  /// A MESMA CONTA NÃO DENUNCIA O MESMO COMENTÁRIO DUAS VEZES.
+  ///
+  /// Sem esta chave, o limite por conta da rota (um contador em memória, que se
+  /// perde a cada reinício e vive por instância) seria a única defesa contra
+  /// alguém inflar a contagem de denúncias em looping até chamar a atenção da
+  /// moderação. Aqui quem garante é o banco, para sempre.
+  ///
+  /// Ela também SERVE DE ÍNDICE por `commentId`: num índice composto, o banco
+  /// usa o prefixo mais à esquerda: as consultas por comentário (a contagem na
+  /// fila de moderação) passam por ela. Um `@@index([commentId])` separado seria
+  /// uma segunda estrutura para manter na escrita sem nenhuma leitura nova.
+  ///
+  /// As linhas com `reporterAccountId` nulo não colidem entre si — NULL é
+  /// distinto de NULL dentro de um índice único, tanto no MySQL quanto no
+  /// Postgres (ver a nota longa em `FranchiseFollow`).
+  @@unique([commentId, reporterAccountId])
+  @@index([reporterAccountId])
 }
 
 // =============================================================================

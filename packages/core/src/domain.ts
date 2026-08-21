@@ -41,7 +41,13 @@ export const ARTICLE_STATUS_FLOW: Record<ArticleStatus, ArticleStatus[]> = {
   claimed: ['draft', 'suggested', 'archived'],
   draft: ['in-review', 'published', 'archived'],
   'in-review': ['published', 'draft', 'archived'],
-  published: ['archived', 'draft'],
+  // 'in-review' aqui NÃO é despublicação por engano: é o caso da matéria já no
+  // ar cuja classificação de conteúdo SOBE numa edição feita por um redator
+  // ('none' → 'sensitive', por exemplo). A versão nova nunca passou pela chefia,
+  // então ela volta para a fila e sai do ar até ser aprovada. Ver
+  // `requiresSensitiveApproval` em staff.ts — este mapa é a descrição do que as
+  // rotas fazem, e deixá-lo desatualizado seria pior do que não tê-lo.
+  published: ['archived', 'draft', 'in-review'],
   archived: ['draft'],
 };
 

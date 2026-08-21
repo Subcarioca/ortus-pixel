@@ -431,22 +431,17 @@ h1, h2, h3, h4 { font-family: var(--font-display); font-weight: 800; line-height
 .header__actions { display: flex; align-items: center; gap: var(--s-2); margin-left: auto; }
 
 /* --- Busca no cabeçalho ----------------------------------------------------
-   O CAMPO só aparece a partir de 768px. Abaixo disso, o header tem 4 elementos
-   disputando uma linha de 56px, e um input espremido ali seria pior que
-   inexistente: sobra o botão de lupa (`.icon-btn`), que leva à página de busca
-   onde o campo tem a largura inteira.
-
-   Não é um componente novo do design system — é o `.input` de sempre em versão
-   compacta, dentro de um contêiner de 2 colunas. Por isso são poucas linhas:
-   toda a aparência já vem de `.input` e `.icon-btn`.                          */
-.header__search { display: none; }
-@media (min-width: 768px) {
-  .header__search { display: flex; align-items: center; gap: 6px; }
-  .header__search .input { min-height: 38px; padding: 8px 14px; width: 15rem; font-size: var(--fs-sm); }
-  /* Abaixo de 768px o botão de lupa substitui o campo; acima, o campo já tem
-     um submit próprio e o atalho ficaria redundante. */
-  .header__search-link { display: none; }
-}
+   A regra de `.header__search` mora só na §17 (mais abaixo, no bloco "BUSCA NO
+   CABEÇALHO"). Havia uma SEGUNDA declaração aqui — escrita antes de a conta de
+   leitor entrar no escopo do produto — que sobrevivia ao merge e brigava por
+   cascata com a mais nova (mesma especificidade, media query sobreposta): ela
+   dizia `display: flex` e a de baixo dizia `display: block`, e a de baixo
+   vencia por vir depois no arquivo. Era exatamente o desalinhamento do
+   relatório de UX ("barra de busca meio fora da formatação"): acima de
+   1024px o campo perdia `align-items: center` e o `gap` para o botão de
+   lupa, ficando fora de eixo com o resto de `.header__actions` (que continua
+   flex+center). Ver o comentário completo na §17 para o raciocínio da regra
+   única que ficou. */
 /* `.icon-btn.nav-toggle`, não só `.nav-toggle`: a regra `.icon-btn` logo abaixo
    também define `display` sem media query, e com a mesma especificidade
    (0,1,0) uma classe só perde para a outra pela ordem no arquivo — bastava
@@ -1648,18 +1643,44 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
 .empty-state :is(h1, h2, h3) { font-size: var(--fs-h3); color: var(--ink); }
 .empty-state a { border-bottom: 2px solid var(--brand-line); font-weight: 600; }
 
-/* BUSCA NO CABEÇALHO.
+/* BUSCA NO CABEÇALHO (Tarefa A do relatório de UX 2026-08 — REGRA ÚNICA).
    Não existe no protótipo — o design foi desenhado antes de a busca e a conta
    de leitor entrarem no escopo. O campo reaproveita `.input` inteiro (mesma
    pílula, mesma borda, mesmo foco de marca) e só ajusta a ALTURA: os 48px do
    `.input` são medida de alvo de toque em formulário, e dentro de uma barra de
    64px eles encostam nas duas bordas.
+
+   BUG CORRIGIDO — dono do site reportou a barra "meio fora da formatação da
+   página": existia uma SEGUNDA declaração de `.header__search` lá na §4
+   (junto do resto do `.header__bar`), escrita antes desta, com `display: flex;
+   align-items: center; gap: 6px`. As duas regras tinham a MESMA
+   especificidade e a mesma media query cobria a mesma faixa (1024px+ contém
+   768px+) — então, por ordem no arquivo, ESTA regra vencia no `display`, e
+   ela dizia `display: block`. Resultado prático: acima de 1024px o form
+   deixava de ser flex, `align-items: center` e `gap` paravam de fazer efeito
+   (não se aplicam fora de flex/grid), e o campo + botão de lupa perdiam o
+   alinhamento vertical central e o espaçamento entre si — ficando fora de
+   eixo com o resto de `.header__actions` (logo, "Em alta", ícone de conta),
+   que continua flex+center. A regra antiga da §4 foi removida; esta aqui
+   passou a ser explicitamente flex, com `gap` no token já usado no resto do
+   `.header__actions` (`--s-2`), e o `.input` ganhou `flex: 1 1 auto` para
+   preencher o espaço que sobra ao lado do botão em vez de manter uma largura
+   fixa desalinhada da moldura de 15rem do container.
+
    Aparece a partir de 1024px, o mesmo breakpoint do `.header__nav`: abaixo
    disso o cabeçalho não tem largura sobrando, e a busca no celular merece tela
    própria em vez de um campo de 90px. */
 .header__search { display: none; }
 @media (min-width: 1024px) {
-  .header__search { display: block; flex: 0 1 15rem; min-width: 0; }
+  .header__search {
+    display: flex; align-items: center; gap: var(--s-2);
+    flex: 0 1 15rem; min-width: 0;
+  }
+  .header__search .input { flex: 1 1 auto; min-width: 0; }
+  /* Acima de 1024px o campo já tem um submit próprio (o `.icon-btn` dentro
+     do form) e o atalho da lupa isolada (`.header__search-link`, ver
+     site-header.tsx) ficaria redundante ao lado dele. */
+  .header__search-link { display: none; }
 }
 .header__search .input { min-height: 38px; padding: 8px var(--s-4); font-size: var(--fs-sm); }
 /* O X nativo do `type="search"` no WebKit desalinha a pílula e some no tema

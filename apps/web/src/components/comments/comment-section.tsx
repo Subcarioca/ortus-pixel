@@ -4,9 +4,13 @@
  * =============================================================================
  *
  * A lista inteira é renderizada no servidor: zero JavaScript para LER
- * comentários. Só quem decide escrever carrega o formulário (que é o único
- * pedaço de cliente aqui). Numa página com 60 comentários, isso é a diferença
- * entre uma página de notícia e um aplicativo.
+ * comentários se você não estiver logado. Numa página com 60 comentários, isso é
+ * a diferença entre uma página de notícia e um aplicativo.
+ *
+ * Os dois únicos pedaços de cliente são o FORMULÁRIO (carregado só por quem tem
+ * sessão) e o botão de DENUNCIAR (idem). Os dois compartilham a mesma condição
+ * porque compartilham o mesmo motivo: são ações que exigem identidade, e o
+ * visitante anônimo não deve pagar o JavaScript de algo que ele não pode fazer.
  *
  * SEGURANÇA (OWASP A03 — XSS): o conteúdo é interpolado em JSX como TEXTO. O
  * React escapa tudo. Não há `dangerouslySetInnerHTML`, não há Markdown, não há
@@ -31,6 +35,7 @@ import { COMMENT_PROVIDER_LABELS, type CommentView } from '@subcarioca/core';
 import { RelativeTime } from '@/components/relative-time';
 import { CommentForm } from './comment-form';
 import { CommentLogin } from './comment-login';
+import { CommentReportButton } from './comment-report-button';
 
 interface CommentSectionProps {
   articleId: string;
@@ -116,6 +121,26 @@ export function CommentSection({
                     A quebra de linha do autor é preservada pelo CSS
                     (`white-space: pre-wrap`), não por HTML. */}
                 <p className="cmt__body">{comment.content}</p>
+
+                {/*
+                  DENUNCIAR — só para quem está logado.
+
+                  Não é cortesia de interface: a denúncia exige sessão de leitor
+                  (é o que permite limitar por conta e impedir a mesma pessoa de
+                  denunciar duas vezes), então mostrar o botão para o visitante
+                  anônimo seria oferecer uma ação que responde 401. Quem recusa
+                  de verdade continua sendo a rota.
+
+                  Fica DEPOIS do texto, e discreto, de propósito: a área de
+                  comentários é para conversar. Um botão de denúncia proeminente
+                  em cada linha muda o tom da página inteira — passa a sugerir
+                  que denunciar é a interação esperada.
+                */}
+                {session && (
+                  <div className="cmt__head">
+                    <CommentReportButton commentId={comment.id} />
+                  </div>
+                )}
               </div>
             </li>
           ))}

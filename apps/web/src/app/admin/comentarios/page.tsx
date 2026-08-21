@@ -3,10 +3,26 @@
  * PAINEL › MODERAÇÃO DE COMENTÁRIOS
  * =============================================================================
  *
- * Tela deliberadamente MÍNIMA. Ela responde a três perguntas e para por aí:
- *   1. O que está esperando aprovação? (fila da "escada de confiança")
- *   2. O que foi publicado recentemente? (para remover algo que passou)
- *   3. Quem está abusando? (bloquear autor)
+ * Tela deliberadamente MÍNIMA. Ela responde a quatro perguntas e para por aí:
+ *   1. O que os LEITORES denunciaram e o bot não removeu? (o que mais precisa
+ *      de olho humano — ver a seção logo abaixo)
+ *   2. O que está esperando aprovação? (fila da "escada de confiança")
+ *   3. O que foi publicado recentemente? (para remover algo que passou)
+ *   4. Quem está abusando? (bloquear autor)
+ *
+ * -----------------------------------------------------------------------------
+ * POR QUE "DENUNCIADOS" VEM ANTES DE "AGUARDANDO APROVAÇÃO"
+ * -----------------------------------------------------------------------------
+ * Porque são filas com custos de espera OPOSTOS. Um comentário pendente está
+ * FORA do ar: enquanto ninguém olha, o prejuízo é uma pessoa esperando para ser
+ * lida. Um comentário denunciado está NO ar: enquanto ninguém olha, o prejuízo é
+ * todo mundo lendo o que já foi apontado como grave.
+ *
+ * O QUE APARECE AQUI É O QUE O BOT NÃO RESOLVEU. A denúncia de conteúdo com
+ * xingamento ou discurso de ódio já removeu o comentário sozinha (ver
+ * `/api/comments/[id]/report` e o bot em core). O que sobra para esta seção é
+ * justamente o que uma denylist não sabe ver — ameaça velada, assédio, spoiler
+ * cruel, briga pessoal — e que só uma pessoa consegue julgar.
  *
  * O QUE NÃO TEM AQUI, E POR QUÊ: filtro por artigo, busca por texto, paginação,
  * estatísticas de moderação. Tudo isso é útil quando há volume — e volume de
@@ -41,25 +57,46 @@ export default async function AdminCommentsPage() {
     return <AdminForbidden user={guard.user} what="A moderação de comentários" />;
   }
 
-  const [pending, recent] = await Promise.all([
+  /**
+   * A CONTAGEM DE DENÚNCIAS ENTRA NO `include` DAS TRÊS CONSULTAS.
+   *
+   * `_count` vira um subselect na mesma ida ao banco. A alternativa — contar por
+   * linha depois de montar a lista — seria N+1 na abertura da tela, e o número
+   * de denúncias é justamente o dado que muda a ordem em que o moderador lê a
+   * fila: ele precisa estar lá antes de a tela existir, não depois.
+   */
+  const MODERATION_INCLUDE = {
+    article: { select: { title: true, slug: true, category: { select: { slug: true } } } },
+    authorAccount: { select: { provider: true, approvedCount: true, isBlocked: true } },
+    _count: { select: { reports: true } },
+  } as const;
+
+  const [reported, pending, recent] = await Promise.all([
+    prisma.comment.findMany({
+      // `some: {}` = "tem pelo menos uma denúncia". O recorte por status é o que
+      // dá sentido à seção: o que o bot removeu já está em 'rejected' e não
+      // precisa de ninguém; o que continua de pé é o que espera julgamento.
+      where: { status: { in: ['approved', 'pending'] }, reports: { some: {} } },
+      // MAIS DENUNCIADO PRIMEIRO, e só depois o mais recente. É a única fila
+      // desta tela ordenada por gravidade em vez de por relógio: cinco pessoas
+      // apontando o mesmo comentário é um sinal mais forte do que o horário em
+      // que ele foi escrito.
+      orderBy: [{ reports: { _count: 'desc' } }, { createdAt: 'desc' }],
+      take: 50,
+      include: MODERATION_INCLUDE,
+    }),
     prisma.comment.findMany({
       where: { status: 'pending' },
       // Mais ANTIGO primeiro: quem espera há mais tempo é atendido antes.
       orderBy: { createdAt: 'asc' },
       take: 50,
-      include: {
-        article: { select: { title: true, slug: true, category: { select: { slug: true } } } },
-        authorAccount: { select: { provider: true, approvedCount: true, isBlocked: true } },
-      },
+      include: MODERATION_INCLUDE,
     }),
     prisma.comment.findMany({
       where: { status: 'approved' },
       orderBy: { createdAt: 'desc' },
       take: 30,
-      include: {
-        article: { select: { title: true, slug: true, category: { select: { slug: true } } } },
-        authorAccount: { select: { provider: true, approvedCount: true, isBlocked: true } },
-      },
+      include: MODERATION_INCLUDE,
     }),
   ]);
 
@@ -73,6 +110,32 @@ export default async function AdminCommentsPage() {
         </p>
         <AdminNav user={guard.user} current="comentarios" />
       </header>
+
+      {/* ---------- DENUNCIADOS PELOS LEITORES ---------- */}
+      {/* Só é desenhada quando há algo: uma seção "Denunciados (0)" fixa no topo
+          todos os dias é como um aviso deixa de ser lido. */}
+      {reported.length > 0 && (
+        <section aria-labelledby="denunciados">
+          <h2 id="denunciados" className="section-title">
+            Denunciados pelos leitores ({reported.length})
+          </h2>
+          <p className="form-hint">
+            O filtro automático não encontrou xingamento nem discurso de ódio nestes — por
+            isso eles continuam no ar. Ameaça velada, assédio e briga pessoal são
+            justamente o que o robô não sabe ver.
+          </p>
+
+          <ul className="cmt-list">
+            {reported.map((comment) => (
+              <CommentRow
+                key={comment.id}
+                comment={comment}
+                showApprove={comment.status === 'pending'}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* ---------- FILA DE PENDENTES ---------- */}
       <section aria-labelledby="pendentes">
@@ -123,6 +186,8 @@ interface CommentRowProps {
     authorAccountId: string | null;
     article: { title: string; slug: string; category: { slug: string } };
     authorAccount: { provider: string; approvedCount: number; isBlocked: boolean } | null;
+    /** Denúncias recebidas. Ver `CommentReport` no schema. */
+    _count: { reports: number };
   };
   showApprove?: boolean;
 }
@@ -147,6 +212,15 @@ function CommentRow({ comment, showApprove = false }: CommentRowProps) {
           <span className="cmt__time">
             {comment.authorAccount?.approvedCount ?? 0} aprovado(s)
           </span>
+          {/* A contagem aparece em TODA fila, e não só na de denunciados: um
+              comentário pendente que já chegou com denúncia é outro caso — e
+              descobrir isso só depois de aprová-lo é o pior momento possível.
+              Some quando é zero, que é o normal e não informa nada. */}
+          {comment._count.reports > 0 && (
+            <span className="chip chip--sm" title="Denúncias recebidas de leitores.">
+              {comment._count.reports} denúncia{comment._count.reports > 1 ? 's' : ''}
+            </span>
+          )}
           <RelativeTime date={comment.createdAt} className="cmt__time" />
         </div>
 

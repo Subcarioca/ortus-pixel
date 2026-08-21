@@ -85,7 +85,20 @@ interface ArticleCreateFormProps {
   authors: { id: string; name: string }[];
   franchises: FranchiseOption[];
   canLowerSensitivity: boolean;
-  onDone: () => void;
+  /**
+   * Fecha o formulário.
+   *
+   * O parâmetro opcional existe por um caso concreto: quando a matéria vai para
+   * a FILA DE APROVAÇÃO em vez de ir ao ar, a frase que explica isso é a
+   * informação mais importante da interação — e ela morreria junto com o
+   * formulário, que se fecha no sucesso. Passando a mensagem para cima, a linha
+   * da pauta a exibe no lugar onde a pessoa continua olhando.
+   *
+   * Fica OPCIONAL (e não obrigatório) porque o caminho normal — "Matéria
+   * publicada." — não precisa de nenhum aviso extra: a matéria some da fila e
+   * aparece no site, que é confirmação suficiente.
+   */
+  onDone: (message?: string) => void;
 }
 
 export function ArticleCreateForm({
@@ -246,7 +259,16 @@ export function ArticleCreateForm({
       // expirou no meio: basta reentrar em outra aba e clicar de novo.
       if (data.ok) {
         router.refresh();
-        onDone();
+        /**
+         * A MATÉRIA PAROU NA FILA DE APROVAÇÃO — o redator precisa saber disso,
+         * e não pode descobrir sozinho procurando o texto dele na home.
+         *
+         * A mensagem sobe junto com o fechamento porque é aqui, e só aqui, que
+         * se sabe qual foi o desfecho. O servidor devolve `status: 'in-review'`
+         * (ver a rota de tópicos) justamente para esta decisão não depender de
+         * interpretar a frase.
+         */
+        onDone(data.status === 'in-review' ? data.message : undefined);
       }
     } catch {
       // Só chega aqui quando o `fetch` sequer completou: rede caída, servidor
@@ -463,7 +485,15 @@ export function ArticleCreateForm({
         >
           {busy === 'publish' ? 'Publicando…' : 'Publicar agora'}
         </button>
-        <button type="button" className="btn btn--ghost" onClick={onDone} disabled={busy !== null}>
+        {/* `() => onDone()` e não `onDone` direto: desde que a função aceita uma
+            mensagem opcional, passá-la como handler entregaria o objeto de
+            evento do clique no lugar do texto. */}
+        <button
+          type="button"
+          className="btn btn--ghost"
+          onClick={() => onDone()}
+          disabled={busy !== null}
+        >
           Cancelar
         </button>
         {message && (

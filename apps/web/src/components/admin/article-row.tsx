@@ -26,6 +26,7 @@ import { routes, type ContentOrigin } from '@subcarioca/core';
 import { readAdminResponse } from './admin-response';
 import type { FranchiseOption } from './article-classification-fields';
 import { ArticleEditForm, type EditableArticle } from './article-edit-form';
+import { ArticleReviewActions } from './article-review-actions';
 
 export interface AdminArticleRowData extends EditableArticle {
   slug: string;
@@ -45,6 +46,18 @@ export interface AdminArticleRowData extends EditableArticle {
   commentCount: number;
   /** URL pública. Só existe de fato quando a matéria está publicada. */
   url: string;
+  /**
+   * Motivo da última DEVOLUÇÃO desta matéria pela aprovação de conteúdo
+   * sensível, quando houve uma.
+   *
+   * Vem do `AuditLog` (ação `article.review_rejected`), e não de uma coluna nova
+   * em `Article`. A decisão é deliberada: o motivo é um FATO DA TRILHA — "em tal
+   * dia, tal administrador devolveu por isto" —, e uma coluna guardaria só o
+   * último, apagando o histórico a cada nova devolução. Como a trilha já existe,
+   * já é gravada em transação e já sobrevive à exclusão da matéria, ler dela
+   * custa uma consulta e não custa uma migração.
+   */
+  reviewRejection: { reason: string; at: string } | null;
 }
 
 interface ArticleRowProps {
@@ -60,6 +73,15 @@ interface ArticleRowProps {
    * `canLowerSensitivity` (core/staff.ts).
    */
   canLowerSensitivity: boolean;
+  /**
+   * A conta logada pode APROVAR conteúdo sensível?
+   *
+   * Cortesia de interface, como a de cima: quem recusa é a rota de review, via
+   * `requireStaffApi('aprovarConteudoSensivel')`. Aqui ela decide apenas se os
+   * botões da fila aparecem — o redator vê a mesma linha, com o rótulo "EM
+   * APROVAÇÃO" e sem botão nenhum, que é a informação que ele precisa.
+   */
+  canApproveReview?: boolean;
 }
 
 export function ArticleRow({
@@ -68,6 +90,7 @@ export function ArticleRow({
   authors,
   franchises,
   canLowerSensitivity,
+  canApproveReview = false,
 }: ArticleRowProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -76,6 +99,7 @@ export function ArticleRow({
   const [message, setMessage] = useState<string | null>(null);
 
   const isPublished = article.status === 'published';
+  const isInReview = article.status === 'in-review';
 
   async function remove() {
     if (busy) return;
@@ -122,7 +146,7 @@ export function ArticleRow({
             {/* Rascunho recebe destaque textual, não colorido: a paleta de
                 temperatura é do conteúdo, não do estado editorial. */}
             <span className="admin-override">
-              {isPublished ? 'PUBLICADA' : 'RASCUNHO'}
+              {isPublished ? 'PUBLICADA' : isInReview ? 'EM APROVAÇÃO' : 'RASCUNHO'}
             </span>
             {/* PROCEDÊNCIA — só aparece quando é IA, pelo mesmo motivo da
                 etiqueta de "pauta da redação" na fila: marcar o normal faz a
@@ -149,6 +173,25 @@ export function ArticleRow({
           </div>
 
           <p className="admin-row__summary">{article.excerpt}</p>
+
+          {/*
+            O MOTIVO DA DEVOLUÇÃO, na linha da matéria devolvida.
+
+            Fica aqui, e não numa tela de "notificações", porque é aqui que a
+            pessoa está quando vai corrigir. `role="status"` (e não `alert`) por
+            ser informação que já estava na tela quando ela chegou — `alert`
+            interromperia a leitura de quem usa leitor de tela sem urgência
+            nenhuma para justificar isso.
+
+            Some sozinho quando a matéria é reenviada e aprovada: a consulta só
+            traz a devolução mais recente das matérias que estão em rascunho.
+          */}
+          {article.reviewRejection && (
+            <p className="form-hint" role="status">
+              <strong>Devolvida pela aprovação</strong> em{' '}
+              {formatDate(article.reviewRejection.at)}: {article.reviewRejection.reason}
+            </p>
+          )}
         </div>
       </div>
 
@@ -247,6 +290,19 @@ export function ArticleRow({
           </span>
         )}
       </div>
+
+      {/*
+        FILA DE CONTEÚDO SENSÍVEL — os botões vêm DEPOIS das ações normais e num
+        bloco próprio, e não misturados a "Editar"/"Apagar", porque são de outra
+        natureza: as de cima são de manutenção do próprio texto; estas duas
+        decidem se o site publica aquilo. Empilhá-las na mesma fileira faria
+        "Aprovar e publicar" competir por atenção com "Pré-visualizar".
+      */}
+      {isInReview && canApproveReview && (
+        <div className="admin-row__detail">
+          <ArticleReviewActions articleId={article.id} articleTitle={article.title} />
+        </div>
+      )}
 
       {editing && (
         <div className="admin-row__detail">

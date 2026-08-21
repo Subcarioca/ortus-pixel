@@ -12,6 +12,12 @@
  * justificativa. Isso não é burocracia: é o que permite, semanas depois,
  * responder "o algoritmo errou ou o editor discordou?" — pergunta central para
  * recalibrar os pesos sem cair no achismo.
+ *
+ * ⚠ `create-article` NEM SEMPRE PUBLICA, mesmo com `publish: true`. Matéria de
+ * conteúdo sensível escrita por redator nasce em `status: 'in-review'` e espera
+ * a liberação do editor-chefe (`/api/admin/articles/[id]/review`). A regra —
+ * e as quatro condições dela — está em `requiresSensitiveApproval`, em
+ * core/staff.ts.
  */
 
 import { NextResponse } from 'next/server';
@@ -24,6 +30,8 @@ import {
   blocksReadingMinutes,
   estimateReadingMinutes,
   hasBlocks,
+  requiresSensitiveApproval,
+  sensitivityRank,
   slugify,
   summarizeRisk,
   toAuditFindings,
@@ -701,6 +709,29 @@ export async function POST(
        */
       const contentOrigin = toContentOrigin(payload.contentOrigin);
 
+      /**
+       * PEDÁGIO DO CONTEÚDO SENSÍVEL — a matéria vai ao ar ou para na fila do
+       * editor-chefe? Ver `requiresSensitiveApproval` (core/staff.ts) para as
+       * quatro condições e o porquê de cada uma.
+       *
+       * `liveRank: null` porque aqui a matéria está NASCENDO: não existe versão
+       * publicada anterior para comparar. A condição que trata "já estava no ar
+       * com esta mesma marca" só faz sentido na rota de edição.
+       *
+       * O resultado separa duas coisas que até agora eram a mesma: a INTENÇÃO
+       * (`publish`, o botão que a pessoa apertou) e o EFEITO (`goesLive`, se o
+       * leitor vai ver isso agora). Tudo que só pode acontecer quando a matéria
+       * de fato sobe — `publishedAt`, `scoreAtPublish`, a invalidação de cache —
+       * passa a olhar para `goesLive`, e não mais para `publish`.
+       */
+      const needsApproval = requiresSensitiveApproval({
+        viewer: guard.user,
+        publishing: publish,
+        nextRank: sensitivityRank(input.contentSensitivity),
+        liveRank: null,
+      });
+      const goesLive = publish && !needsApproval;
+
       // Título sem NENHUMA letra ou número latino (só emoji, pontuação ou
       // escrita não-latina) faz `slugify` devolver string vazia — e uma matéria
       // com slug vazio é publicada com sucesso e fica inalcançável: a URL
@@ -728,7 +759,12 @@ export async function POST(
           blocks: hasBlocks(input.blocks) ? toJsonColumn(input.blocks) : undefined,
           // Ver o bloco de comentário de `contentOrigin`, acima.
           contentOrigin,
-          status: publish ? 'published' : 'draft',
+          // Três destinos, e não dois: 'in-review' é o estado que já existia no
+          // vocabulário de `ArticleStatus` (core/domain.ts) e nunca tinha sido
+          // gravado por ninguém. Ele é EXATAMENTE isto — escrito, entregue, e
+          // fora do ar até alguém dizer que pode subir. Nenhuma consulta pública
+          // o alcança: todas filtram `status: 'published'`.
+          status: needsApproval ? 'in-review' : publish ? 'published' : 'draft',
           categoryId: category.id,
           subcategoryId: input.subcategoryId,
           authorId: input.authorId,
@@ -751,8 +787,14 @@ export async function POST(
             ? blocksReadingMinutes(input.blocks)
             : estimateReadingMinutes(input.content),
           currentScore: topic.currentScore,
-          scoreAtPublish: publish ? topic.currentScore : null,
-          publishedAt: publish ? now : null,
+          // Os dois marcos da publicação seguem `goesLive`, e não `publish`: a
+          // matéria que parou na fila NÃO foi publicada, e datá-la agora
+          // estragaria as duas coisas que estes campos existem para sustentar —
+          // a ordem cronológica do feed e o KPI de precisão do score (o
+          // "previsto" tem de ser o score do momento em que o leitor viu, que
+          // ainda não aconteceu). Quem os grava é a aprovação.
+          scoreAtPublish: goesLive ? topic.currentScore : null,
+          publishedAt: goesLive ? now : null,
         }),
         afterCreate: async (tx, created) => {
           // Franquias e tags entram na MESMA transação da matéria: uma matéria
@@ -765,7 +807,16 @@ export async function POST(
 
           await tx.auditLog.create({
             data: {
-              action: publish ? 'article.published' : 'article.drafted',
+              // Ação PRÓPRIA para o envio à fila, e não 'article.published' com
+              // um campo dentro do `after`: "quantas matérias sensíveis a
+              // redação mandou para aprovação neste mês, e quanto tempo elas
+              // esperaram?" precisa ser um `where: { action }` com índice. É o
+              // mesmo raciocínio de `article.risk_acknowledged`, logo abaixo.
+              action: needsApproval
+                ? 'article.submitted_for_review'
+                : publish
+                  ? 'article.published'
+                  : 'article.drafted',
               entityType: 'Article',
               entityId: created.id,
               // `actorId` finalmente diz QUEM. Era o campo que o segredo
@@ -776,6 +827,11 @@ export async function POST(
                 slug: created.slug,
                 categorySlug: category.slug,
                 publish,
+                // A classificação entra na trilha SEMPRE que a matéria nasce
+                // sensível: é ela que explica por que aquela linha foi parar na
+                // fila, e é a resposta para "por que esta matéria demorou a
+                // subir?" semanas depois.
+                contentSensitivity: input.contentSensitivity,
                 // Repetido aqui (além da coluna da matéria) porque a auditoria
                 // precisa responder "como esta matéria NASCEU?" mesmo que a
                 // linha do artigo seja apagada depois.
@@ -828,7 +884,10 @@ export async function POST(
         );
       }
 
-      if (publish) {
+      // Invalidação só quando algo de fato MUDOU para o leitor. A matéria em
+      // revisão não aparece em página nenhuma — regenerar a home por causa dela
+      // seria trabalho para trocar HTML idêntico por HTML idêntico.
+      if (goesLive) {
         revalidateTag(CACHE_TAGS.home);
         revalidateTag(CACHE_TAGS.trending);
         revalidateTag(CACHE_TAGS.category(category.slug));
@@ -839,9 +898,21 @@ export async function POST(
         ok: true,
         slug: outcome.slug,
         categorySlug: category.slug,
+        /**
+         * O `status` volta para a tela porque a diferença entre "publicada" e
+         * "esperando aprovação" muda o que o redator faz em seguida (avisar a
+         * chefia, ou não ficar recarregando a home procurando a matéria dele).
+         * A mensagem já diz isso em palavras; o campo existe para o formulário
+         * poder decidir sem interpretar texto.
+         */
+        status: needsApproval ? 'in-review' : publish ? 'published' : 'draft',
         // Aviso passivo do rascunho — ver o comentário na rota de edição.
         riskFindings: input.riskFindings,
-        message: publish ? 'Matéria publicada.' : 'Rascunho salvo.',
+        message: needsApproval
+          ? 'Matéria enviada para aprovação. Por ser conteúdo sensível, ela só vai ao ar depois que um administrador liberar — o texto já está salvo e ninguém precisa reescrever nada.'
+          : publish
+            ? 'Matéria publicada.'
+            : 'Rascunho salvo.',
       });
     }
 

@@ -1,11 +1,11 @@
 {
   "version": 4,
   "routes": {
-    "/favicon.ico": {
+    "/apple-icon.png": {
       "initialHeaders": {
-        "cache-control": "public, max-age=0, must-revalidate",
-        "content-type": "image/x-icon",
-        "x-next-cache-tags": "_N_T_/layout,_N_T_/favicon.ico/layout,_N_T_/favicon.ico/route,_N_T_/favicon.ico"
+        "cache-control": "public, immutable, no-transform, max-age=31536000",
+        "content-type": "image/png",
+        "x-next-cache-tags": "_N_T_/layout,_N_T_/apple-icon.png/layout,_N_T_/apple-icon.png/route,_N_T_/apple-icon.png"
       },
       "experimentalBypassFor": [
         {
@@ -19,7 +19,7 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/favicon.ico",
+      "srcRoute": "/apple-icon.png",
       "dataRoute": null,
       "allowHeader": [
         "host",
@@ -59,11 +59,11 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/apple-icon.png": {
+    "/favicon.ico": {
       "initialHeaders": {
-        "cache-control": "public, immutable, no-transform, max-age=31536000",
-        "content-type": "image/png",
-        "x-next-cache-tags": "_N_T_/layout,_N_T_/apple-icon.png/layout,_N_T_/apple-icon.png/route,_N_T_/apple-icon.png"
+        "cache-control": "public, max-age=0, must-revalidate",
+        "content-type": "image/x-icon",
+        "x-next-cache-tags": "_N_T_/layout,_N_T_/favicon.ico/layout,_N_T_/favicon.ico/route,_N_T_/favicon.ico"
       },
       "experimentalBypassFor": [
         {
@@ -77,7 +77,7 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/apple-icon.png",
+      "srcRoute": "/favicon.ico",
       "dataRoute": null,
       "allowHeader": [
         "host",
@@ -225,6 +225,30 @@
         "x-next-revalidate-tag-token"
       ]
     },
+    "/metodologia": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/metodologia",
+      "dataRoute": "/metodologia.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
     "/em-alta": {
       "experimentalBypassFor": [
         {
@@ -241,30 +265,6 @@
       "initialExpireSeconds": 31536000,
       "srcRoute": "/em-alta",
       "dataRoute": "/em-alta.rsc",
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
-    "/metodologia": {
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "next-action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/metodologia",
-      "dataRoute": "/metodologia.rsc",
       "allowHeader": [
         "host",
         "x-matched-path",
@@ -328,8 +328,8 @@
   "dynamicRoutes": {},
   "notFoundRoutes": [],
   "preview": {
-    "previewModeId": "38c90861d8db1837d3c9dbbb24e32e27",
-    "previewModeSigningKey": "fb1991887a6aa9f7f81cc1d0f588fb8397611e7d460ed50884a2aae8b095aa52",
-    "previewModeEncryptionKey": "e4a02bd8658e9228a6360c00abccee6bda162d136c9bc0d8f70c3e6c853f9630"
+    "previewModeId": "7462a2e716ff44754f247738abf32691",
+    "previewModeSigningKey": "cbd8d98d38a47b76f3a97113a10db262283c34b2934be0c345584e64b1faea91",
+    "previewModeEncryptionKey": "26a462b4e9a340df6055179c51d65a85c9c36869dbb31725e05a2b8f8d8f0b51"
   }
 }

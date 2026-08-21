@@ -17,6 +17,8 @@
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 
+import type { Prisma } from '@prisma/client';
+
 import { prisma, toJsonColumn, toStringArray } from '@subcarioca/db';
 import {
   blocksReadingMinutes,
@@ -36,6 +38,7 @@ import {
   isPreArticleConfigured,
   preArticleModel,
 } from '@/server/ai/prearticle';
+import type { PreArticleOutput } from '@/server/ai/prearticle-types';
 import { parseArticleInput } from '@/server/article-input';
 import { editorialRiskGate } from '@/server/editorial-risk-gate';
 import { syncArticleTaxonomy } from '@/server/article-taxonomy';
@@ -422,13 +425,20 @@ export async function POST(
 
       // Contexto mínimo da pauta — título, resumo, fonte e categoria. Só é
       // buscado AQUI, nesta ação, porque as outras cinco não usam esses campos.
+      //
+      // `category` traz também `id` e `slug` (e não só `name`, como antes): é o
+      // que o passo seguinte — criar o RASCUNHO automático — precisa para
+      // preencher `Article.categoryId` e para a auditoria. Um tópico sem
+      // categoria (`category: null`) é possível (`Topic.categoryId` é opcional)
+      // e tratado mais abaixo: a pré-matéria ainda é gerada, só o rascunho
+      // automático que não pode nascer sem editoria.
       const contexto = await prisma.topic.findUnique({
         where: { id },
         select: {
           title: true,
           summary: true,
           sourceName: true,
-          category: { select: { name: true } },
+          category: { select: { id: true, name: true, slug: true } },
         },
       });
 
@@ -491,10 +501,158 @@ export async function POST(
         },
       });
 
+      /**
+       * O RASCUNHO NASCE JUNTO — a pré-matéria deixa de ser só texto solto na
+       * fila e passa a ser um ponto de partida de verdade: uma `Article` com
+       * `status: 'draft'`, pronta para o redator abrir em Matérias, editar (ou
+       * não) e publicar quando quiser.
+       *
+       * -----------------------------------------------------------------------
+       * MESMA TRAVA, MESMO LAÇO DE RETENTATIVA DE `create-article`
+       * -----------------------------------------------------------------------
+       * `createArticleWithUniqueSlug` (definida no fim do arquivo) é a extração
+       * dessa lógica: a mesma trava atômica contra tópico duplicado e o mesmo
+       * laço de slug com retentativa. Duplicar as ~30 linhas aqui era o jeito
+       * mais rápido de as duas cópias divergirem no dia em que uma delas fosse
+       * corrigida e a outra, esquecida.
+       *
+       * -----------------------------------------------------------------------
+       * O QUE FICA DE FORA, DE PROPÓSITO
+       * -----------------------------------------------------------------------
+       * Franquia, tag e o portão de risco editorial NÃO entram aqui: o rascunho
+       * nasce sem etiquetas (o redator adiciona ao editar) e sem publicação —
+       * portanto sem nada para o portão de risco barrar. A checagem de risco já
+       * roda no fluxo de EDIÇÃO/publicação existente
+       * (`/api/admin/articles/[id]`, PATCH), que é por onde este rascunho
+       * obrigatoriamente passa antes de ir ao ar.
+       *
+       * -----------------------------------------------------------------------
+       * AUTORIA DO RASCUNHO
+       * -----------------------------------------------------------------------
+       * `guard.user.id` — quem pediu a pré-matéria —, e não um campo de
+       * formulário: esta ação não passa por nenhum formulário (é um clique só),
+       * então não existe um autor "escolhido" para resolver. É a MESMA
+       * identidade que `parseArticleInput` usa como padrão para quem não tem a
+       * capacidade `atribuirOutroAutor` (ver `article-input.ts`), e o redator
+       * pode trocar o autor livremente ao editar o rascunho, como em qualquer
+       * matéria.
+       */
+      let draft: { id: string; slug: string } | 'already-covered' | 'slug-exhausted' | 'skipped' = 'skipped';
+      let draftSkipReason = '';
+
+      const fields = draftFieldsFromPreArticle(dados, contexto.title);
+
+      if (!contexto.category) {
+        // `Topic.categoryId` é opcional; a `Article` exige categoria. Sem uma,
+        // não há como preencher `categoryId` — a pré-matéria continua útil como
+        // leitura, só o rascunho automático que não pode nascer.
+        draftSkipReason =
+          'este tópico não tem categoria definida. Abra "Criar matéria" e preencha manualmente.';
+      } else if (!fields) {
+        // Geração degenerada (texto curto demais mesmo com os fallbacks) — caso
+        // raro, mas `parsePreArticle` só garante texto NÃO VAZIO, não texto
+        // dentro dos limites de gravação. Melhor devolver a pré-matéria "só
+        // para leitura" do que gravar uma matéria com título ou corpo inválido.
+        draftSkipReason =
+          'o texto gerado veio curto demais para virar rascunho automaticamente. Copie o conteúdo para "Criar matéria".';
+      } else {
+        const category = contexto.category;
+        const baseSlug = slugify(fields.title) || 'materia';
+
+        const outcome = await createArticleWithUniqueSlug({
+          topicId: id,
+          baseSlug,
+          buildData: (slug) => ({
+            slug,
+            title: fields.title,
+            excerpt: fields.excerpt,
+            content: fields.content,
+            contentOrigin: 'ai-assisted',
+            status: 'draft',
+            categoryId: category.id,
+            authorId: guard.user.id,
+            topicId: id,
+            readingMinutes: estimateReadingMinutes(fields.content),
+            currentScore: topic.currentScore,
+          }),
+          afterCreate: async (tx, created) => {
+            await tx.auditLog.create({
+              data: {
+                action: 'article.drafted',
+                entityType: 'Article',
+                entityId: created.id,
+                actorId: guard.user.id,
+                after: {
+                  title: fields.title,
+                  slug: created.slug,
+                  categorySlug: category.slug,
+                  contentOrigin: 'ai-assisted',
+                  // Diferencia, na trilha de auditoria, o rascunho nascido de
+                  // pré-matéria do rascunho escrito à mão em "Criar matéria" —
+                  // os dois usam a mesma ação (`article.drafted`), e é este
+                  // campo que responde "veio de onde?" sem precisar cruzar com
+                  // `topic.ai_prearticle` por horário.
+                  source: 'prearticle',
+                },
+                ipHash,
+              },
+            });
+          },
+        });
+
+        if (outcome === 'already-covered') {
+          draft = 'already-covered';
+        } else if (outcome === null) {
+          draft = 'slug-exhausted';
+        } else {
+          draft = outcome;
+        }
+      }
+
+      // Colisão esgotada ou corrida perdida contra outra aba: a pré-matéria já
+      // foi gerada (e já custou a chamada), mas o rascunho não pôde ser salvo.
+      // Isto é diferente de "sem categoria"/"texto curto": ali o rascunho nunca
+      // chegou a ser TENTADO, então devolver a pré-matéria para leitura é a
+      // resposta certa. Aqui a tentativa falhou de um jeito que repetir o clique
+      // resolve — o 409 é o mesmo padrão de `create-article`.
+      if (draft === 'already-covered') {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              'Este tópico já virou matéria — provavelmente em outra aba. Recarregue a fila e edite a matéria existente em Matérias.',
+          },
+          { status: 409 },
+        );
+      }
+
+      if (draft === 'slug-exhausted') {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              'A pré-matéria foi gerada, mas não foi possível criar um endereço único para o rascunho. Tente de novo.',
+          },
+          { status: 409 },
+        );
+      }
+
+      if (draft === 'skipped') {
+        return NextResponse.json({
+          ok: true,
+          message: `Pré-matéria gerada, mas o rascunho não foi salvo automaticamente: ${draftSkipReason}`,
+          prearticle: dados,
+        });
+      }
+
       return NextResponse.json({
         ok: true,
-        message: 'Pré-matéria gerada. Revise tudo antes de publicar.',
+        message: 'Pré-matéria gerada e salva como rascunho. Revise antes de publicar.',
         prearticle: dados,
+        // Só existem quando o rascunho foi criado: o painel usa a presença
+        // destes campos para decidir se mostra "Abrir rascunho para editar".
+        articleId: draft.id,
+        articleSlug: draft.slug,
       });
     }
 
@@ -546,164 +704,108 @@ export async function POST(
       // Título sem NENHUMA letra ou número latino (só emoji, pontuação ou
       // escrita não-latina) faz `slugify` devolver string vazia — e uma matéria
       // com slug vazio é publicada com sucesso e fica inalcançável: a URL
-      // resultante é a da categoria. O sufixo do laço abaixo cuida da unicidade.
+      // resultante é a da categoria. O sufixo do laço dentro de
+      // `createArticleWithUniqueSlug` cuida da unicidade.
       const baseSlug = slugify(input.title) || 'materia';
       const now = new Date();
 
-      let outcome: { slug: string } | 'already-covered' | null = null;
+      // TRAVA CONTRA MATÉRIA DUPLICADA + RETENTATIVA DE SLUG — extraídas para
+      // `createArticleWithUniqueSlug` (fim do arquivo) porque `prearticle`
+      // também precisa delas, para o rascunho automático que a pré-matéria
+      // agora cria. Ver o comentário completo da trava (isolamento do InnoDB,
+      // gap locks) na própria função.
+      const outcome = await createArticleWithUniqueSlug({
+        topicId: id,
+        baseSlug,
+        buildData: (slug) => ({
+          slug,
+          title: input.title,
+          excerpt: input.excerpt,
+          content: input.content,
+          // `null` (e não `[]`) quando não há blocos: a coluna significa "esta
+          // matéria foi escrita no editor de blocos?", e um array vazio
+          // responderia "sim, e está vazia" — que é outra coisa.
+          blocks: hasBlocks(input.blocks) ? toJsonColumn(input.blocks) : undefined,
+          // Ver o bloco de comentário de `contentOrigin`, acima.
+          contentOrigin,
+          status: publish ? 'published' : 'draft',
+          categoryId: category.id,
+          subcategoryId: input.subcategoryId,
+          authorId: input.authorId,
+          topicId: id,
+          format: input.format,
+          tldr: input.tldr,
+          coverImageUrl: input.coverImageUrl,
+          coverImageAlt: input.coverImageAlt,
+          isBreaking: input.isBreaking,
+          hasSpoiler: input.hasSpoiler,
+          // Na CRIAÇÃO não há valor anterior, então não há o que "reduzir":
+          // qualquer nível é aceito de qualquer conta. A trava de permissão
+          // (`canLowerSensitivity`) só existe na edição, que é onde a redução
+          // acontece. Ver core/staff.ts.
+          contentSensitivity: input.contentSensitivity,
+          // Com blocos, o tempo de leitura conta imagem e vídeo além das
+          // palavras (ver `blocksReadingMinutes`). Sem blocos, continua a
+          // estimativa de sempre sobre o Markdown.
+          readingMinutes: hasBlocks(input.blocks)
+            ? blocksReadingMinutes(input.blocks)
+            : estimateReadingMinutes(input.content),
+          currentScore: topic.currentScore,
+          scoreAtPublish: publish ? topic.currentScore : null,
+          publishedAt: publish ? now : null,
+        }),
+        afterCreate: async (tx, created) => {
+          // Franquias e tags entram na MESMA transação da matéria: uma matéria
+          // publicada com metade das etiquetas não daria erro nenhum e sumiria
+          // dos hubs de fandom sem ninguém notar.
+          await syncArticleTaxonomy(tx, created.id, {
+            franchiseIds: input.franchiseIds,
+            tags: input.tags,
+          });
 
-      for (let attempt = 0; attempt < 5 && outcome === null; attempt += 1) {
-        // Primeira tentativa com o slug limpo; as seguintes com sufixo curto —
-        // mais amigável para o editor do que rejeitar e pedir outro título.
-        const slug =
-          attempt === 0 ? baseSlug : `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`;
-
-        try {
-          outcome = await prisma.$transaction(async (tx) => {
-            // TRAVA CONTRA MATÉRIA DUPLICADA — quem garante é o banco, não a
-            // tela. A fila esconde o botão "Criar matéria" de um tópico já
-            // coberto, mas isso só vale para a aba que recarregou: com o
-            // formulário aberto em duas abas (ou dois editores no mesmo
-            // tópico), o segundo envio criava uma SEGUNDA matéria do mesmo
-            // assunto, publicada, sem nenhum aviso.
-            //
-            // O `updateMany` com a condição no `where` resolve isso em uma
-            // operação atômica: o segundo UPDATE espera o primeiro terminar e
-            // então reavalia o filtro contra a linha já atualizada, encontrando
-            // zero registros. Um `findUnique` seguido de `update` teria uma
-            // janela entre ler e escrever — que é exatamente onde as duas
-            // requisições simultâneas passavam.
-            //
-            // ESTA GARANTIA NÃO É DO POSTGRES — foi conferida também para o
-            // MySQL/MariaDB na migração de banco, e vale nos dois. A versão
-            // anterior deste comentário dizia "no Postgres, ...", o que dava a
-            // entender que a troca de banco a colocaria em risco. Não coloca, e
-            // os dois motivos são específicos o bastante para valer o registro:
-            //
-            //   1. NÍVEL DE ISOLAMENTO. O padrão do InnoDB é REPEATABLE READ, e
-            //      não READ COMMITTED como no Postgres. Isso NÃO afeta este
-            //      trecho: `UPDATE` é leitura CORRENTE (locking read), não
-            //      leitura de snapshot. Ao destravar, o InnoDB relê a versão
-            //      mais recente já comitada e reaplica o `WHERE` — exatamente o
-            //      mesmo comportamento que o Postgres tem aqui.
-            //
-            //   2. GAP LOCKS. A preocupação legítima com REPEATABLE READ é que
-            //      o InnoDB trava intervalos, e não só linhas — o que muda o
-            //      perfil de deadlock. Também não se aplica aqui: o `where` casa
-            //      a CHAVE PRIMÁRIA com um valor exato, e esse é justamente o
-            //      caso documentado em que o InnoDB trava só o registro
-            //      encontrado, sem o intervalo anterior.
-            //
-            // O que continua valendo, e é o que de fato acontece na disputa: o
-            // segundo pedido recebe `count === 0` e devolve 'already-covered'.
-            const claimed = await tx.topic.updateMany({
-              where: { id, status: { not: 'published' } },
-              data: { status: 'published' },
-            });
-
-            if (claimed.count === 0) return 'already-covered' as const;
-
-            const created = await tx.article.create({
-              data: {
-                slug,
+          await tx.auditLog.create({
+            data: {
+              action: publish ? 'article.published' : 'article.drafted',
+              entityType: 'Article',
+              entityId: created.id,
+              // `actorId` finalmente diz QUEM. Era o campo que o segredo
+              // compartilhado deixava vazio e que tornava a auditoria inútil.
+              actorId: guard.user.id,
+              after: {
                 title: input.title,
-                excerpt: input.excerpt,
-                content: input.content,
-                // `null` (e não `[]`) quando não há blocos: a coluna significa
-                // "esta matéria foi escrita no editor de blocos?", e um array
-                // vazio responderia "sim, e está vazia" — que é outra coisa.
-                blocks: hasBlocks(input.blocks) ? toJsonColumn(input.blocks) : undefined,
-                // Ver o bloco de comentário de `contentOrigin`, acima.
+                slug: created.slug,
+                categorySlug: category.slug,
+                publish,
+                // Repetido aqui (além da coluna da matéria) porque a auditoria
+                // precisa responder "como esta matéria NASCEU?" mesmo que a
+                // linha do artigo seja apagada depois.
                 contentOrigin,
-                status: publish ? 'published' : 'draft',
-                categoryId: category.id,
-                subcategoryId: input.subcategoryId,
-                authorId: input.authorId,
-                topicId: id,
-                format: input.format,
-                tldr: input.tldr,
-                coverImageUrl: input.coverImageUrl,
-                coverImageAlt: input.coverImageAlt,
-                isBreaking: input.isBreaking,
-                hasSpoiler: input.hasSpoiler,
-                // Na CRIAÇÃO não há valor anterior, então não há o que
-                // "reduzir": qualquer nível é aceito de qualquer conta. A trava
-                // de permissão (`canLowerSensitivity`) só existe na edição, que
-                // é onde a redução acontece. Ver core/staff.ts.
-                contentSensitivity: input.contentSensitivity,
-                // Com blocos, o tempo de leitura conta imagem e vídeo além das
-                // palavras (ver `blocksReadingMinutes`). Sem blocos, continua a
-                // estimativa de sempre sobre o Markdown.
-                readingMinutes: hasBlocks(input.blocks)
-                  ? blocksReadingMinutes(input.blocks)
-                  : estimateReadingMinutes(input.content),
-                currentScore: topic.currentScore,
-                scoreAtPublish: publish ? topic.currentScore : null,
-                publishedAt: publish ? now : null,
               },
-            });
+              ipHash,
+            },
+          });
 
-            // Franquias e tags entram na MESMA transação da matéria: uma
-            // matéria publicada com metade das etiquetas não daria erro nenhum
-            // e sumiria dos hubs de fandom sem ninguém notar.
-            await syncArticleTaxonomy(tx, created.id, {
-              franchiseIds: input.franchiseIds,
-              tags: input.tags,
-            });
-
+          // Ver o comentário equivalente na rota de edição: ação PRÓPRIA para
+          // que "quais matérias foram publicadas apesar do alerta?" seja uma
+          // consulta por índice, e não uma varredura de coluna Json.
+          if (riskGate.acknowledgement) {
             await tx.auditLog.create({
               data: {
-                action: publish ? 'article.published' : 'article.drafted',
+                action: 'article.risk_acknowledged',
                 entityType: 'Article',
                 entityId: created.id,
-                // `actorId` finalmente diz QUEM. Era o campo que o segredo
-                // compartilhado deixava vazio e que tornava a auditoria inútil.
                 actorId: guard.user.id,
                 after: {
-                  title: input.title,
-                  slug,
-                  categorySlug: category.slug,
-                  publish,
-                  // Repetido aqui (além da coluna da matéria) porque a auditoria
-                  // precisa responder "como esta matéria NASCEU?" mesmo que a
-                  // linha do artigo seja apagada depois.
-                  contentOrigin,
+                  resumo: summarizeRisk(riskGate.acknowledgement.findings),
+                  trechos: toAuditFindings(riskGate.acknowledgement.findings),
                 },
+                reason: riskGate.acknowledgement.reason,
                 ipHash,
               },
             });
-
-            // Ver o comentário equivalente na rota de edição: ação PRÓPRIA para
-            // que "quais matérias foram publicadas apesar do alerta?" seja uma
-            // consulta por índice, e não uma varredura de coluna Json.
-            if (riskGate.acknowledgement) {
-              await tx.auditLog.create({
-                data: {
-                  action: 'article.risk_acknowledged',
-                  entityType: 'Article',
-                  entityId: created.id,
-                  actorId: guard.user.id,
-                  after: {
-                    resumo: summarizeRisk(riskGate.acknowledgement.findings),
-                    trechos: toAuditFindings(riskGate.acknowledgement.findings),
-                  },
-                  reason: riskGate.acknowledgement.reason,
-                  ipHash,
-                },
-              });
-            }
-
-            return { slug: created.slug };
-          });
-        } catch (error) {
-          // Duas matérias com o mesmo título enviadas ao mesmo tempo passam as
-          // duas por qualquer verificação prévia de slug e colidem só na
-          // gravação. Aqui a colisão vira uma nova tentativa com outro sufixo;
-          // antes, virava um 500 sem corpo e um "Erro de conexão." na tela.
-          if (isSlugTaken(error)) continue;
-          throw error;
-        }
-      }
+          }
+        },
+      });
 
       if (outcome === 'already-covered') {
         return NextResponse.json(
@@ -788,4 +890,146 @@ function isSlugTaken(error: unknown): boolean {
   return Array.isArray(target)
     ? target.includes('slug')
     : typeof target === 'string' && target.includes('slug');
+}
+
+/** O tipo do cliente transacional do Prisma. Ver a mesma definição, com a
+ *  mesma justificativa, em `server/article-taxonomy.ts`. */
+type Tx = Prisma.TransactionClient;
+
+/**
+ * =============================================================================
+ * CRIA UMA `Article` COM SLUG ÚNICO, sob a trava contra tópico duplicado
+ * =============================================================================
+ *
+ * Extraída de `create-article` para `prearticle` poder reusar exatamente a
+ * mesma lógica ao criar o rascunho automático: duplicar as ~30 linhas do laço
+ * de retentativa era o jeito mais rápido de as duas cópias divergirem no dia
+ * em que uma delas fosse corrigida e a outra, esquecida.
+ *
+ * O QUE FICA DE FORA DE PROPÓSITO: etiquetagem (`syncArticleTaxonomy`) e
+ * reconhecimento de risco editorial são exclusivos de `create-article` (só ele
+ * publica) — quem precisar deles grava por conta própria dentro de
+ * `afterCreate`, que roda NA MESMA transação da criação da matéria.
+ */
+async function createArticleWithUniqueSlug(params: {
+  topicId: string;
+  baseSlug: string;
+  buildData: (slug: string) => Prisma.ArticleUncheckedCreateInput;
+  afterCreate: (tx: Tx, created: { id: string; slug: string }) => Promise<void>;
+}): Promise<{ id: string; slug: string } | 'already-covered' | null> {
+  const { topicId, baseSlug, buildData, afterCreate } = params;
+
+  let outcome: { id: string; slug: string } | 'already-covered' | null = null;
+
+  for (let attempt = 0; attempt < 5 && outcome === null; attempt += 1) {
+    // Primeira tentativa com o slug limpo; as seguintes com sufixo curto —
+    // mais amigável para o editor do que rejeitar e pedir outro título.
+    const slug = attempt === 0 ? baseSlug : `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`;
+
+    try {
+      outcome = await prisma.$transaction(async (tx) => {
+        // TRAVA CONTRA MATÉRIA DUPLICADA — quem garante é o banco, não a tela.
+        // A fila esconde os botões de um tópico já coberto, mas isso só vale
+        // para a aba que recarregou: com duas abas abertas (ou dois editores
+        // no mesmo tópico), o segundo envio criava uma SEGUNDA matéria do
+        // mesmo assunto, sem nenhum aviso.
+        //
+        // O `updateMany` com a condição no `where` resolve isso em uma
+        // operação atômica: o segundo UPDATE espera o primeiro terminar e
+        // então reavalia o filtro contra a linha já atualizada, encontrando
+        // zero registros. Um `findUnique` seguido de `update` teria uma janela
+        // entre ler e escrever — que é exatamente onde as duas requisições
+        // simultâneas passavam.
+        //
+        // ESTA GARANTIA NÃO É DO POSTGRES — foi conferida também para o
+        // MySQL/MariaDB na migração de banco, e vale nos dois:
+        //
+        //   1. NÍVEL DE ISOLAMENTO. O padrão do InnoDB é REPEATABLE READ, e não
+        //      READ COMMITTED como no Postgres. Isso NÃO afeta este trecho:
+        //      `UPDATE` é leitura CORRENTE (locking read), não leitura de
+        //      snapshot. Ao destravar, o InnoDB relê a versão mais recente já
+        //      comitada e reaplica o `WHERE` — exatamente o mesmo
+        //      comportamento que o Postgres tem aqui.
+        //
+        //   2. GAP LOCKS. A preocupação legítima com REPEATABLE READ é que o
+        //      InnoDB trava intervalos, e não só linhas — o que muda o perfil
+        //      de deadlock. Também não se aplica aqui: o `where` casa a CHAVE
+        //      PRIMÁRIA com um valor exato, e esse é justamente o caso
+        //      documentado em que o InnoDB trava só o registro encontrado, sem
+        //      o intervalo anterior.
+        //
+        // O que continua valendo, e é o que de fato acontece na disputa: o
+        // segundo pedido recebe `count === 0` e devolve 'already-covered'.
+        const claimed = await tx.topic.updateMany({
+          where: { id: topicId, status: { not: 'published' } },
+          data: { status: 'published' },
+        });
+
+        if (claimed.count === 0) return 'already-covered' as const;
+
+        const created = await tx.article.create({ data: buildData(slug) });
+
+        await afterCreate(tx, created);
+
+        return { id: created.id, slug: created.slug };
+      });
+    } catch (error) {
+      // Duas matérias com o mesmo título enviadas ao mesmo tempo passam as
+      // duas por qualquer verificação prévia de slug e colidem só na
+      // gravação. Aqui a colisão vira uma nova tentativa com outro sufixo;
+      // antes, virava um 500 sem corpo e um "Erro de conexão." na tela.
+      if (isSlugTaken(error)) continue;
+      throw error;
+    }
+  }
+
+  return outcome;
+}
+
+/**
+ * Traduz a pré-matéria gerada pela IA para os três campos textuais que a
+ * `Article` exige — respeitando os MESMOS limites de `server/article-input.ts`
+ * (título 8–180, resumo 20–300, corpo mín. 40), para não gravar um rascunho
+ * que a EDIÇÃO depois recusaria como inválido.
+ *
+ * Cada campo tem um FALLBACK para quando o gerador devolve algo curto demais
+ * (acontece: o modelo às vezes resume o subtítulo demais). O fallback nunca é
+ * texto inventado — é outro pedaço da MESMA geração, sempre mais completo. Só
+ * quando nem o fallback alcança o mínimo é que a função devolve `null`: melhor
+ * a pré-matéria virar "só para leitura" do que uma `Article` com título ou
+ * corpo vazio.
+ */
+function draftFieldsFromPreArticle(
+  dados: PreArticleOutput,
+  topicTitle: string,
+): { title: string; excerpt: string; content: string } | null {
+  const title = boundedOrFallback(dados.pre_materia.titulo, topicTitle, 8, 180);
+  if (!title) return null;
+
+  const excerpt = boundedOrFallback(dados.pre_materia.subtitulo, dados.contextualizacao, 20, 300);
+  if (!excerpt) return null;
+
+  // Markdown simples: parágrafos separados por linha em branco. É o mesmo
+  // formato que `content` sempre teve (ver ADR 0005) — o redator pode
+  // converter para blocos ao editar, como em qualquer matéria escrita direto
+  // no campo de texto.
+  const content = [
+    dados.pre_materia.abertura,
+    dados.pre_materia.corpo.join('\n\n'),
+    dados.pre_materia.fechamento_cta,
+  ]
+    .filter((part) => part.trim().length > 0)
+    .join('\n\n')
+    .trim()
+    .slice(0, 20_000);
+
+  if (content.length < 40) return null;
+
+  return { title, excerpt, content };
+}
+
+/** `primary` se alcançar o mínimo; senão `fallback`. `null` se nem esse alcançar. */
+function boundedOrFallback(primary: string, fallback: string, min: number, max: number): string | null {
+  const candidate = primary.trim().length >= min ? primary.trim() : fallback.trim();
+  return candidate.length >= min ? candidate.slice(0, max) : null;
 }

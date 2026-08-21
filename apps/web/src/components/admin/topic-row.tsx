@@ -21,6 +21,7 @@ import {
   EMOTIONAL_TRIGGER_LABELS,
   TOPIC_ORIGIN_LABELS,
   heatForBand,
+  routes,
   type EmotionalTrigger,
   type ScoreBand,
   type TopicOrigin,
@@ -148,6 +149,15 @@ export function TopicRow({
   const [generatingPreArticle, setGeneratingPreArticle] = useState(false);
   const [prearticleCopied, setPrearticleCopied] = useState(false);
 
+  /**
+   * O RASCUNHO QUE A GERAÇÃO ACABOU DE CRIAR, quando criar (ver a rota:
+   * `articleId`/`articleSlug` só vêm preenchidos quando a `Article` foi salva
+   * como rascunho). `null` cobre os dois casos em que não há o que abrir: a
+   * geração falhou, ou teve sucesso mas o rascunho automático não pôde ser
+   * criado (tópico sem categoria, texto curto demais — ver a mensagem).
+   */
+  const [prearticleDraft, setPrearticleDraft] = useState<{ id: string; slug: string } | null>(null);
+
   /** Minutos restantes da meta de 30 min. Negativo = estourou. */
   const minutesLeft = topic.becameHotAt
     ? 30 - Math.floor((Date.now() - topic.becameHotAt.getTime()) / 60_000)
@@ -241,6 +251,7 @@ export function TopicRow({
     setFeedback('');
     setPrearticle(null);
     setPrearticleCopied(false);
+    setPrearticleDraft(null);
     setGeneratingPreArticle(true);
 
     try {
@@ -257,6 +268,17 @@ export function TopicRow({
       // não é a pré-matéria.
       if (data.ok && isPreArticle(data.prearticle)) {
         setPrearticle(data.prearticle);
+
+        // O rascunho automático (ver a rota) é OPCIONAL mesmo num sucesso: um
+        // tópico sem categoria, por exemplo, gera a pré-matéria normalmente mas
+        // não consegue virar `Article`. `articleId`/`articleSlug` só existem
+        // quando a matéria de fato foi criada — daí a checagem de forma, e não
+        // só de presença.
+        setPrearticleDraft(
+          typeof data.articleId === 'string' && typeof data.articleSlug === 'string'
+            ? { id: data.articleId, slug: data.articleSlug }
+            : null,
+        );
       } else {
         setFeedback(data.message);
       }
@@ -537,6 +559,26 @@ export function TopicRow({
               {prearticleCopied ? 'Copiado ✓' : 'Copiar JSON'}
             </button>
           </div>
+
+          {/* ---------- ABRIR O RASCUNHO SALVO ---------- */}
+          {/* A pré-matéria não fica mais só na tela: a rota já salvou uma
+              `Article` com `status: 'draft'` a partir deste texto (ver
+              `POST /api/admin/topics/[id]`, ação `prearticle`). Este link é o
+              que fecha o caminho até lá.
+
+              APONTA PARA A LISTA DE MATÉRIAS, e não para uma URL com o id do
+              rascunho: a tela de edição em `/admin/materias` não tem rota
+              própria por matéria — é um formulário que abre inline dentro da
+              própria listagem (ver `article-row.tsx`). Como "Rascunhos" vem
+              PRIMEIRO nessa lista e é ordenada por edição mais recente, o
+              rascunho que acabou de nascer é a primeira linha de lá. */}
+          {prearticleDraft && (
+            <p className="admin-row__summary">
+              <a className="btn btn--primary btn--sm" href={routes.adminArticles()}>
+                Abrir rascunho para editar
+              </a>
+            </p>
+          )}
 
           <p className="admin-row__summary">{prearticle.contextualizacao}</p>
 

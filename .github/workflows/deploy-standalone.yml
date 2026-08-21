@@ -98,6 +98,34 @@ jobs:
       # Next NÃO inclui `.next/static/` (comportamento documentado — CSS/JS
       # ficam de fora do bundle standalone de propósito); sem este passo os
       # chunks/CSS somem no deploy e o navegador recebe 404 no lugar deles.
+      # DOT_PRISMA_CLIENT / AT_PRISMA_CLIENT: o Prisma Client de verdade que a
+      # Hostinger serve não vem do `node_modules` normal — ele é restaurado a
+      # cada processo a partir de `vendor/dot-prisma-client/` e
+      # `vendor/at-prisma-client/` na branch deploy-standalone (ver o
+      # cabeçalho de `server.js` NAQUELA branch: o `npm install` da Hostinger
+      # roda sem lockfile e deixa só stubs, então o CÓDIGO gerado do client
+      # precisa vir de algum lugar estável — esse vendor/).
+      #
+      # ⚠ HISTÓRICO DE INCIDENTE (dois, na mesma sessão): a primeira vez que
+      # isto foi automatizado, o `find` usava só `-path '*/@prisma/client'` e
+      # `head -n1` — e pegou, sem avisar, uma pasta STUB do próprio
+      # `@prisma/client` (o placeholder que o pacote cria quando `prisma
+      # generate` ainda não rodou naquele node_modules específico: só
+      # `default.js`/`package.json`/`runtime/`, SEM `index.js`). O `vendor/`
+      # foi sobrescrito com esse stub, e toda consulta no site derrubou até
+      # ser revertido à mão. A causa: o output standalone do Next, ao traçar
+      # um monorepo, pode conter MAIS DE UMA pasta `@prisma/client` (a
+      # hoisted de verdade e cópias parciais/stub de outros pontos da árvore
+      # de dependências) — `head -n1` confia na ORDEM do `find`, que não tem
+      # nenhuma garantia de escolher a certa.
+      #
+      # A busca abaixo é blindada contra o mesmo erro: só aceita candidato
+      # que TENHA `index.js` (o stub não tem — é o sinal mais barato e mais
+      # direto de "isto foi gerado de verdade"), e entre os que sobrarem
+      # pega o de MAIOR `index.js` (o client real embala o DMMF do schema
+      # inteiro e é sempre ordens de magnitude maior que qualquer stub
+      # parcial). Falha ALTO E CEDO se nada passar no filtro — silenciar
+      # aqui é exatamente o que causou os dois incidentes.
       - name: Preparar artefatos para overlay
         run: |
           cp -r src/apps/web/.next/standalone/apps/web  APPS_WEB_BUILD
@@ -106,6 +134,42 @@ jobs:
           cp -r src/apps/web/public                         WEB_PUBLIC
           mkdir -p PRISMA_SCHEMA
           cp    src/packages/db/prisma/schema.prisma        PRISMA_SCHEMA/schema.prisma
+
+          find_real_client() {
+            # $1 = padrão de caminho a procurar (ex.: '*/.prisma/client').
+            # `-printf '%s %p'` (não `ls -la` + `awk`) de propósito: o
+            # formato de coluna do `ls` varia por sistema/locale, e um script
+            # que depende da posição exata de uma coluna é frágil bem quando
+            # menos se espera. `-printf` do GNU find imprime tamanho e
+            # caminho direto, sem parsing de texto de outro programa.
+            find src/apps/web/.next/standalone -type f -path "$1/index.js" -printf '%s %p\n' \
+              | sort -rn \
+              | head -n1 \
+              | cut -d' ' -f2- \
+              | xargs -r dirname
+          }
+
+          DOT_PRISMA_SRC="$(find_real_client '*/.prisma/client')"
+          AT_PRISMA_SRC="$(find_real_client '*/@prisma/client')"
+
+          if [ -z "$DOT_PRISMA_SRC" ] || [ -z "$AT_PRISMA_SRC" ]; then
+            echo "::error::Nenhum Prisma Client com index.js encontrado no output standalone (só stub, ou nada). DOT='$DOT_PRISMA_SRC' AT='$AT_PRISMA_SRC'"
+            exit 1
+          fi
+
+          # Confere que o schema ATUAL está de fato embarcado — não só que
+          # "algum" index.js existe, mas que é o gerado a partir do commit
+          # deste build. `reactionCount` é um campo recém-adicionado; se ele
+          # não aparecer aqui, o client encontrado está desatualizado e o
+          # site vai quebrar exatamente como nos dois incidentes anteriores.
+          if ! grep -q "reactionCount" "${DOT_PRISMA_SRC}/index.js"; then
+            echo "::error::Prisma Client encontrado em ${DOT_PRISMA_SRC} não contém o schema atual (campo 'reactionCount' ausente). Abortando em vez de publicar um client desatualizado."
+            exit 1
+          fi
+
+          echo "[overlay] Prisma Client traçado (verificado): DOT=$DOT_PRISMA_SRC AT=$AT_PRISMA_SRC"
+          cp -r "$DOT_PRISMA_SRC" DOT_PRISMA_CLIENT
+          cp -r "$AT_PRISMA_SRC"  AT_PRISMA_CLIENT
 
       # ---------------------------------------------------------------- (8)
       # Monta a árvore final: overlay mínimo em cima da branch deploy.

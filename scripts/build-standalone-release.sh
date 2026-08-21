@@ -16,13 +16,24 @@
 #     ./CURATOR_DIST/          -> `services/curator/dist/` do build do curator
 #     ./WEB_PUBLIC/            -> `apps/web/public/`
 #     ./PRISMA_SCHEMA/         -> o único arquivo `schema.prisma`
+#     ./DOT_PRISMA_CLIENT/     -> `.prisma/client` traçado pelo build standalone
+#     ./AT_PRISMA_CLIENT/      -> `@prisma/client` traçado pelo build standalone
 #     ./deploy/                -> clone da branch `deploy-standalone` (destino)
 #   SAÍDA:
 #     `deploy-standalone` com overlay MÍNIMO: só o que muda a cada release.
 #
-# PRESERVA VERBATIM (nunca regerado aqui): vendor/, server.js, package.json,
+# PRESERVA VERBATIM (nunca regerado aqui): server.js, package.json,
 # node_modules/ (árvore traçada com sharp/engine Linux), curator/build-info.json
 # só é regerado pelo build do curator (via CURATOR_DIST), não à mão.
+#
+# ⚠ `vendor/dot-prisma-client/` e `vendor/at-prisma-client/` NÃO estão nessa
+# lista — ver a etapa (7) abaixo. Deixá-los congelados foi a causa de DOIS
+# incidentes de produção na mesma sessão: o site inteiro (home, categoria,
+# busca) fica com consultas recusadas pelo Prisma sempre que o schema ganha
+# um campo novo que o `vendor/` não conhece, e o erro fica escondido atrás
+# do `safeQuery` da home — o sintoma é "nenhuma matéria aparece", sem pista
+# nenhuma da causa. O workflow (`deploy-standalone.yml`, etapa 7) já
+# verifica que o client encontrado tem o schema atual antes de chegar aqui.
 # =============================================================================
 set -euo pipefail
 
@@ -33,10 +44,12 @@ WEB_STATIC="${WEB_STATIC:-./WEB_STATIC}"
 CURATOR_DIST="${CURATOR_DIST:-./CURATOR_DIST}"
 WEB_PUBLIC="${WEB_PUBLIC:-./WEB_PUBLIC}"
 PRISMA_SCHEMA="${PRISMA_SCHEMA:-./PRISMA_SCHEMA}"
+DOT_PRISMA_CLIENT="${DOT_PRISMA_CLIENT:-./DOT_PRISMA_CLIENT}"
+AT_PRISMA_CLIENT="${AT_PRISMA_CLIENT:-./AT_PRISMA_CLIENT}"
 DEPLOY_OUT="${DEPLOY_OUT:-./deploy}"
 
 # Valida entradas antes de tocar em qualquer coisa (falha alto e cedo).
-for v in APPS_WEB_BUILD WEB_STATIC CURATOR_DIST WEB_PUBLIC PRISMA_SCHEMA DEPLOY_OUT; do
+for v in APPS_WEB_BUILD WEB_STATIC CURATOR_DIST WEB_PUBLIC PRISMA_SCHEMA DOT_PRISMA_CLIENT AT_PRISMA_CLIENT DEPLOY_OUT; do
   if [[ ! -e "${!v}" ]]; then
     echo "ERRO: entrada ausente: ${v}=${!v}" >&2
     exit 1
@@ -91,8 +104,24 @@ echo "[overlay] curator/ ..."
 rm -rf "${DEPLOY_OUT}/curator"
 cp -r "${CURATOR_DIST}" "${DEPLOY_OUT}/curator"
 
-# ------------------------------------------------------------------ (6) done
-# vendor/, server.js, package.json e node_modules/ ficaram INTACTOS — nenhuma
-# linha acima os toca. O git status do passo de push revela exatamente o diff
+# ------------------------------------------------------------------ (7) vendor/Prisma
+# `server.js` (nesta branch) restaura `node_modules/.prisma/client` e
+# `node_modules/@prisma/client` A CADA PROCESSO a partir destas duas pastas
+# (workaround pro `npm install` da Hostinger, que roda sem lockfile e deixa
+# só stubs). O workflow já validou que o client encontrado tem `index.js` de
+# verdade e contém o schema atual — aqui é só overlay.
+#
+# O engine (`.so.node`, ~20MB) vai junto dentro de `dot-prisma-client/` — não
+# é copiado a cada processo (`server.js` usa `PRISMA_QUERY_ENGINE_LIBRARY`
+# para apontar direto pra cá), mas PRECISA existir fisicamente neste caminho.
+echo "[overlay] vendor/dot-prisma-client/ e vendor/at-prisma-client/ ..."
+rm -rf "${DEPLOY_OUT}/vendor/dot-prisma-client" "${DEPLOY_OUT}/vendor/at-prisma-client"
+mkdir -p "${DEPLOY_OUT}/vendor"
+cp -r "${DOT_PRISMA_CLIENT}" "${DEPLOY_OUT}/vendor/dot-prisma-client"
+cp -r "${AT_PRISMA_CLIENT}"  "${DEPLOY_OUT}/vendor/at-prisma-client"
+
+# ------------------------------------------------------------------ (8) done
+# server.js, package.json e node_modules/ ficaram INTACTOS — nenhuma linha
+# acima os toca. O git status do passo de push revela exatamente o diff
 # enxuto que a Hostinger precisa promover.
 echo "[overlay] concluído. diff enxuto em ${DEPLOY_OUT}/"

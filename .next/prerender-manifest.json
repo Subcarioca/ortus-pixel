@@ -201,30 +201,6 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/editorias": {
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "next-action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/editorias",
-      "dataRoute": "/editorias.rsc",
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
     "/politica-de-afiliados": {
       "experimentalBypassFor": [
         {
@@ -273,13 +249,37 @@
         "x-next-revalidated-tags",
         "x-next-revalidate-tag-token"
       ]
+    },
+    "/editorias": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/editorias",
+      "dataRoute": "/editorias.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
     }
   },
   "dynamicRoutes": {},
   "notFoundRoutes": [],
   "preview": {
-    "previewModeId": "101b987002537ed137b6e6369360d10f",
-    "previewModeSigningKey": "7a688c371970a4be8e18a5d2823435b5c609228ec04a46dba0d7eb137351c057",
-    "previewModeEncryptionKey": "f93f06122012706ce7f6244320dc0bcb502b7476b3adfc6323aa20bff6bee0fe"
+    "previewModeId": "312433c7410714f57017f03d597bf5e3",
+    "previewModeSigningKey": "3417dc103ff4064800db1b6c98c13c30f8635bcd34b8a9a8f99e4b9d175ead83",
+    "previewModeEncryptionKey": "71bd93603dee8973a558ae5aad6a196de318e0852a349e59811b766514c1d88a"
   }
 }

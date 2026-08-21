@@ -187,6 +187,9 @@ const CARD_SELECT = {
   category: { select: { slug: true, name: true } },
   subcategory: { select: { slug: true } },
   franchises: { select: { franchise: { select: { slug: true, name: true } } } },
+  // Barato (é a mesma linha já lida) e alimenta a seção "Mais popular da
+  // semana" (Tarefa D) sem precisar de um `select` próprio para ela.
+  reactionCount: true,
 } as const;
 
 type CardRow = {
@@ -215,6 +218,7 @@ type CardRow = {
   category: { slug: string; name: string };
   subcategory: { slug: string } | null;
   franchises: { franchise: { slug: string; name: string } }[];
+  reactionCount: number;
 };
 
 /**
@@ -265,6 +269,7 @@ function toCardData(row: CardRow): ContentCardData {
     // A checagem de fonte oficial mora no pipeline; aqui usamos a faixa como
     // condição necessária. O push efetivo passa por `isEligibleForAutomation`.
     pushEligible: band === 'HOT',
+    reactionCount: row.reactionCount,
   };
 }
 
@@ -496,6 +501,71 @@ const getHomeDataCached = unstable_cache(
   },
 );
 export const getHomeData = withDateRevival(getHomeDataCached);
+
+/**
+ * "MAIS POPULAR DA SEMANA" (Tarefa D) — destaque ADICIONAL, não substitui o
+ * hero.
+ *
+ * O hero (`getHomeData`) é sobre o ALGORITMO: o que está repercutindo AGORA,
+ * pelo score do curator (HOT/RISING/mais recente). Esta consulta é sobre o
+ * LEITOR: a matéria publicada nos últimos 7 dias que mais reação recebeu —
+ * curtida + descurtida somadas, com o MESMO peso (ver `Article.reactionCount`
+ * no schema e `server/reactions.ts` para o porquê de somar em vez de
+ * subtrair). As duas fontes podem, e devem, divergir: uma matéria pode estar
+ * "quente" pelo algoritmo sem ter reação nenhuma ainda (é recente demais), e
+ * uma matéria de alguns dias atrás pode ter acumulado reação sem estar mais
+ * entre as mais quentes. É esse segundo caso que esta seção existe para
+ * mostrar — é sinal do LEITOR, não do pipeline.
+ *
+ * JANELA DE 7 DIAS: mais curto que isso (1-2 dias) quase sempre coincidiria
+ * com o próprio hero, que já é dominado pelo que é recente; mais longo (30
+ * dias) deixaria uma matéria antiga "grudada" no destaque por semanas só por
+ * ter acumulado reação ao longo do tempo, escondendo o que o site publicou
+ * essa semana. Sete dias é "esta semana" no sentido comum da expressão.
+ *
+ * `reactionCount: { gt: 0 }`: sem reação nenhuma, não há "mais popular" — só
+ * ausência de dado. Nesse caso a seção simplesmente não aparece na home (ver
+ * `page.tsx`), em vez de destacar a primeira matéria da janela por default.
+ */
+const POPULAR_WEEK_WINDOW_DAYS = 7;
+
+const getMostPopularWeeklyCached = unstable_cache(
+  async () => {
+    const since = new Date(Date.now() - POPULAR_WEEK_WINDOW_DAYS * 86_400_000);
+
+    const rows = await safeQuery(
+      'home:popular-week',
+      () =>
+        prisma.article.findMany({
+          where: {
+            status: 'published',
+            publishedAt: { gte: since },
+            reactionCount: { gt: 0 },
+          },
+          select: CARD_SELECT,
+          // Desempate por `publishedAt`, pelo mesmo motivo do lote de score em
+          // `getHomeData`: `reactionCount` empata com frequência num acervo
+          // pequeno, e sem desempate estável a matéria em destaque mudaria a
+          // cada requisição sem nada ter mudado de verdade.
+          orderBy: [{ reactionCount: 'desc' }, { publishedAt: 'desc' }],
+          take: 1,
+        }),
+      [],
+    );
+
+    return rows[0] ? toCardData(rows[0]) : null;
+  },
+  ['home-popular-week'],
+  {
+    // Mesma janela da home: mudança de faixa de reação não dispara evento
+    // próprio (ao contrário do score), então a rede de segurança de 60s é
+    // quem mantém isto atualizado — reforçada pela invalidação explícita de
+    // `CACHE_TAGS.home` que `/api/reactions` dispara a cada clique.
+    revalidate: 60,
+    tags: [CACHE_TAGS.home],
+  },
+);
+export const getMostPopularWeekly = withDateRevival(getMostPopularWeeklyCached);
 
 /** Itens do ticker vermelho: só score >= 90 (corte alto, por decisão do design). */
 const getTickerItemsCached = unstable_cache(

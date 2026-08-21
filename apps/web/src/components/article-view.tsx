@@ -104,12 +104,14 @@ import { HeatBadge } from '@/components/heat-badge';
 import { TrendTag } from '@/components/heat-bar';
 import { NewsletterForm } from '@/components/newsletter-form';
 import { PushOptIn } from '@/components/push-opt-in';
+import { ReactionBar } from '@/components/reaction-bar';
 import { RelativeTime } from '@/components/relative-time';
 import { ShareBar } from '@/components/share-bar';
 import { SpoilerBlock } from '@/components/spoiler-block';
 import { commercePolicy } from '@/lib/ads';
 import { DISCORD_INVITE_URL } from '@/lib/site';
 import { availableProviders } from '@/server/oauth';
+import { getCurrentReaction } from '@/server/reactions';
 import { getReaderSession } from '@/server/reader-session';
 import {
   getArticleComments,
@@ -155,9 +157,9 @@ export async function ArticleView({ data, mode = 'public' }: ArticleViewProps) {
   const categoria = article.category.slug;
   const slug = article.slug;
 
-  // Comentários e sessão em paralelo com as relacionadas: são consultas
-  // independentes, e em série a página esperaria a soma dos tempos.
-  const [related, comments, session] = await Promise.all([
+  // Comentários, sessão e reação em paralelo com as relacionadas: são
+  // consultas independentes, e em série a página esperaria a soma dos tempos.
+  const [related, comments, session, reaction] = await Promise.all([
     getRelatedArticles({
       id: article.id,
       franchiseSlugs: article.franchises.map((f) => f.slug),
@@ -166,6 +168,9 @@ export async function ArticleView({ data, mode = 'public' }: ArticleViewProps) {
     }),
     preview ? SEM_COMENTARIOS : getArticleComments(article.id),
     preview ? null : getReaderSession(),
+    // Rascunho em preview não tem `ArticleReaction` de verdade nem faz sentido
+    // reagir a ele — mesmo tratamento dado a comentários e sessão no preview.
+    preview ? null : getCurrentReaction(article.id),
   ]);
 
   const articleUrl = absoluteUrl(routes.article(categoria, slug));
@@ -622,6 +627,23 @@ export async function ArticleView({ data, mode = 'public' }: ArticleViewProps) {
             source={`artigo-${categoria}`}
             variant="inline"
           />
+
+          {/* ---------- CURTIR / DESCURTIR ----------
+              DEPOIS do corpo, e não junto do `ShareBar` do topo: compartilhar é
+              uma intenção que existe ANTES de ler ("passar adiante"); reagir só
+              faz sentido DEPOIS ("o que achei disso"). Fora do modo preview —
+              rascunho não tem `ArticleReaction` de verdade, e reagir a uma
+              matéria que ainda não existe para o público não faz sentido (mesmo
+              critério já aplicado a comentários e métricas no cabeçalho deste
+              arquivo). */}
+          {!preview && (
+            <ReactionBar
+              articleId={article.id}
+              initialReaction={reaction}
+              initialCount={article.reactionCount}
+              isLoggedIn={session !== null}
+            />
+          )}
 
           <ShareBar url={articleUrl} title={article.title} showCount />
         </article>

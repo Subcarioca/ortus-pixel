@@ -1,6 +1,6 @@
 /**
  * =============================================================================
- * CONVITE DE LOGIN — Discord ou Google, com o mesmo peso visual
+ * CONVITE DE LOGIN — todos os provedores disponíveis, com o mesmo peso visual
  * =============================================================================
  *
  * Server Component: são dois links. Nenhum JavaScript.

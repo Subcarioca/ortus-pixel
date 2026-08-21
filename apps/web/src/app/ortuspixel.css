@@ -879,6 +879,12 @@ html:has(#th-dark:focus-visible)  .lbl-dark { outline: 3px solid var(--brand); o
   background: light-dark(#FFFFFF, #131314); color: light-dark(#1F1F1F, #E3E3E3);
   border: 1px solid light-dark(#DADCE0, #8E918F);
 }
+/* Três provedores novos (Tarefa A), mesmas cores de marca já usadas na barra
+   de compartilhamento (.share__btn--x/--ig) — reconhecimento em vez de
+   inventar paleta nova para o mesmo símbolo. */
+.btn--facebook { background: #1877F2; color: #fff; }
+.btn--x { background: light-dark(#000, #fff); color: light-dark(#fff, #000); }
+.btn--instagram { background: linear-gradient(135deg,#F58529,#DD2A7B,#8134AF); color: #fff; }
 /* CTA comercial: grafite. Nunca vermelho — nem o de marca, nem o de temperatura. */
 .btn--buy { background: var(--ink); color: var(--ink-invert); border: 1px solid var(--ink); }
 .btn--buy:hover { background: var(--ink-2); border-color: var(--ink-2); }
@@ -995,6 +1001,14 @@ html:has(#th-dark:focus-visible)  .lbl-dark { outline: 3px solid var(--brand); o
 .share__btn--ig { background: linear-gradient(135deg,#F58529,#DD2A7B,#8134AF); color: #fff; border: 0; }
 .share__btn--tt { background: #000; color: #fff; border-color: #000; }
 .share__count { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-3); }
+
+/* Curtir / descurtir (Tarefa B). Os botões em si são `.chip` — a pílula que já
+   existe no design system — com `aria-pressed` fazendo o preenchimento de
+   "ativo" (ver a regra `.chip[aria-pressed="true"]` acima). Só o CONTÊINER e o
+   texto auxiliar são novos aqui. */
+.reaction-bar { display: flex; align-items: center; gap: var(--s-2); flex-wrap: wrap; margin: var(--s-3) 0; }
+.reaction-bar__count { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--ink-3); }
+.reaction-bar__hint { flex-basis: 100%; margin: 0; }
 
 .share-rail { display: none; }
 @media (min-width: 1180px) {

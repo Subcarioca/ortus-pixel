@@ -45,6 +45,7 @@ import { categoryRailSlot, feedAdSlot } from '@/lib/ads';
 import { AdSlot } from '@/components/ad-slot';
 import { ArticleCard } from '@/components/article-card';
 import { Breadcrumb } from '@/components/breadcrumb';
+import { CategoryFollowButton } from '@/components/category-follow-button';
 import { BreadcrumbJsonLd, CollectionJsonLd } from '@/components/json-ld';
 import { HeatBar } from '@/components/heat-bar';
 import { NewsletterForm } from '@/components/newsletter-form';
@@ -250,6 +251,12 @@ export default async function CategoryPage({
             <h1 className="article__title">{category.name}</h1>
             <p className="section-sub">{category.description}</p>
           </div>
+          {/* Seguir CATEGORIA (Tarefa C) — mesmo botão que já existe no hub de
+              franquia, aplicado aqui à editoria inteira. Fica no cabeçalho,
+              ao lado do título, pelo mesmo motivo do hub de franquia: é a
+              ação de retenção mais barata da página e precisa estar visível
+              sem rolar. */}
+          <CategoryFollowButton categorySlug={slug} categoryName={category.name} />
         </header>
 
         {/*

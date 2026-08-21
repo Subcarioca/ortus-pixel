@@ -7,8 +7,9 @@
  *
  * São dois públicos e dois sistemas de autenticação distintos: a redação entra
  * com conta individual de e-mail e senha (`server/staff-auth.ts`), o leitor
- * entra com Discord ou Google. Nenhum caminho de navegação liga um ao outro, e
- * um bug
+ * entra com login social (Discord, Google, Facebook, X ou Instagram — ver
+ * `COMMENT_PROVIDERS` em core/community.ts). Nenhum caminho de navegação liga
+ * um ao outro, e um bug
  * aqui não pode, em hipótese alguma, abrir a porta da redação — por isso esta
  * página não importa uma linha sequer do módulo de admin.
  *
@@ -23,6 +24,7 @@ import Link from 'next/link';
 import { COMMENT_PROVIDER_LABELS, isCommentProvider, routes } from '@subcarioca/core';
 
 import { AccountActions } from '@/components/account-actions';
+import { getFollowedCategories } from '@/server/category-follows';
 import { getFollowedFranchises } from '@/server/follows';
 import { availableProviders } from '@/server/oauth';
 import { getReaderSession } from '@/server/reader-session';
@@ -36,9 +38,13 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function AccountPage() {
-  // As duas leituras não dependem uma da outra — em série, a página esperaria a
-  // soma dos tempos por nada.
-  const [session, follows] = await Promise.all([getReaderSession(), getFollowedFranchises()]);
+  // As três leituras não dependem uma da outra — em série, a página esperaria
+  // a soma dos tempos por nada.
+  const [session, follows, categoryFollows] = await Promise.all([
+    getReaderSession(),
+    getFollowedFranchises(),
+    getFollowedCategories(),
+  ]);
 
   const providers = availableProviders();
 
@@ -141,8 +147,45 @@ export default async function AccountPage() {
         */}
         {!session && follows.length > 0 && (
           <p className="form-hint">
-            Esses universos estão salvos apenas neste navegador. Entre com Discord ou Google
+            Esses universos estão salvos apenas neste navegador. Entre com uma conta
             para levá-los com você em qualquer aparelho.
+          </p>
+        )}
+      </section>
+
+      {/* Categorias seguidas (Tarefa C) — espelha a seção de franquias acima,
+          inclusive no aviso de "salvo só neste navegador" para quem não está
+          logado. Ver `CategoryFollow` no schema e `server/category-follows.ts`. */}
+      <section className="section" aria-labelledby="conta-seguindo-categorias">
+        <div className="section-head">
+          <h2 id="conta-seguindo-categorias" className="section-title">
+            Editorias que você segue
+            {categoryFollows.length > 0 && (
+              <span className="cmt__time"> · {categoryFollows.length}</span>
+            )}
+          </h2>
+        </div>
+
+        {categoryFollows.length === 0 ? (
+          <p className="empty-state">
+            Você ainda não segue nenhuma editoria. Abra uma{' '}
+            <Link href={routes.category('games')}>página de categoria</Link> e toque em
+            “Seguir”.
+          </p>
+        ) : (
+          <div className="filters">
+            {categoryFollows.map((follow) => (
+              <Link key={follow.slug} href={routes.category(follow.slug)} className="chip">
+                {follow.name}
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {!session && categoryFollows.length > 0 && (
+          <p className="form-hint">
+            Essas editorias estão salvas apenas neste navegador. Entre com uma conta para
+            levá-las com você em qualquer aparelho.
           </p>
         )}
       </section>

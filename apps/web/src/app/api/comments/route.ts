@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   const session = await getReaderSession();
   if (!session) {
     return NextResponse.json(
-      { ok: false, message: 'Entre com Discord ou Google para comentar.' },
+      { ok: false, message: 'Entre com uma conta para comentar.' },
       { status: 401 },
     );
   }

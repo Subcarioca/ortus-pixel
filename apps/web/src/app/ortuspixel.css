@@ -2422,3 +2422,235 @@ ul.side-list, ol.side-list { list-style: none; padding: 0; font-size: var(--fs-s
    é a mais recente do arquivo, tem ~4,8 KB, é usada por UMA tela interna — e
    até aqui era baixada por todo leitor que abrisse a home no celular.
    ========================================================================== */
+/* ==========================================================================
+   ==========================================================================
+   21. TAREFA A (UI) — SANGRIA/DESFOQUE DA CAPA, EFEITO SPOTIFY/APPLE MUSIC
+   ==========================================================================
+   ==========================================================================
+
+   Pedido do dono do produto: a capa nítida fica contida no tamanho normal, e
+   uma cópia AMPLIADA e DESFOCADA da MESMA foto preenche o fundo ao redor dela
+   — só na região onde a capa está, não a página inteira. Da camada nítida (a
+   foto de verdade, na frente) até a desfocada (o fundo, atrás), a transição
+   vai da borda original da imagem até a borda da SEÇÃO onde ela mora.
+
+   ONDE A REGIÃO "SEÇÃO" ACABA, EM CADA LUGAR — porque é essa borda que decide
+   até onde o desfoque pode ir:
+
+   · CAPA DA MATÉRIA (`.article__cover` → `.media--full`, seção 18): no
+     celular a foto nítida já sangra até a borda da TELA (a regra de
+     `.media--full` abaixo de 767px), então não sobra gutter nenhum para o
+     desfoque preencher — a camada nasce oculta abaixo de 768px, resolvido no
+     fim desta seção. A partir de 768px a capa trava em 1088px (`--media-max:
+     68rem`) dentro de um `.container` de até 1232px internos (seção 3):
+     sobram até 72px de cada lado, SEMPRE, em qualquer resolução de desktop —
+     é o mesmo respiro que a seção 18 já reserva para a foto nunca encostar
+     na borda da página, e é exatamente esse respiro que o desfoque ocupa.
+
+   · HERO DA HOME (`.hero`): a capa já ocupa 100% do cartão (`.hero__media`),
+     e o cartão tem `overflow: hidden` — é o que dá os cantos arredondados e
+     sustenta o corte de rosto documentado na seção 7 (`object-position: top`
+     + `margin-top` negativo do `.hero__body`). Um desfoque DENTRO do cartão
+     ficaria atrás da própria foto e nunca apareceria; por isso o hero usa a
+     variante `.hero-glow`, que mora FORA do cartão como um halo ambiente,
+     vazando só alguns pixels além da borda dele — sem tocar no crop nem no
+     texto que morde a foto por cima. É um efeito mais contido que o da
+     matéria, de propósito: a área ao redor do hero é pequena (o gap entre
+     ele e a coluna secundária de "quentes", quando ela existe) e o recorte
+     de rosto do hero é resultado de três rodadas de ajuste (seção 7) — não é
+     um lugar para um efeito decorativo arriscar sangrar por cima de nada.
+
+   DEDUPLICAÇÃO DE REDE — o cuidado que o próprio pedido exige: a camada
+   desfocada é um SEGUNDO `<Image>` do Next com o MESMO `src`, `width`,
+   `height` e `sizes` da foto nítida ao lado dela — nunca `background-image`
+   com a URL crua. Motivo: o `<Image>` do Next serve a foto por um otimizador
+   (`/_next/image?url=...&w=...`), e uma `background-image` apontando para a
+   URL original bateria num endereço DIFERENTE, baixando o arquivo inteiro
+   pela segunda vez, sem otimização — exatamente o que o pedido pede para
+   evitar. Com os quatro parâmetros iguais, o Next monta a MESMA URL para os
+   dois `<img>`, e o navegador reaproveita a resposta já em cache/voo em vez
+   de baixar de novo (confirmado na aba Rede do DevTools ao testar: uma única
+   requisição para o arquivo da capa). Só a foto nítida leva `priority` — a
+   regra "uma única imagem prioritária por página" (seções 8 e 18) não muda;
+   a camada de desfoque é decorativa, `alt=""` e `aria-hidden`, e pode
+   aguardar a fila normal de carregamento.
+
+   CLS ZERO: as duas camadas usam `position: absolute`, então nenhuma delas
+   participa do fluxo do documento — a altura do cartão/figura continua
+   vindo só do `.thumb` (aspect-ratio) e da foto nítida, exatamente como já
+   era antes desta seção existir. Nada empurra texto ao carregar.
+   -------------------------------------------------------------------------- */
+
+/* --- Capa da matéria: `.cover-bleed` embrulha só o `.thumb` ------------- */
+.cover-bleed { position: relative; isolation: isolate; }
+.cover-bleed__bg {
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  left: 50%;
+  /* Nunca ultrapassa a largura útil do `.container` (seção 3: `--maxw` menos
+     as duas margens `--s-5`) nem o viewport — a mesma trava que impede a
+     sangria de `.media--full` no mobile (seção 18) de abrir barra de
+     rolagem horizontal, aqui protegendo um elemento decorativo em vez de um
+     bloco de conteúdo. */
+  width: min(calc(var(--maxw) - 2 * var(--s-5)), calc(100vw - 2 * var(--s-5)));
+  height: 100%;
+  transform: translate(-50%, -50%) scale(1.22);
+  object-fit: cover;
+  filter: blur(48px) saturate(1.3);
+  opacity: .55;
+  border-radius: var(--r-lg);
+  pointer-events: none;
+  user-select: none;
+}
+/* Abaixo de 768px a foto nítida já sangra até a borda da tela (seção 18) —
+   não sobra gutter para o desfoque preencher, e ele nem chega a renderizar
+   (economiza o custo de `filter: blur` num elemento que ficaria invisível). */
+@media (max-width: 767px) { .cover-bleed__bg { display: none; } }
+
+/* PONTE: o `.thumb` da capa agora é NETO de `.media--full` (mora dentro de
+   `.cover-bleed`), então o combinador de filho direto `.media--full > .thumb`
+   da seção 18 não alcança mais ele. Estas duas regras repetem o MESMO
+   tratamento (raio e sombra no desktop, sangria sem raio no celular) pelo
+   caminho novo — nenhum valor novo, só os mesmos tokens pelo seletor certo. */
+@media (min-width: 768px) {
+  .media--full > .cover-bleed > .thumb { border-radius: var(--r-lg); box-shadow: var(--sh-2); }
+}
+@media (max-width: 767px) {
+  .media--full > .cover-bleed > .thumb { border-radius: 0; border-inline: 0; }
+}
+
+/* --- Hero da home: halo ambiente fora do cartão, não sangria total ------ */
+.hero-glow { position: relative; isolation: isolate; }
+.hero-glow__bg {
+  position: absolute;
+  z-index: -1;
+  /* 16px = o menor `padding-inline` que `.container` usa (seção 3, abaixo de
+     768px) e também o menor `gap` do `.hero-layout` (seção 3, abaixo de
+     1024px). Manter o vazamento dentro desse valor garante que o halo nunca
+     ultrapasse a margem que a página já reserva nem toque a coluna
+     secundária de "quentes", em nenhuma largura de tela. */
+  top: -16px; right: -16px; bottom: -16px; left: -16px;
+  width: calc(100% + 32px);
+  height: calc(100% + 32px);
+  object-fit: cover;
+  filter: blur(40px) saturate(1.3);
+  opacity: .45;
+  border-radius: var(--r-lg);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ==========================================================================
+   ==========================================================================
+   22. TAREFA B (UI) — MAIS ANIMAÇÃO: HOVER, MICROINTERAÇÃO, ENTRADA
+   ==========================================================================
+   ==========================================================================
+
+   CSS puro (transition/keyframes) em vez de biblioteca nova: o projeto não
+   tem uma hoje, e o custo de bundle de adicionar uma para efeitos deste
+   tamanho não se paga (mesmo raciocínio de "sem framework novo por causa de
+   um arquivo" que `package.json` já registra para os testes).
+
+   ACESSIBILIDADE: a regra global de `prefers-reduced-motion` (seção 2) zera
+   `animation-duration` e `transition-duration` do site INTEIRO — nada aqui
+   precisa repetir essa guarda por conta própria; quem desliga animação no
+   sistema simplesmente vê os estados finais sem movimento nenhum, em vez de
+   um site quebrado ou desconfortável. */
+
+/* --- Cards do feed: elevação suave no hover, além da borda que já existia */
+.card--grid {
+  transition:
+    transform .22s var(--ease),
+    box-shadow .22s var(--ease),
+    border-color .22s var(--ease),
+    background-color .22s var(--ease);
+}
+.card--grid:hover { transform: translateY(-3px); box-shadow: var(--sh-2); }
+/* O zoom fica no `.thumb`, que já tem `overflow: hidden` (seção 6): a foto
+   cresce dentro da moldura, sem vazar por cima do título ou do badge. */
+.card--grid .thumb > img { transition: transform .5s var(--ease); }
+.card--grid:hover .thumb > img { transform: scale(1.045); }
+
+/* --- Linha do ranking: desliza para a direita, como um item que "acorda" */
+.rank { transition: transform .18s var(--ease), background-color .18s var(--ease), border-color .18s var(--ease); }
+.rank:hover { transform: translateX(4px); }
+
+/* --- Pílula de fandom: a mesma elevação dos cards, numa forma de pílula -- */
+.fandom { transition: transform .18s var(--ease), border-color .18s var(--ease); }
+.fandom:hover { transform: translateY(-2px); }
+
+/* --- Chip (curtir/descurtir, filtros, editorias): "pop" ao pressionar/ativar
+   `.chip[aria-pressed="true"]` cobre o Curtir/Descurtir de `reaction-bar.tsx`
+   — o mesmo seletor que já pinta a pílula preenchida (seção 9) agora também
+   dispara o "pop" no instante em que ela vira a ativa, sem o componente
+   precisar saber nada sobre animação. */
+.chip { transition: transform .15s var(--ease), background-color .15s var(--ease), color .15s var(--ease), border-color .15s var(--ease); }
+.chip:active { transform: scale(.94); }
+.chip[aria-pressed="true"],
+.chip[aria-current="true"] { animation: pop-in .28s var(--ease); }
+@keyframes pop-in {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+/* --- Botão "Seguir"/"Seguindo" (franquia e categoria): mesmo "pop", via
+   `.btn--pulse` — aplicada pelo componente por um instante logo depois do
+   clique (`follow-button.tsx`, `category-follow-button.tsx`). Não dá para
+   usar o mesmo gatilho do `.chip` acima (`[aria-pressed]`): o botão de
+   seguir não usa esse atributo, ele TROCA de classe (`.btn--primary` ↔
+   `.btn--ghost`) e de texto — a troca de classe sozinha não é um "evento"
+   que o CSS possa escutar, por isso o componente marca o instante. */
+.btn--pulse { animation: pop-in .28s var(--ease); }
+
+/* --- Entrada suave do hero ao carregar a home ---------------------------
+   Só translateY + opacity — as duas propriedades mais baratas de animar
+   (compostas pela GPU, sem repintura), o mesmo motivo que já justifica o
+   halo do `.logo__rec` (seção 19.1) e o do ticker. `both` mantém o estado
+   inicial (opacity:0) até a animação começar, evitando um flash do hero no
+   tamanho final antes do primeiro quadro animado. */
+@keyframes hero-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.hero { animation: hero-in .5s var(--ease) both; }
+
+/* --- Botões de compartilhar: pequeno levante no hover -------------------- */
+.share__btn { transition: transform .15s var(--ease), background-color .15s var(--ease); }
+.share__btn:hover { transform: translateY(-2px); }
+
+/* ==========================================================================
+   ==========================================================================
+   23. TAREFA C (UI) — REFINAMENTOS DE HIERARQUIA, ESPAÇAMENTO E COR
+   ==========================================================================
+   ==========================================================================
+
+   Lapidação dentro do vocabulário já existente — nenhum token novo, nenhuma
+   cor fora da paleta da seção 1. */
+
+/* "Mais popular da semana" ganha um painel com o MESMO degradê de
+   `.cta-news` (seção 11: radial de `--brand-soft` + `--surface-1`) em vez de
+   flutuar solta dentro de `.section`. A seção é a única do feed que existe
+   por causa do LEITOR (reações), não do algoritmo — merecia mais peso visual
+   que um card igual aos outros, e reaproveitar a receita do `.cta-news` (em
+   vez de inventar uma nova) mantém a página falando o mesmo idioma visual em
+   vez de introduzir um quarto tom de destaque. */
+.spotlight-panel {
+  background:
+    radial-gradient(90% 140% at 100% 0%, var(--brand-soft), transparent 60%),
+    var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: var(--s-4);
+}
+@media (min-width: 768px) { .spotlight-panel { padding: var(--s-5); } }
+/* Dentro do painel o card não precisa da própria borda/fundo/sombra — o
+   painel já os dá, e as duas superfícies empilhadas achatariam a
+   hierarquia (mesmo raciocínio do `.rank-list--dense` na seção 17.1). */
+.spotlight-panel .card--grid { border: 0; background: none; box-shadow: none; }
+.spotlight-panel .card--grid:hover { background: none; transform: none; box-shadow: none; }
+
+/* A linha fina (`.hero__dek`) ganha um teto de leitura: sem ele, no hero sem
+   coluna secundária (site com uma matéria só, ou o degrau "última
+   publicada") o resumo esticava por até 46rem/1280px de largura em telas
+   grandes — mais que o dobro da medida de leitura confortável que o resto
+   do site usa (`.article`, 44rem) para o MESMO tipo de texto corrido. */
+.hero__dek { max-width: 42rem; }

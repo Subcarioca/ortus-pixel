@@ -21,7 +21,7 @@
  * Exigir cadastro aqui mataria a conversão do gesto mais barato do funil.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type FollowState = 'unknown' | 'following' | 'not-following';
 
@@ -33,6 +33,20 @@ interface FollowButtonProps {
 export function FollowButton({ franchiseSlug, franchiseName }: FollowButtonProps) {
   const [state, setState] = useState<FollowState>('unknown');
   const [pending, setPending] = useState(false);
+  // Microinteração (Tarefa B de UI): um "pop" de ~0,3s toda vez que o estado
+  // muda de verdade — não em toda renderização. `.btn--pulse` só existe
+  // enquanto este timer está de pé; ele mesmo se desliga no fim da animação,
+  // então um segundo clique rápido reinicia o efeito em vez de acumular
+  // `setTimeout`s pendentes (ver `toggle`, abaixo).
+  const [pulsing, setPulsing] = useState(false);
+  const pulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    // Limpa o timer se o botão sair da tela no meio da animação (navegação
+    // rápida entre hubs) — o mesmo cuidado que a busca de estado já tem
+    // acima com `ignore`, aplicado a este segundo efeito.
+    if (pulseTimer.current) clearTimeout(pulseTimer.current);
+  }, []);
 
   useEffect(() => {
     // `ignore` evita atualizar estado depois que o componente saiu da tela
@@ -71,6 +85,16 @@ export function FollowButton({ franchiseSlug, franchiseName }: FollowButtonProps
     // falhou.
     setState(willFollow ? 'following' : 'not-following');
 
+    // "Pop" de confirmação (Tarefa B de UI) — dispara junto da atualização
+    // otimista, não da resposta do servidor: é o clique que precisa parecer
+    // instantâneo, e a resposta de rede já tem sua própria reversão se der
+    // errado (abaixo). Reinicia o timer a cada clique em vez de deixar dois
+    // rodando: um segundo toggle rápido troca a animação em andamento pela
+    // nova, em vez de somar as duas.
+    if (pulseTimer.current) clearTimeout(pulseTimer.current);
+    setPulsing(true);
+    pulseTimer.current = setTimeout(() => setPulsing(false), 280);
+
     try {
       const response = await fetch('/api/follows', {
         method: willFollow ? 'POST' : 'DELETE',
@@ -96,8 +120,11 @@ export function FollowButton({ franchiseSlug, franchiseName }: FollowButtonProps
     <button
       type="button"
       // `.btn--ghost` quando já segue: seguir é a ação PRIMÁRIA (carmim), deixar
-      // de seguir não deve competir visualmente com ela.
-      className={`btn ${isFollowing ? 'btn--ghost' : 'btn--primary'}`}
+      // de seguir não deve competir visualmente com ela. `.btn--pulse` some
+      // sozinha 280ms depois do clique (ver `toggle`) — a mesma microinteração
+      // do `.chip` de curtir, aplicada a um botão que muda de classe em vez de
+      // `aria-pressed` (ortuspixel.css §22).
+      className={`btn ${isFollowing ? 'btn--ghost' : 'btn--primary'}${pulsing ? ' btn--pulse' : ''}`}
       onClick={toggle}
       disabled={state === 'unknown' || pending}
       aria-busy={state === 'unknown' || pending}

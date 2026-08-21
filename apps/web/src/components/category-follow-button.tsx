@@ -11,7 +11,7 @@
  * endpoint (`/api/category-follows`) e o campo do corpo (`categorySlug`).
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 type FollowState = 'unknown' | 'following' | 'not-following';
 
@@ -23,6 +23,15 @@ interface CategoryFollowButtonProps {
 export function CategoryFollowButton({ categorySlug, categoryName }: CategoryFollowButtonProps) {
   const [state, setState] = useState<FollowState>('unknown');
   const [pending, setPending] = useState(false);
+  // Microinteração (Tarefa B de UI) — mesmo padrão de `follow-button.tsx`,
+  // que tem o racional completo: um "pop" de ~0,3s a cada troca de estado de
+  // verdade, com o timer reiniciado a cada clique.
+  const [pulsing, setPulsing] = useState(false);
+  const pulseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (pulseTimer.current) clearTimeout(pulseTimer.current);
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -50,6 +59,10 @@ export function CategoryFollowButton({ categorySlug, categoryName }: CategoryFol
     setPending(true);
     setState(willFollow ? 'following' : 'not-following');
 
+    if (pulseTimer.current) clearTimeout(pulseTimer.current);
+    setPulsing(true);
+    pulseTimer.current = setTimeout(() => setPulsing(false), 280);
+
     try {
       const response = await fetch('/api/category-follows', {
         method: willFollow ? 'POST' : 'DELETE',
@@ -72,7 +85,7 @@ export function CategoryFollowButton({ categorySlug, categoryName }: CategoryFol
   return (
     <button
       type="button"
-      className={`btn ${isFollowing ? 'btn--ghost' : 'btn--primary'}`}
+      className={`btn ${isFollowing ? 'btn--ghost' : 'btn--primary'}${pulsing ? ' btn--pulse' : ''}`}
       onClick={toggle}
       disabled={state === 'unknown' || pending}
       aria-busy={state === 'unknown' || pending}

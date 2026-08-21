@@ -296,6 +296,31 @@ export default async function HomePage() {
             className={heroHasSideColumn ? 'hero-layout' : undefined}
             aria-labelledby="hero-titulo"
           >
+            {/*
+              `.hero-glow` (Tarefa A de UI) — halo ambiente FORA do cartão do
+              hero, não dentro dele: `.hero` tem `overflow: hidden` (é o que dá
+              os cantos arredondados e sustenta o recorte de rosto documentado
+              logo abaixo), então um desfoque nascido dentro do cartão ficaria
+              atrás da própria foto e nunca apareceria. Este `<Image>` extra é
+              a MESMA foto (mesmo `src`/`width`/`height`/`sizes` do `<Image>`
+              nítido dentro do `.hero__media`), decorativa e sem `priority` —
+              o Next gera a mesma URL otimizada para os dois, e o navegador
+              reaproveita o download em vez de duplicá-lo. Racional completo
+              (incluindo por que o vazamento é pequeno e contido, ao contrário
+              da capa da matéria) em ortuspixel.css §21.
+            */}
+            <div className="hero-glow">
+              {leadStory.coverImageUrl && (
+                <Image
+                  src={leadStory.coverImageUrl}
+                  alt=""
+                  aria-hidden="true"
+                  width={1280}
+                  height={720}
+                  sizes="(max-width: 1024px) 100vw, 66vw"
+                  className="hero-glow__bg"
+                />
+              )}
             <article className="hero">
               {leadStory.coverImageUrl && (
                 <div className="hero__media">
@@ -425,6 +450,7 @@ export default async function HomePage() {
                 </footer>
               </div>
             </article>
+            </div>
 
             {/* Demais "quentes" (o teto de 3 já foi aplicado no servidor).
                 No protótipo esta coluna é `.stack` — o utilitário de empilhar
@@ -496,14 +522,21 @@ export default async function HomePage() {
                 </p>
               </div>
             </div>
-            <ArticleCard
-              item={popularWeek}
-              variant="lead"
-              showReactionCount
-              // Ver `lcpCandidateId`: só entra em cena quando nem o hero nem os
-              // quentes secundários renderizaram foto nenhuma acima daqui.
-              priority={popularWeek.id === lcpCandidateId}
-            />
+            {/* `.spotlight-panel` (Tarefa C de UI): esta é a única seção do
+                feed movida pelo LEITOR, não pelo algoritmo — reaproveita o
+                degradê de `.cta-news` (ortuspixel.css §23) para dar a ela mais
+                peso visual que um card solto dentro de `.section`, sem
+                inventar um quarto tom de destaque no vocabulário do site. */}
+            <div className="spotlight-panel">
+              <ArticleCard
+                item={popularWeek}
+                variant="lead"
+                showReactionCount
+                // Ver `lcpCandidateId`: só entra em cena quando nem o hero nem os
+                // quentes secundários renderizaram foto nenhuma acima daqui.
+                priority={popularWeek.id === lcpCandidateId}
+              />
+            </div>
           </section>
         )}
 

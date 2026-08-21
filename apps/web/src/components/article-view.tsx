@@ -450,25 +450,53 @@ export async function ArticleView({ data, mode = 'public' }: ArticleViewProps) {
               um destaque bem maior".
 
               A moldura 16:9 e o recorte continuam vindo do `.thumb`; a foto
-              real entra pela ponte `.thumb > img` da seção 17 do CSS. */}
+              real entra pela ponte `.thumb > img` da seção 17 do CSS.
+
+              SANGRIA/DESFOQUE (Tarefa A) — `.cover-bleed` embrulha só o
+              `.thumb`, não a `<figure>` inteira: a legenda fica DE FORA dessa
+              embalagem de propósito, senão a camada desfocada (que usa
+              `height: 100%` do que a envolve) esticaria por trás do texto da
+              legenda também, em vez de parar exatamente onde a foto acaba.
+              A camada é um SEGUNDO `<Image>` do Next com o MESMO `src`/
+              `width`/`height`/`sizes` da foto nítida logo abaixo — não um
+              `background-image` com a URL crua, que bateria num endereço
+              diferente (fora do otimizador do Next) e baixaria a foto de
+              novo, do tamanho original. Com os quatro parâmetros iguais, as
+              duas tags viram a MESMA URL otimizada e o navegador reaproveita
+              a resposta em vez de duplicar o download (conferido na aba Rede
+              do DevTools: uma única requisição para o arquivo da capa).
+              Decorativa (`alt=""`, `aria-hidden`) e sem `priority` — a foto
+              nítida continua sendo a ÚNICA imagem prioritária da página. Ver
+              o racional completo em ortuspixel.css §21. */}
           {article.coverImageUrl && (
             <figure className="media media--full article__cover">
-              <div className="thumb" data-c={catToken(categoria)}>
+              <div className="cover-bleed">
                 <Image
                   src={article.coverImageUrl}
-                  alt={article.coverImageAlt ?? ''}
+                  alt=""
+                  aria-hidden="true"
                   width={1200}
                   height={675}
-                  // Imagem de capa do artigo: é o elemento de LCP desta página.
-                  priority
-                  // O `sizes` acompanha a nova largura: abaixo de 1136px a foto
-                  // ocupa a janela inteira (sangria no celular, teto de
-                  // `100vw - 48px` no tablet); acima disso ela trava em 1088px,
-                  // que é o valor de `--media-max` do `.media--full`. Errar
-                  // este número é pedir ao navegador o arquivo errado — grande
-                  // demais custa banda, pequeno demais borra a capa.
                   sizes="(min-width: 1136px) 1088px, 100vw"
+                  className="cover-bleed__bg"
                 />
+                <div className="thumb" data-c={catToken(categoria)}>
+                  <Image
+                    src={article.coverImageUrl}
+                    alt={article.coverImageAlt ?? ''}
+                    width={1200}
+                    height={675}
+                    // Imagem de capa do artigo: é o elemento de LCP desta página.
+                    priority
+                    // O `sizes` acompanha a nova largura: abaixo de 1136px a foto
+                    // ocupa a janela inteira (sangria no celular, teto de
+                    // `100vw - 48px` no tablet); acima disso ela trava em 1088px,
+                    // que é o valor de `--media-max` do `.media--full`. Errar
+                    // este número é pedir ao navegador o arquivo errado — grande
+                    // demais custa banda, pequeno demais borra a capa.
+                    sizes="(min-width: 1136px) 1088px, 100vw"
+                  />
+                </div>
               </div>
               {article.coverImageAlt && <figcaption>{article.coverImageAlt}</figcaption>}
             </figure>

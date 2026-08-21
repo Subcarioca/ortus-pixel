@@ -156,28 +156,28 @@ export async function POST(request: Request) {
   }
 
   /**
-   * A CONFIRMAÇÃO GANHOU UMA SEGUNDA FRASE — o aviso de resolução.
+   * `message` FICOU SÓ COM A CONFIRMAÇÃO — o aviso de resolução saiu daqui.
    *
    * Motivo (investigação da queixa "as imagens das matérias estão pixeladas"):
    * esta rota não redimensiona nem recomprime nada, então a nitidez final da
-   * capa é EXATAMENTE a do arquivo que chegou aqui. Uma capa de 900px é
-   * esticada pelo navegador em qualquer tela de alta densidade, e não existe
-   * ajuste de front-end que conserte isso depois. O racional completo, o porquê
-   * de avisar em vez de recusar e os números dos limiares estão em
-   * `coverResolutionAdvice` (server/upload-rules.ts).
+   * capa é EXATAMENTE a do arquivo que chegou aqui. O racional completo, o
+   * porquê de avisar em vez de recusar e os números dos limiares estão em
+   * `coverResolutionAdvice` (`lib/cover-resolution.ts`, reexportado por
+   * `server/upload-rules.ts`).
    *
-   * As dimensões vão no corpo além do texto: a tela de hoje só mostra
-   * `message`, mas o dado bruto é o que permite a qualquer tela futura decidir
-   * sozinha o que fazer com ele.
+   * ATÉ AQUI o aviso vinha embutido NESTA frase — mas só cobria quem ENVIAVA
+   * arquivo. Quem colava a URL de uma imagem já hospedada nunca passava por
+   * nenhuma checagem (esta rota não roda para esse caminho). Agora
+   * `components/admin/image-url-field.tsx` calcula o mesmo aviso, dos dois
+   * lados, lendo `naturalWidth` da própria prévia — sem round-trip ao
+   * servidor. Manter o texto aqui TAMBÉM duplicaria o mesmo aviso na tela
+   * logo abaixo de si mesmo. `width`/`height` continuam no corpo por prever
+   * consumidor futuro que não seja este campo.
    */
-  const message = saved.resolutionAdvice
-    ? `Imagem enviada (${(saved.bytes / 1024).toFixed(0)} KB). ${saved.resolutionAdvice}`
-    : `Imagem enviada (${(saved.bytes / 1024).toFixed(0)} KB).`;
-
   return NextResponse.json({
     ok: true,
     url: saved.url,
-    message,
+    message: `Imagem enviada (${(saved.bytes / 1024).toFixed(0)} KB).`,
     width: saved.dimensions?.width ?? null,
     height: saved.dimensions?.height ?? null,
     accepted: ACCEPTED_IMAGE_EXTENSIONS,

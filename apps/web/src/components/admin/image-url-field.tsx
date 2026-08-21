@@ -31,6 +31,8 @@
 
 import { useRef, useState } from 'react';
 
+import { coverResolutionAdvice } from '@/lib/cover-resolution';
+
 interface ImageUrlFieldProps {
   label: string;
   value: string;
@@ -45,6 +47,18 @@ export function ImageUrlField({ label, value, onChange, className, hint }: Image
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  /**
+   * AVISO DE RESOLUÇÃO, LIDO DA PRÓPRIA PRÉVIA — cobre os DOIS caminhos do
+   * campo (arquivo enviado e URL colada), e não só o primeiro.
+   *
+   * O envio de arquivo já tem esse aviso vindo do servidor (`message`, acima —
+   * ver o racional em `server/upload-rules.ts`), mas colar a URL de uma imagem
+   * já hospedada nunca passava por nenhuma checagem: o servidor não baixa
+   * imagem alheia só para medir pixel. Aqui não precisa — a prévia abaixo já
+   * carrega a imagem, então `naturalWidth` está de graça, sem round-trip
+   * nenhum. `null` = ainda não sabemos (prévia não carregou) ou está boa.
+   */
+  const [resolutionAdvice, setResolutionAdvice] = useState<string | null>(null);
 
   async function upload(file: File) {
     if (busy) return;
@@ -87,7 +101,13 @@ export function ImageUrlField({ label, value, onChange, className, hint }: Image
         <input
           type="text"
           value={value}
-          onChange={(event) => onChange(event.target.value)}
+          onChange={(event) => {
+            onChange(event.target.value);
+            // O valor mudou: o aviso de resolução anterior (se havia) é sobre
+            // outra imagem. Some com ele agora — a prévia recalcula no `onLoad`
+            // quando a nova URL terminar de carregar.
+            setResolutionAdvice(null);
+          }}
           placeholder="https://... ou envie um arquivo abaixo"
         />
       </label>
@@ -114,6 +134,7 @@ export function ImageUrlField({ label, value, onChange, className, hint }: Image
             onClick={() => {
               onChange('');
               setMessage(null);
+              setResolutionAdvice(null);
             }}
             disabled={busy}
           >
@@ -134,6 +155,17 @@ export function ImageUrlField({ label, value, onChange, className, hint }: Image
         </p>
       )}
 
+      {/* Ver o comentário de `resolutionAdvice` acima: cobre tanto o arquivo
+          enviado (que já tinha `message`, do servidor) quanto a URL colada
+          (que nunca tinha aviso nenhum até agora). `role="status"` e não
+          `"alert"` pelo mesmo motivo de `message`: não é erro, é conselho —
+          não interrompe quem está lendo o resto da tela com o leitor de tela. */}
+      {resolutionAdvice && (
+        <p className="form-hint form-hint--warning" role="status">
+          {resolutionAdvice}
+        </p>
+      )}
+
       {hint && <p className="form-hint">{hint}</p>}
 
       {value && (
@@ -146,11 +178,25 @@ export function ImageUrlField({ label, value, onChange, className, hint }: Image
           // na prévia faria o leitor de tela anunciar a mesma coisa duas vezes.
           className="admin-image-preview"
           style={{ maxWidth: '220px', maxHeight: '140px', objectFit: 'cover', marginTop: '8px' }}
+          onLoad={(event) => {
+            const img = event.currentTarget;
+            // `naturalWidth`/`naturalHeight` são os pixels REAIS do arquivo,
+            // não o tamanho exibido pela prévia (que está limitada a 220×140
+            // pelo `style` acima) — é exatamente o dado que
+            // `coverResolutionAdvice` precisa, e o navegador já mediu de
+            // graça ao decodificar a imagem para desenhar a prévia.
+            setResolutionAdvice(
+              coverResolutionAdvice({ width: img.naturalWidth, height: img.naturalHeight }),
+            );
+          }}
           onError={(event) => {
             // Imagem que não carrega some da tela em vez de deixar o ícone de
             // quebrado: o campo já mostra a URL, e um ícone de erro sugeriria
             // falha do sistema quando o mais provável é URL ainda incompleta.
             event.currentTarget.style.display = 'none';
+            // Sem dimensão nenhuma para avaliar — mesma lógica de
+            // `coverResolutionAdvice(null)`: silêncio é a resposta certa.
+            setResolutionAdvice(null);
           }}
         />
       )}

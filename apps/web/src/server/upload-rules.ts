@@ -1,5 +1,14 @@
 import path from 'node:path';
 
+import {
+  COVER_WIDTH_GOOD,
+  COVER_WIDTH_POOR,
+  coverResolutionAdvice,
+  type ImageDimensions,
+} from '@/lib/cover-resolution';
+
+export { COVER_WIDTH_GOOD, COVER_WIDTH_POOR, coverResolutionAdvice, type ImageDimensions };
+
 /**
  * =============================================================================
  * REGRAS DE UPLOAD — as decisões, sem nenhum efeito colateral
@@ -331,9 +340,14 @@ export function mimeTypeForStoredFile(filePath: string): string {
  * uma quinta-feira, em nome da nitidez, é o tipo de regra que faz alguém
  * publicar sem imagem nenhuma — resultado pior que uma imagem macia.
  *
- * Então a rota devolve um TEXTO junto da confirmação, e a tela do painel já o
- * exibe (`components/admin/image-url-field.tsx` mostra `message`, seja qual
- * for). Custo de implementação: zero de interface.
+ * Então em vez de recusar, avisamos — e o aviso cobre os DOIS caminhos do
+ * campo de imagem (arquivo enviado e URL colada), não só o primeiro:
+ * `coverResolutionAdvice` mora em `lib/cover-resolution.ts` (sem `node:path`,
+ * de propósito) justamente para que `components/admin/image-url-field.tsx`
+ * possa chamá-la direto no cliente, lendo `naturalWidth` da própria prévia —
+ * sem depender desta rota, que só existe para quem ENVIA arquivo. Este
+ * módulo reexporta os três nomes por compatibilidade com quem já os importa
+ * daqui (ver `uploads.ts`, `upload-rules.test.ts`).
  *
  * -----------------------------------------------------------------------------
  * POR QUE UM LEITOR DE CABEÇALHO PRÓPRIO, E NÃO `sharp`/`image-size`
@@ -348,60 +362,6 @@ export function mimeTypeForStoredFile(filePath: string): string {
  * suíte de `node --test` que este módulo já tem — que é justamente a razão de
  * ele existir separado de `uploads.ts`.
  */
-
-export interface ImageDimensions {
-  width: number;
-  height: number;
-}
-
-/**
- * Largura abaixo da qual a imagem fica visivelmente esticada MESMO em tela
- * comum (densidade 1). A capa ocupa 1088px de CSS no desktop; com folga para o
- * recorte 16:9 do `.thumb`, 1200 é o piso honesto.
- */
-const COVER_WIDTH_POOR = 1200;
-
-/**
- * Largura a partir da qual a capa se sustenta em tela de alta densidade.
- *
- * O ideal aritmético seria 2176 (1088 × 2), mas exigir isso de uma redação com
- * teto de 1,8 MB por arquivo seria uma recomendação que ninguém consegue
- * cumprir — e recomendação impossível é ignorada por inteiro, inclusive quando
- * o caso é grave. 1600 é o número que cobre o desktop a 150% de escala (o
- * cenário mais comum no Windows) e reduz muito o esticamento a 2×.
- */
-const COVER_WIDTH_GOOD = 1600;
-
-/**
- * Conselho de resolução para exibir junto da confirmação de envio.
- *
- * `null` quando não há nada útil a dizer — e isso inclui o caso em que não
- * conseguimos ler as dimensões. Um "não consegui medir sua imagem" seria ruído
- * puro para quem está fechando uma matéria: a informação não muda nada do que
- * a pessoa pode fazer.
- */
-export function coverResolutionAdvice(dimensions: ImageDimensions | null): string | null {
-  if (!dimensions) return null;
-
-  const { width } = dimensions;
-
-  if (width < COVER_WIDTH_POOR) {
-    return (
-      `⚠ Esta imagem tem só ${width}px de largura. Como capa de matéria ela vai aparecer ` +
-      `esticada até em tela comum (a capa é exibida com até 1088px). Se for a CAPA, procure ` +
-      `uma versão com ${COVER_WIDTH_GOOD}px ou mais; se for ilustração no meio do texto, está de bom tamanho.`
-    );
-  }
-
-  if (width < COVER_WIDTH_GOOD) {
-    return (
-      `Esta imagem tem ${width}px de largura: suficiente para tela comum, mas macia em celular ` +
-      `e notebook de alta resolução. Como capa, o ideal é ${COVER_WIDTH_GOOD}px ou mais.`
-    );
-  }
-
-  return null;
-}
 
 /**
  * Largura e altura a partir dos PRIMEIROS BYTES do arquivo — sem decodificar a

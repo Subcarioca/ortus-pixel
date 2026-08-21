@@ -298,6 +298,13 @@
   font-size: var(--fs-xxs);
 }
 
+/* Aviso de resolução de capa (`image-url-field.tsx`, `cover-resolution.ts`):
+   não é erro — o envio não é recusado —, então não usa `--heat-hot-text`
+   (vermelho reservado a urgência/falha real). É a mesma cor de "em alta"
+   morno (`--heat-rise-text`), e o texto do próprio aviso já carrega o "⚠" e
+   a explicação por extenso: cor nunca é o único sinal. */
+.form-hint--warning { color: var(--heat-rise-text); font-weight: 600; }
+
 /* A etiqueta de gravidade NUNCA é só cor: ela carrega a palavra ("Alto risco",
    "Atenção"). Cor sozinha não chega a quem não a enxerga — e é a mesma regra já
    aplicada em `.form-hint--error`. */

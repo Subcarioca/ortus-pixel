@@ -8,7 +8,9 @@ import {
   ACCEPTED_IMAGE_EXTENSIONS,
   MAX_UPLOAD_BYTES,
   UPLOAD_URL_PREFIX,
+  coverResolutionAdvice,
   detectImageFormat,
+  imageDimensions,
   uploadRoot,
 } from './upload-rules';
 
@@ -121,16 +123,41 @@ export {
   ACCEPTED_IMAGE_MIME_TYPES,
   MAX_UPLOAD_BYTES,
   UPLOAD_URL_PREFIX,
+  coverResolutionAdvice,
   detectImageFormat,
+  imageDimensions,
   mimeTypeForStoredFile,
   resolveUploadPath,
   uploadRoot,
+  type ImageDimensions,
   type ResolvedUploadPath,
   type UploadRootResult,
 } from './upload-rules';
 
 export type SaveImageResult =
-  | { ok: true; url: string; bytes: number; mimeType: string }
+  | {
+      ok: true;
+      url: string;
+      bytes: number;
+      mimeType: string;
+      /**
+       * Dimensões lidas do cabeçalho do arquivo, ou `null` quando o formato não
+       * permitiu ler com segurança. Ver `imageDimensions` em `upload-rules.ts`.
+       */
+      dimensions: { width: number; height: number } | null;
+      /**
+       * Texto para a redação quando a imagem chegou pequena demais para servir
+       * de capa — `null` quando não há nada útil a dizer.
+       *
+       * ELE VIAJA SEPARADO da mensagem de sucesso de propósito: quem monta o
+       * texto que vai para a tela é a ROTA (é ela que já compõe "Imagem enviada
+       * (N KB)"), e este módulo continua respondendo só sobre o arquivo. Se um
+       * dia outra tela quiser tratar o aviso de outro jeito — destacar em
+       * amarelo, oferecer "enviar outra" —, ela tem o campo, não uma frase
+       * concatenada que precisaria ser desmontada.
+       */
+      resolutionAdvice: string | null;
+    }
   | { ok: false; message: string };
 
 /**
@@ -213,11 +240,24 @@ export async function saveUploadedImage(file: {
   await mkdir(directory, { recursive: true });
   await writeFile(path.join(directory, name), file.bytes, { flag: 'wx' });
 
+  /**
+   * A MEDIÇÃO ACONTECE DEPOIS DA GRAVAÇÃO, E ISSO É DELIBERADO.
+   *
+   * Resolução baixa NÃO é motivo para recusar o arquivo (o racional está em
+   * `coverResolutionAdvice`, em upload-rules.ts: numa redação, bloquear a única
+   * imagem disponível produz matéria sem imagem, que é pior). Como a leitura
+   * não pode mudar o desfecho, ela fica depois — assim nenhum bug futuro nesse
+   * parser tem como impedir um upload legítimo.
+   */
+  const dimensions = imageDimensions(file.bytes);
+
   return {
     ok: true,
     url: `${UPLOAD_URL_PREFIX}${folder}/${name}`,
     bytes: file.bytes.length,
     mimeType: format.mimeType,
+    dimensions,
+    resolutionAdvice: coverResolutionAdvice(dimensions),
   };
 }
 

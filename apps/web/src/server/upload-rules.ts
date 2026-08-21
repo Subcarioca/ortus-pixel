@@ -295,3 +295,335 @@ export function mimeTypeForStoredFile(filePath: string): string {
   const extension = path.extname(filePath).slice(1).toLowerCase();
   return IMAGE_FORMATS.find((f) => f.extension === extension)?.mimeType ?? 'application/octet-stream';
 }
+
+/**
+ * =============================================================================
+ * RESOLUÇÃO DA IMAGEM ENVIADA — a metade da pixelização que só se resolve aqui
+ * =============================================================================
+ *
+ * O PROBLEMA, EM UMA FRASE: nenhuma configuração de front-end torna nítida uma
+ * imagem que chegou pequena.
+ *
+ * O contexto completo está em `next.config.ts` (bloco `images`), mas o resumo é
+ * este: a capa de matéria é exibida com até 1088px de LARGURA EM CSS, e um
+ * navegador em tela de alta densidade multiplica isso pela densidade —
+ * 1,5× no Windows a 150%, 2× num notebook retina, até 3× no celular. Uma capa
+ * enviada com 900px de largura é esticada em TODOS esses casos, e não existe
+ * `deviceSizes`, `quality` ou `sizes` que conserte: o otimizador do Next nunca
+ * amplia além do arquivo de origem (e faz bem — ampliar só produziria um
+ * arquivo maior igualmente borrado).
+ *
+ * POR QUE ISSO ESTAVA ACONTECENDO DE FORMA SISTEMÁTICA: este projeto NÃO
+ * processa a imagem no upload (sem `sharp`, sem redimensionamento, sem
+ * recompressão — ver `uploads.ts`), e o teto é de 1,8 MB. A combinação empurra
+ * a redação a encolher a imagem no computador antes de enviar, que é
+ * exatamente o passo em que a resolução se perde — e ninguém percebe, porque no
+ * monitor de quem enviou a prévia de 220px do painel fica ótima.
+ *
+ * -----------------------------------------------------------------------------
+ * A ESCOLHA: AVISAR, NUNCA RECUSAR
+ * -----------------------------------------------------------------------------
+ * A tentação é barrar o envio abaixo de um mínimo. Seria errado por dois
+ * motivos concretos. Primeiro, nem toda imagem enviada é capa: o editor de
+ * blocos usa a mesma rota para ilustração de miolo, print de tuíte e recorte de
+ * tabela, onde 700px é o tamanho certo. Segundo, e mais importante: isto é uma
+ * redação de notícia. Bloquear o único frame disponível de um vídeo às 23h de
+ * uma quinta-feira, em nome da nitidez, é o tipo de regra que faz alguém
+ * publicar sem imagem nenhuma — resultado pior que uma imagem macia.
+ *
+ * Então a rota devolve um TEXTO junto da confirmação, e a tela do painel já o
+ * exibe (`components/admin/image-url-field.tsx` mostra `message`, seja qual
+ * for). Custo de implementação: zero de interface.
+ *
+ * -----------------------------------------------------------------------------
+ * POR QUE UM LEITOR DE CABEÇALHO PRÓPRIO, E NÃO `sharp`/`image-size`
+ * -----------------------------------------------------------------------------
+ * `sharp` existe na árvore de dependências (é opcional do Next, usado pelo
+ * otimizador), mas depender dele AQUI significaria declará-lo como dependência
+ * direta do app e passar a carregar um binário nativo numa rota de upload que
+ * hoje não tem nenhum — numa hospedagem compartilhada onde o processo Node é o
+ * mesmo que serve o site. Ler os primeiros bytes do arquivo responde a pergunta
+ * que precisamos responder ("quantos pixels tem?") sem decodificar a imagem,
+ * sem alocar bitmap e sem dependência nova. E, como é função pura, entra na
+ * suíte de `node --test` que este módulo já tem — que é justamente a razão de
+ * ele existir separado de `uploads.ts`.
+ */
+
+export interface ImageDimensions {
+  width: number;
+  height: number;
+}
+
+/**
+ * Largura abaixo da qual a imagem fica visivelmente esticada MESMO em tela
+ * comum (densidade 1). A capa ocupa 1088px de CSS no desktop; com folga para o
+ * recorte 16:9 do `.thumb`, 1200 é o piso honesto.
+ */
+const COVER_WIDTH_POOR = 1200;
+
+/**
+ * Largura a partir da qual a capa se sustenta em tela de alta densidade.
+ *
+ * O ideal aritmético seria 2176 (1088 × 2), mas exigir isso de uma redação com
+ * teto de 1,8 MB por arquivo seria uma recomendação que ninguém consegue
+ * cumprir — e recomendação impossível é ignorada por inteiro, inclusive quando
+ * o caso é grave. 1600 é o número que cobre o desktop a 150% de escala (o
+ * cenário mais comum no Windows) e reduz muito o esticamento a 2×.
+ */
+const COVER_WIDTH_GOOD = 1600;
+
+/**
+ * Conselho de resolução para exibir junto da confirmação de envio.
+ *
+ * `null` quando não há nada útil a dizer — e isso inclui o caso em que não
+ * conseguimos ler as dimensões. Um "não consegui medir sua imagem" seria ruído
+ * puro para quem está fechando uma matéria: a informação não muda nada do que
+ * a pessoa pode fazer.
+ */
+export function coverResolutionAdvice(dimensions: ImageDimensions | null): string | null {
+  if (!dimensions) return null;
+
+  const { width } = dimensions;
+
+  if (width < COVER_WIDTH_POOR) {
+    return (
+      `⚠ Esta imagem tem só ${width}px de largura. Como capa de matéria ela vai aparecer ` +
+      `esticada até em tela comum (a capa é exibida com até 1088px). Se for a CAPA, procure ` +
+      `uma versão com ${COVER_WIDTH_GOOD}px ou mais; se for ilustração no meio do texto, está de bom tamanho.`
+    );
+  }
+
+  if (width < COVER_WIDTH_GOOD) {
+    return (
+      `Esta imagem tem ${width}px de largura: suficiente para tela comum, mas macia em celular ` +
+      `e notebook de alta resolução. Como capa, o ideal é ${COVER_WIDTH_GOOD}px ou mais.`
+    );
+  }
+
+  return null;
+}
+
+/**
+ * Largura e altura a partir dos PRIMEIROS BYTES do arquivo — sem decodificar a
+ * imagem.
+ *
+ * Cobre os cinco formatos que `IMAGE_FORMATS` aceita. `null` significa "não
+ * consegui ler com segurança", e é o retorno certo para qualquer dúvida: esta
+ * função alimenta um AVISO, então um palpite errado seria pior que o silêncio
+ * (mandaria alguém trocar uma imagem que estava boa, ou aprovaria uma ruim).
+ *
+ * Ela nunca lança e nunca lê fora dos limites do buffer: recebe bytes vindos da
+ * internet, e um arquivo truncado ou deliberadamente malformado precisa
+ * resultar em `null`, não em exceção dentro da rota de upload.
+ */
+export function imageDimensions(bytes: Uint8Array): ImageDimensions | null {
+  const format = detectImageFormat(bytes);
+  if (!format) return null;
+
+  switch (format.extension) {
+    case 'png':
+      return pngDimensions(bytes);
+    case 'gif':
+      return gifDimensions(bytes);
+    case 'jpg':
+      return jpegDimensions(bytes);
+    case 'webp':
+      return webpDimensions(bytes);
+    case 'avif':
+      return avifDimensions(bytes);
+    default:
+      return null;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Leitores de inteiro com verificação de limite.
+//
+// Cada um devolve `null` quando o buffer acaba antes — é o que transforma
+// "arquivo truncado" em `null` lá em cima, em vez de `NaN` se propagando pelos
+// cálculos até virar um aviso absurdo ("sua imagem tem NaN px").
+// -----------------------------------------------------------------------------
+
+function u16be(b: Uint8Array, at: number): number | null {
+  if (at + 1 >= b.length) return null;
+  return ((b[at] as number) << 8) | (b[at + 1] as number);
+}
+
+function u16le(b: Uint8Array, at: number): number | null {
+  if (at + 1 >= b.length) return null;
+  return (b[at] as number) | ((b[at + 1] as number) << 8);
+}
+
+function u24le(b: Uint8Array, at: number): number | null {
+  if (at + 2 >= b.length) return null;
+  return (b[at] as number) | ((b[at + 1] as number) << 8) | ((b[at + 2] as number) << 16);
+}
+
+function u32be(b: Uint8Array, at: number): number | null {
+  if (at + 3 >= b.length) return null;
+  // `>>> 0` porque um valor com o bit mais alto ligado viraria negativo no
+  // deslocamento com sinal do JavaScript.
+  return (
+    (((b[at] as number) << 24) |
+      ((b[at + 1] as number) << 16) |
+      ((b[at + 2] as number) << 8) |
+      (b[at + 3] as number)) >>>
+    0
+  );
+}
+
+/** Só aceita um par que faça sentido como imagem de verdade. */
+function validated(width: number | null, height: number | null): ImageDimensions | null {
+  if (width === null || height === null) return null;
+  if (!Number.isFinite(width) || !Number.isFinite(height)) return null;
+  if (width <= 0 || height <= 0) return null;
+  // Teto de sanidade: acima disso é cabeçalho corrompido lido como número, não
+  // uma foto. (O maior sensor de câmera comercial não passa de ~15.000px.)
+  if (width > 100_000 || height > 100_000) return null;
+  return { width, height };
+}
+
+/**
+ * PNG: o IHDR é OBRIGATORIAMENTE o primeiro chunk, então as posições são fixas.
+ * 8 bytes de assinatura + 4 de tamanho + 4 de tipo = largura no byte 16.
+ */
+function pngDimensions(b: Uint8Array): ImageDimensions | null {
+  return validated(u32be(b, 16), u32be(b, 20));
+}
+
+/** GIF: o "logical screen descriptor" vem logo depois dos 6 bytes de versão. */
+function gifDimensions(b: Uint8Array): ImageDimensions | null {
+  return validated(u16le(b, 6), u16le(b, 8));
+}
+
+/**
+ * JPEG: não há posição fixa. É preciso percorrer os segmentos até achar um
+ * "Start Of Frame", que é o único que carrega as dimensões.
+ *
+ * Os marcadores C4 (tabela de Huffman), C8 (extensão JPEG) e CC (codificação
+ * aritmética) estão na mesma faixa numérica dos SOF e NÃO são SOF — confundi-los
+ * é o erro clássico deste parser e produziria dimensões aleatórias.
+ */
+function jpegDimensions(b: Uint8Array): ImageDimensions | null {
+  // Começa depois do SOI (FF D8).
+  let at = 2;
+
+  while (at + 3 < b.length) {
+    // Todo marcador começa com FF. Bytes FF repetidos são preenchimento legal.
+    if (b[at] !== 0xff) {
+      at += 1;
+      continue;
+    }
+
+    const marker = b[at + 1] as number;
+    if (marker === 0xff) {
+      at += 1;
+      continue;
+    }
+
+    // Marcadores sem carga: SOI, EOI e os RSTn.
+    if (marker === 0xd8 || marker === 0xd9 || (marker >= 0xd0 && marker <= 0xd7)) {
+      at += 2;
+      continue;
+    }
+
+    const length = u16be(b, at + 2);
+    if (length === null || length < 2) return null;
+
+    const isStartOfFrame =
+      marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
+
+    if (isStartOfFrame) {
+      // Dentro do SOF: [tamanho:2][precisão:1][altura:2][largura:2]
+      return validated(u16be(b, at + 7), u16be(b, at + 5));
+    }
+
+    // SOS (FF DA) marca o início dos dados comprimidos: se chegamos aqui sem
+    // achar o SOF, não vamos achar depois.
+    if (marker === 0xda) return null;
+
+    at += 2 + length;
+  }
+
+  return null;
+}
+
+/**
+ * WebP: três codificações possíveis dentro do mesmo contêiner RIFF, cada uma
+ * guardando o tamanho de um jeito. O tipo está nos 4 bytes do byte 12.
+ */
+function webpDimensions(b: Uint8Array): ImageDimensions | null {
+  const chunk = ascii(b, 12, 4);
+
+  // VP8X (estendido, usado por WebP animado ou com canal alfa/metadados):
+  // depois do cabeçalho do chunk (8 bytes) vêm 4 bytes de flags e então a
+  // largura e a altura da TELA, cada uma em 24 bits, guardadas como (valor - 1).
+  if (chunk === 'VP8X') {
+    const width = u24le(b, 24);
+    const height = u24le(b, 27);
+    return validated(width === null ? null : width + 1, height === null ? null : height + 1);
+  }
+
+  // VP8 (lossy): o "sync code" 9D 01 2A confirma que estamos no lugar certo; as
+  // dimensões vêm logo depois, em 14 bits úteis cada (os 2 bits altos são a
+  // escala, que não interessa aqui).
+  if (chunk === 'VP8 ') {
+    if (b[23] !== 0x9d || b[24] !== 0x01 || b[25] !== 0x2a) return null;
+    const rawWidth = u16le(b, 26);
+    const rawHeight = u16le(b, 28);
+    return validated(
+      rawWidth === null ? null : rawWidth & 0x3fff,
+      rawHeight === null ? null : rawHeight & 0x3fff,
+    );
+  }
+
+  // VP8L (lossless): 1 byte de assinatura (0x2F) e então 28 bits contendo
+  // (largura - 1) em 14 bits e (altura - 1) nos 14 seguintes, em little-endian
+  // de bits. Montamos um inteiro de 32 bits e fatiamos.
+  if (chunk === 'VP8L') {
+    if (b[20] !== 0x2f) return null;
+    if (24 >= b.length) return null;
+    const bits =
+      ((b[21] as number) |
+        ((b[22] as number) << 8) |
+        ((b[23] as number) << 16) |
+        ((b[24] as number) << 24)) >>>
+      0;
+    return validated((bits & 0x3fff) + 1, ((bits >>> 14) & 0x3fff) + 1);
+  }
+
+  return null;
+}
+
+/**
+ * AVIF: as dimensões vivem numa caixa `ispe` ("image spatial extents"), em
+ * profundidade variável dentro da árvore ISO-BMFF.
+ *
+ * Em vez de percorrer a árvore inteira (meta → iprp → ipco → ispe, com
+ * tamanhos de 32 ou 64 bits e caixas de extensão), procuramos a assinatura
+ * `ispe` diretamente. É uma sequência de 4 bytes com estrutura fixa logo
+ * depois, e o risco de falso positivo é remoto — mas existe, então usamos duas
+ * proteções: `validated()` recusa números absurdos, e ficamos com a MAIOR
+ * ocorrência.
+ *
+ * A maior, e não a primeira, porque um AVIF pode carregar miniatura embutida
+ * (`thmb`), que tem `ispe` própria e às vezes aparece antes da imagem
+ * principal. Pegar a primeira faria a rota avisar "sua imagem tem 240px" sobre
+ * uma foto de 4000px — o pior erro possível para um aviso cuja função é ser
+ * levado a sério.
+ */
+function avifDimensions(b: Uint8Array): ImageDimensions | null {
+  let best: ImageDimensions | null = null;
+
+  for (let at = 0; at + 15 < b.length; at += 1) {
+    if (b[at] !== 0x69 || b[at + 1] !== 0x73 || b[at + 2] !== 0x70 || b[at + 3] !== 0x65) {
+      continue; // não é "ispe"
+    }
+
+    // [tipo:4][versão+flags:4][largura:4][altura:4]
+    const candidate = validated(u32be(b, at + 8), u32be(b, at + 12));
+    if (candidate && (!best || candidate.width > best.width)) best = candidate;
+  }
+
+  return best;
+}

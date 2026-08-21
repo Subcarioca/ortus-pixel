@@ -28,13 +28,26 @@ import { AdminLogoutButton } from './admin-logout-button';
 interface AdminNavProps {
   user: StaffUser;
   /** Rota atual, para marcar o item ativo com `aria-current`. */
-  current: 'fila' | 'materias' | 'analytics' | 'comentarios' | 'afiliados' | 'precisao' | 'contas';
+  current:
+    | 'fila'
+    | 'materias'
+    | 'franquias'
+    | 'analytics'
+    | 'comentarios'
+    | 'afiliados'
+    | 'precisao'
+    | 'contas';
 }
 
 export function AdminNav({ user, current }: AdminNavProps) {
   const links: { key: AdminNavProps['current']; href: string; label: string; visible: boolean }[] = [
     { key: 'fila', href: routes.admin(), label: 'Fila de pautas', visible: can(user.accessLevel, 'verFilaDePautas') },
     { key: 'materias', href: routes.adminArticles(), label: 'Matérias', visible: can(user.accessLevel, 'verMaterias') },
+    // Logo depois de "Matérias" de propósito: é a partir de uma matéria que a
+    // pessoa descobre que a franquia não existe no catálogo, e a aba mais
+    // próxima é a que ela vai achar. Visível para redator também — a capacidade
+    // `criarFranquia` é dos dois níveis (ver core/staff.ts).
+    { key: 'franquias', href: routes.adminFranchises(), label: 'Franquias', visible: can(user.accessLevel, 'criarFranquia') },
     // Visível para redator TAMBÉM: o que muda para ele é o RECORTE (só as
     // matérias que assina), aplicado na consulta — nunca a existência da aba.
     // Esconder a aba dele seria negar a alguém o resultado do próprio trabalho.

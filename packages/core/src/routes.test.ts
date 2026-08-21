@@ -49,6 +49,7 @@ test('TODA rota do painel declarada em `routes` é reconhecida como painel', () 
     routes.adminAffiliates(),
     routes.adminComments(),
     routes.adminAccounts(),
+    routes.adminFranchises(),
   ];
 
   for (const rota of rotasDoPainel) {

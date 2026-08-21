@@ -6,10 +6,22 @@
  * Categorias são entidades de primeira classe com URL estável (requisito de
  * SEO do briefing).
  *
- * DECISÃO DE ORDENAÇÃO: a grade é CRONOLÓGICA, não por score. Justificativa do
- * design: "Ordenar por score dentro da categoria confundiria o leitor que vai
- * lá justamente para ver o que saiu hoje." Quem quer ordem por score tem a
- * página /em-alta e a sidebar "Em alta em Games".
+ * DECISÃO DE ORDENAÇÃO (histórico): a grade nasceu CRONOLÓGICA, não por
+ * score. Justificativa do design original: "Ordenar por score dentro da
+ * categoria confundiria o leitor que vai lá justamente para ver o que saiu
+ * hoje." Quem queria ordem por score tinha a página /em-alta e a sidebar
+ * "Em alta em Games" — mas nada DENTRO da editoria.
+ *
+ * TAREFA C (relatório de UX 2026-08) — a regra continua valendo como PADRÃO,
+ * só deixou de ser a ÚNICA opção: o dono do site pediu um seletor de
+ * ordenação (`?ordenacao=`, ver `SORT_TABS`/`parseSortFilter` abaixo) com
+ * Cronológica (o comportamento de sempre, ainda o padrão — a justificativa
+ * acima não perdeu validade, só passou a conviver com alternativas
+ * explícitas em vez de ser a única leitura possível), Hype (`currentScore`
+ * decrescente, o MESMO score do ranking) e Categoria (agrupa por
+ * SUB-categoria — ver o comentário de `CategorySort` em `server/queries.ts`
+ * para a interpretação escolhida, que fica pendente de confirmação do dono
+ * do site).
  *
  * -----------------------------------------------------------------------------
  * RE-SKIN v0.3
@@ -50,7 +62,7 @@ import { BreadcrumbJsonLd, CollectionJsonLd } from '@/components/json-ld';
 import { HeatBar } from '@/components/heat-bar';
 import { NewsletterForm } from '@/components/newsletter-form';
 import { Pagination } from '@/components/pagination';
-import { getCategoryPage } from '@/server/queries';
+import { type CategorySort, getCategoryPage } from '@/server/queries';
 
 /**
  * Renderização sob demanda (SSR). A query obrigatória desta página
@@ -117,6 +129,32 @@ function parseFormatFilter(value: unknown): ContentFormat | null {
   return FORMAT_TABS.some((tab) => tab.value === value) ? (value as ContentFormat) : null;
 }
 
+/**
+ * SELETOR DE ORDENAÇÃO (Tarefa C do relatório de UX 2026-08).
+ *
+ * Reaproveita o MESMO mecanismo dos outros dois controles desta página
+ * (`?pagina=`, `?formato=`): parâmetro de URL lido pela página server, sem
+ * componente cliente novo. A página inteira já é `force-dynamic` e os links
+ * de paginação/formato já navegam assim — um `<Link>` do App Router não
+ * recarrega o documento (é navegação client-side, sem flash branco nem perda
+ * de posição de scroll), então "sem recarregar a página inteira" já vale sem
+ * precisar de `useState`/fetch no cliente.
+ *
+ * `chrono` é o valor PADRÃO e por isso nunca aparece na URL (mesma regra de
+ * `hrefFor` para `pagina=1`): mantém a URL canônica de cada editoria limpa
+ * para quem chega de busca ou link externo.
+ */
+const SORT_TABS: { value: CategorySort; label: string }[] = [
+  { value: 'chrono', label: 'Cronológica' },
+  { value: 'hype', label: 'Hype' },
+  { value: 'category', label: 'Categoria' },
+];
+
+/** Query string aceita na URL. Qualquer outro valor (ou ausência) vira o padrão. */
+function parseSortFilter(value: unknown): CategorySort {
+  return SORT_TABS.some((tab) => tab.value === value) ? (value as CategorySort) : 'chrono';
+}
+
 /** Página lida da URL. Valor inválido (0, -3, "abc", 10^9) vira 1. */
 function parsePage(value: unknown): number {
   const page = Number(value);
@@ -136,7 +174,12 @@ export async function generateMetadata({
   const query = await searchParams;
   const page = parsePage(query.pagina);
 
-  const data = await getCategoryPage(slug, page, parseFormatFilter(query.formato));
+  const data = await getCategoryPage(
+    slug,
+    page,
+    parseFormatFilter(query.formato),
+    parseSortFilter(query.ordenacao),
+  );
   if (!data) return {};
 
   const { category } = data;
@@ -184,8 +227,9 @@ export default async function CategoryPage({
   const query = await searchParams;
   const page = parsePage(query.pagina);
   const formatFilter = parseFormatFilter(query.formato);
+  const sort = parseSortFilter(query.ordenacao);
 
-  const data = await getCategoryPage(slug, page, formatFilter);
+  const data = await getCategoryPage(slug, page, formatFilter, sort);
   if (!data) notFound();
 
   const { category, articles, trending, upcomingReleases, totalPages } = data;
@@ -203,14 +247,65 @@ export default async function CategoryPage({
    */
   if (page > 1 && articles.length === 0) notFound();
 
-  /** Monta a URL preservando o outro filtro. */
+  /** Monta a URL preservando o outro filtro e a ordenação escolhida. */
   const hrefFor = (target: number) => {
     const search = new URLSearchParams();
     if (formatFilter) search.set('formato', formatFilter);
+    if (sort !== 'chrono') search.set('ordenacao', sort);
     if (target > 1) search.set('pagina', String(target));
     const qs = search.toString();
     return qs ? `${routes.category(slug)}?${qs}` : routes.category(slug);
   };
+
+  /**
+   * Troca de ordenação: preserva o `formato` (são eixos independentes — dá
+   * para ver só as análises ordenadas por hype), mas SEMPRE volta para a
+   * página 1, pelo mesmo motivo das abas de formato logo abaixo: a página 4
+   * da ordem cronológica não corresponde a nada específico na ordem por
+   * hype, então manter `pagina` na troca levaria o leitor a um trecho
+   * arbitrário da lista nova.
+   */
+  const sortHrefFor = (target: CategorySort) => {
+    const search = new URLSearchParams();
+    if (formatFilter) search.set('formato', formatFilter);
+    if (target !== 'chrono') search.set('ordenacao', target);
+    const qs = search.toString();
+    return qs ? `${routes.category(slug)}?${qs}` : routes.category(slug);
+  };
+
+  /**
+   * Cabeçalho de grupo por SUB-CATEGORIA, só no modo `category` (ver
+   * `CategorySort` em `server/queries.ts` para a interpretação escolhida e o
+   * pedido de confirmação ao dono do site).
+   *
+   * Só faz sentido em editorias que TÊM sub-seção (`subcategories.length >
+   * 0` — hoje, só Tech/Hardware): nas outras, todo item cai no mesmo grupo
+   * "sem sub-categoria" e um cabeçalho repetindo o nome da própria editoria
+   * não ajudaria ninguém — por isso o modo degenera de propósito para a
+   * mesma grade cronológica nesse caso (mesmo resultado visual do padrão,
+   * sem cabeçalho nenhum).
+   *
+   * A consulta já devolve os artigos ordenados por `subcategoryId` (ver
+   * `orderByForSort` em `server/queries.ts`), então detectar a fronteira de
+   * grupo é só comparar cada item com o ANTERIOR na mesma listagem — sem
+   * `GROUP BY` no banco nem reordenar nada no cliente. É por isso que a
+   * função recebe o índice ABSOLUTO na listagem (não o da fatia): os dois
+   * blocos de grade abaixo (`slice(0,6)` e `slice(6)`) precisam enxergar a
+   * MESMA fronteira, senão um grupo que atravessa os dois blocos ganharia
+   * cabeçalho duplicado.
+   */
+  const showGroupHeaders = sort === 'category' && subcategories.length > 0;
+  function groupHeaderBefore(index: number): string | null {
+    if (!showGroupHeaders) return null;
+    const item = articles[index];
+    const prev = articles[index - 1];
+    if (prev && prev.subsection === item.subsection) return null;
+    if (item.subsection) {
+      return subcategories.find((s) => s.slug === item.subsection)?.name ?? item.subsection;
+    }
+    // Grupo "sem sub-seção": o resto do acervo da editoria, fora de Hardware.
+    return category.name;
+  }
 
   return (
     <>
@@ -303,6 +398,28 @@ export default async function CategoryPage({
             </Link>
           ))}
         </nav>
+
+        {/*
+          ORDENAÇÃO (Tarefa C do relatório de UX 2026-08) — reaproveita o
+          MESMO componente `.tabs` das abas acima, por consistência visual e
+          porque o comportamento é idêntico: cada opção é uma URL própria
+          (`?ordenacao=`), com a ativa marcada por `aria-current="page"`. Fica
+          numa segunda linha, separada das abas de sub-seção/formato, porque
+          responde a uma pergunta diferente ("em que ORDEM" em vez de "qual
+          RECORTE do acervo") — misturar as duas na mesma fileira confundiria
+          as duas perguntas num leitor de tela e visualmente.
+        */}
+        <nav className="tabs" aria-label={`Ordenar ${category.name}`}>
+          {SORT_TABS.map((tab) => (
+            <Link
+              key={tab.value}
+              href={sortHrefFor(tab.value)}
+              {...(sort === tab.value ? { 'aria-current': 'page' as const } : {})}
+            >
+              {tab.label}
+            </Link>
+          ))}
+        </nav>
       </div>
 
       <div className="container layout-2col">
@@ -327,15 +444,32 @@ export default async function CategoryPage({
             // protótipo. Antes era `.grid` puro, que no design não define
             // coluna nenhuma: a categoria inteira saía empilhada no desktop.
             <div className="grid g-sm-2">
-              {articles.slice(0, 6).map((item, index) => (
-                <ArticleCard
-                  key={item.id}
-                  item={item}
-                  variant="grid"
-                  // Só a primeira imagem é prioritária: é a candidata a LCP.
-                  priority={index === 0}
-                />
-              ))}
+              {articles.slice(0, 6).map((item, index) => {
+                // `gridColumn: '1 / -1'` faz o cabeçalho ocupar as DUAS
+                // colunas da grade (`.g-sm-2`) em vez de virar um card vazio
+                // na primeira coluna — é o mesmo truque de "linha cheia" já
+                // usado pelo raciocínio do slot de anúncio, logo abaixo.
+                const groupHeader = groupHeaderBefore(index);
+                return (
+                  <Fragment key={item.id}>
+                    {groupHeader && (
+                      <h2
+                        id={`grupo-${item.subsection ?? 'geral'}`}
+                        className="section-title"
+                        style={{ gridColumn: '1 / -1' }}
+                      >
+                        {groupHeader}
+                      </h2>
+                    )}
+                    <ArticleCard
+                      item={item}
+                      variant="grid"
+                      // Só a primeira imagem é prioritária: é a candidata a LCP.
+                      priority={index === 0}
+                    />
+                  </Fragment>
+                );
+              })}
             </div>
           )}
 
@@ -360,9 +494,23 @@ export default async function CategoryPage({
                   começo de uma linha nova — a "linha completa" que a regra pede. */}
               <div className="grid g-sm-2">
                 {articles.slice(6).map((item, index) => {
-                  const adSlot = feedAdSlot(index + 6);
+                  const absoluteIndex = index + 6;
+                  const adSlot = feedAdSlot(absoluteIndex);
+                  // Mesmo índice ABSOLUTO usado pelo slot de anúncio acima —
+                  // ver o comentário de `groupHeaderBefore` sobre por que os
+                  // dois blocos de grade precisam enxergar a mesma fronteira.
+                  const groupHeader = groupHeaderBefore(absoluteIndex);
                   return (
                     <Fragment key={item.id}>
+                      {groupHeader && (
+                        <h2
+                          id={`grupo-${item.subsection ?? 'geral'}`}
+                          className="section-title"
+                          style={{ gridColumn: '1 / -1' }}
+                        >
+                          {groupHeader}
+                        </h2>
+                      )}
                       {adSlot && <AdSlot slot={adSlot} />}
                       <ArticleCard item={item} variant="grid" />
                     </Fragment>

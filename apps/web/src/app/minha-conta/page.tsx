@@ -86,10 +86,24 @@ export default async function AccountPage() {
           </div>
         </section>
       ) : (
+        /**
+         * TAREFA D (relatório de UX 2026-08) — VERIFICAÇÃO: clicar no ícone
+         * neutro de conta no cabeçalho (ver o comentário em site-header.tsx
+         * sobre por que ele é discreto de propósito, decisão que NÃO foi
+         * revista aqui) trazia a pessoa direto para cá, e a tela já mostrava
+         * os 5 botões de login com peso igual — isso já funcionava. O que
+         * faltava era mais sutil: como o produto não tem cadastro separado
+         * (login social também É o cadastro, no primeiro acesso), um título
+         * "Entrar" sozinho deixa a pergunta "e se eu não tiver conta aqui
+         * ainda?" sem resposta na tela — quem nunca usou o site pode achar
+         * que precisa se cadastrar em outro lugar primeiro e desistir antes
+         * de clicar. O título e a legenda abaixo passaram a dizer isso de
+         * forma explícita, sem adicionar nenhum elemento novo à tela.
+         */
         <section className="section" aria-labelledby="conta-entrar">
           <div className="section-head">
             <h2 id="conta-entrar" className="section-title">
-              Entrar
+              Entrar ou criar conta
             </h2>
           </div>
 
@@ -98,7 +112,9 @@ export default async function AccountPage() {
           ) : (
             <div className="side-box">
               <p className="form-hint">
-                Use a conta que você já tem. Não criamos senha nova e não pedimos seu e-mail.
+                Use a conta que você já tem em um desses serviços — não existe cadastro
+                separado. Na primeira vez, criamos sua conta automaticamente: sem senha nova
+                e sem pedir seu e-mail.
               </p>
               <div className="auth-grid">
                 {providers.map((provider) => (

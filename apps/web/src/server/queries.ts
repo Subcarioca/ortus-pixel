@@ -703,8 +703,60 @@ export const getTrendingRanking = withDateRevival(getTrendingRankingCached);
  */
 export const CATEGORY_PAGE_SIZE = 18;
 
+/**
+ * Ordenação da grade de matérias dentro da editoria (Tarefa C do relatório de
+ * UX 2026-08). Três modos:
+ *
+ *   'chrono'    Cronológica, `publishedAt` decrescente. PADRÃO — é a decisão
+ *               de design documentada no cabeçalho deste arquivo/página:
+ *               "ordenar por score confundiria o leitor que vai lá para ver
+ *               o que saiu hoje". Continua valendo; só deixou de ser a ÚNICA
+ *               opção.
+ *   'hype'      `currentScore` decrescente (mesmo campo do ranking de
+ *               /em-alta e da sidebar "Em alta em {editoria}" já existentes
+ *               nesta página — não é um score novo, é o mesmo).
+ *   'category'  Agrupa por SUB-CATEGORIA (`subcategoryId`). É a interpretação
+ *               escolhida para "ordenar por categoria" dentro de uma página
+ *               que já É uma categoria só: como sub-categoria (Hardware ⊂
+ *               Tech, hoje a única que existe — ver `SUBCATEGORIES` em
+ *               core/taxonomy.ts) já é o campo estrutural que a própria
+ *               página usa para as abas "Tudo / Hardware", reaproveitá-lo
+ *               para agrupar é a leitura mais direta — e evita inventar um
+ *               segundo conceito de "categoria" dentro de uma tela que já
+ *               fala de categoria em outro sentido (a editoria do slug da
+ *               URL). Nas editorias SEM sub-categoria (todas, hoje, exceto
+ *               Tech), este modo degenera para "tudo num grupo só" — mesmo
+ *               resultado da cronológica, só que o rótulo do grupo aparece.
+ *               ESTA LEITURA FICA PENDENTE DE CONFIRMAÇÃO com o dono do
+ *               site: a alternativa seria ordenar por NOME da editoria-mãe,
+ *               que nesta tela é sempre a mesma para todo mundo — logo, um
+ *               no-op —, e por isso pareceu a leitura menos útil das duas.
+ */
+export type CategorySort = 'chrono' | 'hype' | 'category';
+
+/**
+ * `orderBy` do Prisma para cada modo. `category` ordena por `subcategoryId`
+ * ASC antes do desempate cronológico: no MySQL, `ORDER BY col ASC` põe NULL
+ * primeiro — ou seja, os artigos SEM sub-categoria (a maioria, em toda
+ * editoria) vêm antes do grupo nomeado (Hardware). A página usa essa mesma
+ * ordem para decidir onde inserir o cabeçalho de cada grupo (ver
+ * `groupHeaderBefore` em `app/categoria/[slug]/page.tsx`) — trocar a direção
+ * aqui sem trocar lá quebraria os dois em silêncio.
+ */
+function orderByForSort(sort: CategorySort) {
+  switch (sort) {
+    case 'hype':
+      return [{ currentScore: 'desc' as const }, { publishedAt: 'desc' as const }];
+    case 'category':
+      return [{ subcategoryId: 'asc' as const }, { publishedAt: 'desc' as const }];
+    case 'chrono':
+    default:
+      return { publishedAt: 'desc' as const };
+  }
+}
+
 const getCategoryPageCached = unstable_cache(
-  async (slug: string, page: number, format: string | null) => {
+  async (slug: string, page: number, format: string | null, sort: CategorySort) => {
     const category = await requiredQuery('category:lookup', () =>
       prisma.category.findUnique({ where: { slug } }),
     );
@@ -735,8 +787,9 @@ const getCategoryPageCached = unstable_cache(
           prisma.article.findMany({
             where,
             select: CARD_SELECT,
-            // Ordem CRONOLÓGICA: quem entra na categoria quer ver o que saiu hoje.
-            orderBy: { publishedAt: 'desc' },
+            // Cronológica é o padrão (ver comentário de `CategorySort` acima);
+            // 'hype' e 'category' são escolha do leitor via `?ordenacao=`.
+            orderBy: orderByForSort(sort),
             skip: (page - 1) * CATEGORY_PAGE_SIZE,
             take: CATEGORY_PAGE_SIZE,
           }),

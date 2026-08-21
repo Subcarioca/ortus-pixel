@@ -11,9 +11,11 @@
  *
  * O QUE É APAGADO, e por que a lista é exatamente esta:
  *
- *   CommentAuthor  → a identidade em si. Some.
- *   CommentSession → em cascata pelo schema. O acesso morre no mesmo instante.
- *   FranchiseFollow→ em cascata pelo schema. É o dado de preferência.
+ *   CommentAuthor   → a identidade em si. Some.
+ *   CommentSession  → em cascata pelo schema. O acesso morre no mesmo instante.
+ *   FranchiseFollow → em cascata pelo schema. É o dado de preferência.
+ *   CategoryFollow  → em cascata pelo schema. Mesmo dado, para editoria.
+ *   ArticleReaction → em cascata pelo schema. Curtidas/descurtidas somem.
  *
  * O QUE **NÃO** É APAGADO, e por que isso está certo:
  *
@@ -67,8 +69,10 @@ export async function DELETE() {
       data: { authorAccountId: null },
     });
 
-    // 2) Os follows precisam devolver o que somaram ao contador desnormalizado,
-    // senão a franquia fica com seguidores fantasmas para sempre.
+    // 2) Os follows de FRANQUIA precisam devolver o que somaram ao contador
+    // desnormalizado, senão a franquia fica com seguidores fantasmas para
+    // sempre. `CategoryFollow` não tem contador equivalente (ver o comentário
+    // de `CategoryFollow` no schema) — nada a decrementar ali.
     const follows = await tx.franchiseFollow.findMany({
       where: { commentAuthorId: session.authorId },
       select: { franchiseId: true },
@@ -81,7 +85,24 @@ export async function DELETE() {
       });
     }
 
-    // 3) A conta. Sessões e follows saem em cascata, pelo schema.
+    // 3) MESMO RACIOCÍNIO para as reações: `Article.reactionCount` é
+    // desnormalizado (ver o comentário do campo no schema), então apagar a
+    // conta sem tocar nele deixaria matérias com reação "fantasma" contada
+    // para sempre — o mesmo bug que o passo 2 evita para franquias.
+    const reactions = await tx.articleReaction.findMany({
+      where: { commentAuthorId: session.authorId },
+      select: { articleId: true },
+    });
+
+    for (const reaction of reactions) {
+      await tx.article.update({
+        where: { id: reaction.articleId },
+        data: { reactionCount: { decrement: 1 } },
+      });
+    }
+
+    // 4) A conta. Sessões, follows (franquia e categoria) e reações saem em
+    // cascata, pelo schema.
     await tx.commentAuthor.delete({ where: { id: session.authorId } });
   });
 

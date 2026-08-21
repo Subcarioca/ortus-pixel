@@ -462,6 +462,15 @@ export interface ContentCardData {
   coverImageAlt: string | null;
   /** score >= 80 E fonte oficial confirmada. Calculado no servidor. */
   pushEligible: boolean;
+  /**
+   * Curtidas + descurtidas somadas (mesmo peso — ver `Article.reactionCount`
+   * no schema). Presente em TODO card (é barato: já vem no mesmo `select` de
+   * sempre), mas só EXIBIDO onde a UI liga `showReactionCount` em
+   * `ArticleCard` — hoje, a seção "Mais popular da semana" da home. Mostrar em
+   * todo card poluiria a leitura com um número que a maioria das seções não
+   * usa para nada.
+   */
+  reactionCount: number;
 }
 
 /**

@@ -26,6 +26,7 @@ import { cookies } from 'next/headers';
 
 import { isCommentProvider } from '@subcarioca/core';
 
+import { reconcileCategoryFollowsOnLogin } from '@/server/category-follows';
 import { reconcileFollowsOnLogin } from '@/server/follows';
 import { exchangeCodeForProfile, getProviderConfig, safeReturnTo } from '@/server/oauth';
 import { createReaderSession, setSessionCookie } from '@/server/reader-session';
@@ -122,7 +123,20 @@ export async function GET(
     await reconcileFollowsOnLogin(authorId);
   } catch (error) {
     console.error(
-      '[oauth] follows anônimos não puderam ser vinculados à conta:',
+      '[oauth] follows de franquia anônimos não puderam ser vinculados à conta:',
+      error instanceof Error ? error.message : error,
+    );
+  }
+
+  // Mesma lógica, para follows de CATEGORIA (Tarefa C) — ver o cabeçalho de
+  // `server/category-follows.ts`. Tratamento de erro idêntico e pelo mesmo
+  // motivo: login já está completo neste ponto, e não pode ser derrubado por
+  // uma reconciliação de preferência que falhou.
+  try {
+    await reconcileCategoryFollowsOnLogin(authorId);
+  } catch (error) {
+    console.error(
+      '[oauth] follows de categoria anônimos não puderam ser vinculados à conta:',
       error instanceof Error ? error.message : error,
     );
   }

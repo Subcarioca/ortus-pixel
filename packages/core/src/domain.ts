@@ -164,6 +164,8 @@ export interface Article {
   video: { url: string; thumbnailUrl: string; durationSeconds: number } | null;
   isBreaking: boolean;
   viewCount: number;
+  /** Curtidas + descurtidas somadas (mesmo peso). Ver `Article.reactionCount` no schema. */
+  reactionCount: number;
 
   // ---------------------------------------------------------------------------
   // MONETIZAÇÃO — campos DERIVADOS, nunca editáveis à mão

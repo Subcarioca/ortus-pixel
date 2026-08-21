@@ -3,8 +3,9 @@
  * GET /api/auth/[provider] — início do login social
  * =============================================================================
  *
- * Redireciona para o Discord ou o Google, guardando `state` e `code_verifier`
- * em cookies de vida curta que serão conferidos no retorno.
+ * Redireciona para o provedor escolhido (Discord, Google, Facebook, X ou
+ * Instagram), guardando `state` e `code_verifier` em cookies de vida curta que
+ * serão conferidos no retorno.
  *
  * POR QUE OS SEGREDOS DO FLUXO VÃO PARA COOKIE, e não para o banco: eles vivem
  * 10 minutos e pertencem a UM navegador. Uma tabela para isso significaria

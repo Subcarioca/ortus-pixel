@@ -6,7 +6,8 @@ import { COMMENT_PROVIDERS, sanitizeDisplayName, type CommentProvider } from '@s
 
 /**
  * =============================================================================
- * CLIENTE OAUTH 2.0 — login social para comentários (Discord e Google)
+ * CLIENTE OAUTH 2.0 — login social da conta do leitor (Discord, Google,
+ * Facebook, X e Instagram)
  * =============================================================================
  *
  * DECISÃO DE ARQUITETURA — POR QUE NÃO AUTH.JS (ADR 0011 no README)
@@ -47,8 +48,14 @@ import { COMMENT_PROVIDERS, sanitizeDisplayName, type CommentProvider } from '@s
  * MINIMIZAÇÃO DE ESCOPO — a decisão de LGPD mais importante do arquivo
  * -----------------------------------------------------------------------------
  * Pedimos o MENOR escopo que faz o recurso existir:
- *   Discord → `identify`        (id, nome público, avatar). SEM `email`.
- *   Google  → `openid profile`  (sub, nome, foto).          SEM `email`.
+ *   Discord   → `identify`                    (id, nome público, avatar).
+ *   Google    → `openid profile`               (sub, nome, foto).
+ *   Facebook  → `public_profile`                (id, nome).
+ *   X         → `tweet.read users.read`        (id, nome, @usuário) — é o
+ *               mínimo que a API do X exige para ler o perfil básico; não dá
+ *               para pedir só `users.read` sozinho (a API recusa o token).
+ *   Instagram → `instagram_business_basic`     (id, @usuário).
+ * NENHUM dos cinco pede `email`.
  *
  * Não pedir o e-mail resolve três problemas de uma vez: a tela de consentimento
  * fica menos assustadora (converte melhor), não guardamos um dado que não
@@ -56,6 +63,17 @@ import { COMMENT_PROVIDERS, sanitizeDisplayName, type CommentProvider } from '@s
  * A coluna `emailHash` existe no schema e permanece NULA — se um dia o produto
  * precisar dela, será uma decisão consciente com escopo novo, não um dado que
  * já estava lá "por via das dúvidas".
+ *
+ * -----------------------------------------------------------------------------
+ * ⚠ INSTAGRAM: LIMITAÇÃO REAL DA PLATAFORMA, NÃO DESTE CÓDIGO
+ * -----------------------------------------------------------------------------
+ * A "Instagram Basic Display API" (o caminho de login simples para qualquer
+ * conta pessoal) foi DESCONTINUADA pela Meta em dezembro de 2024. O caminho
+ * atual — "Instagram API with Instagram Login", implementado abaixo — é
+ * desenhado para contas Business/Creator (mesmo que sem Página do Facebook
+ * vinculada, a conta do Instagram precisa estar configurada como profissional).
+ * Um leitor com conta PESSOAL comum pode simplesmente não conseguir concluir o
+ * login. Ver o alerta completo no cabeçalho de `core/community.ts`.
  */
 
 export interface OAuthProviderConfig {
@@ -67,6 +85,21 @@ export interface OAuthProviderConfig {
   scope: string;
   clientId: string;
   clientSecret: string;
+  /**
+   * Como o `client_secret` é apresentado na troca de código por token.
+   *
+   * `undefined` (padrão) → o segredo vai no CORPO do POST, junto de `client_id`
+   * e `code` — é o que Discord, Google, Facebook e Instagram aceitam.
+   *
+   * `'basic'` → o segredo vai no cabeçalho `Authorization: Basic
+   * base64(client_id:client_secret)`, e SAI do corpo. Hoje só o X exige isto:
+   * é a forma de autenticação de "cliente confidencial" da RFC 6749 §2.3.1, e a
+   * API do X trata o client_secret no corpo como formato inválido para esse
+   * tipo de cliente. Campo por provedor (em vez de um `if (provider === 'x')`
+   * dentro de `exchangeCodeForProfile`) para o próximo provedor com a mesma
+   * exigência não precisar tocar na função de troca — só declarar a config.
+   */
+  tokenAuthStyle?: 'basic';
 }
 
 /**
@@ -99,6 +132,59 @@ export function getProviderConfig(provider: CommentProvider): OAuthProviderConfi
       scope: 'openid profile',
       clientId: process.env.GOOGLE_CLIENT_ID ?? '',
       clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? '',
+    },
+    facebook: {
+      id: 'facebook',
+      label: 'Facebook',
+      // v21.0: versão estável mais recente do Graph API em ago/2026. O número
+      // da versão precisa ser revisado periodicamente — a Meta aposenta versões
+      // antigas com aviso de ~2 anos.
+      authorizeUrl: 'https://www.facebook.com/v21.0/dialog/oauth',
+      tokenUrl: 'https://graph.facebook.com/v21.0/oauth/access_token',
+      // `fields=id,name`: só o suficiente para reconhecer a conta e assinar o
+      // comentário. Sem `email` — mesmo princípio dos outros provedores.
+      userInfoUrl: 'https://graph.facebook.com/me?fields=id,name',
+      // `public_profile` é o escopo PADRÃO (nem precisa ser pedido explicitamente
+      // pela maioria dos apps, mas declarado aqui por clareza) e não exige
+      // revisão do app pela Meta, ao contrário de `email`.
+      scope: 'public_profile',
+      clientId: process.env.FACEBOOK_CLIENT_ID ?? '',
+      clientSecret: process.env.FACEBOOK_CLIENT_SECRET ?? '',
+    },
+    x: {
+      id: 'x',
+      label: 'X',
+      authorizeUrl: 'https://x.com/i/oauth2/authorize',
+      tokenUrl: 'https://api.x.com/2/oauth2/token',
+      userInfoUrl: 'https://api.x.com/2/users/me',
+      // `users.read` sozinho não é aceito pela API do X para ler o perfil
+      // básico — `tweet.read` precisa acompanhar, mesmo sem lermos post nenhum.
+      scope: 'tweet.read users.read',
+      clientId: process.env.X_CLIENT_ID ?? '',
+      clientSecret: process.env.X_CLIENT_SECRET ?? '',
+      // ⚠ Único provedor com PKCE OBRIGATÓRIO pela própria API (os outros já
+      // recebem PKCE deste cliente por padrão, mas o X é quem o EXIGE) e com
+      // troca de token via Basic Auth — ver `tokenAuthStyle` na interface.
+      tokenAuthStyle: 'basic',
+    },
+    instagram: {
+      id: 'instagram',
+      label: 'Instagram',
+      // "Instagram API with Instagram Login" — ver o alerta no cabeçalho deste
+      // arquivo e em core/community.ts: só funciona para conta Business/Creator.
+      authorizeUrl: 'https://www.instagram.com/oauth/authorize',
+      tokenUrl: 'https://api.instagram.com/oauth/access_token',
+      // `graph.instagram.com` (não `graph.facebook.com`): é o host do Graph
+      // API específico da Instagram Platform. Pedimos `username` e não `name`:
+      // a resposta deste endpoint para conta comum não traz nome de exibição,
+      // só o @usuário — é o único dado de identificação visual disponível.
+      userInfoUrl: 'https://graph.instagram.com/me?fields=id,username',
+      // Escopo mínimo pós-migração de nomenclatura (os antigos `basic`/
+      // `business_basic`, sem o prefixo `instagram_`, foram desativados pela
+      // Meta em 27/jan/2025).
+      scope: 'instagram_business_basic',
+      clientId: process.env.INSTAGRAM_CLIENT_ID ?? '',
+      clientSecret: process.env.INSTAGRAM_CLIENT_SECRET ?? '',
     },
   };
 
@@ -208,20 +294,38 @@ export async function exchangeCodeForProfile(
   codeVerifier: string,
 ): Promise<OAuthProfile | null> {
   try {
+    // TROCA DE CÓDIGO — dois formatos de autenticação do cliente.
+    //
+    // Padrão (Discord, Google, Facebook, Instagram): `client_secret` viaja no
+    // CORPO do POST, junto de `client_id`.
+    //
+    // `tokenAuthStyle: 'basic'` (hoje só o X): o segredo viaja no cabeçalho
+    // `Authorization: Basic base64(client_id:client_secret)` e SAI do corpo —
+    // mandar os dois ao mesmo tempo é rejeitado pela API do X como cliente mal
+    // configurado. `client_id` continua no corpo: o X exige isso mesmo com
+    // Basic Auth, porque é também o valor conferido contra o PKCE da sessão.
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Accept: 'application/json',
+    };
+    const bodyParams: Record<string, string> = {
+      client_id: config.clientId,
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: redirectUriFor(config.id),
+      code_verifier: codeVerifier,
+    };
+
+    if (config.tokenAuthStyle === 'basic') {
+      headers.Authorization = `Basic ${Buffer.from(`${config.clientId}:${config.clientSecret}`).toString('base64')}`;
+    } else {
+      bodyParams.client_secret = config.clientSecret;
+    }
+
     const tokenResponse = await fetchWithTimeout(config.tokenUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Accept: 'application/json',
-      },
-      body: new URLSearchParams({
-        client_id: config.clientId,
-        client_secret: config.clientSecret,
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: redirectUriFor(config.id),
-        code_verifier: codeVerifier,
-      }),
+      headers,
+      body: new URLSearchParams(bodyParams),
     });
 
     if (!tokenResponse.ok) {
@@ -288,12 +392,54 @@ function normalizeProfile(provider: CommentProvider, raw: unknown): OAuthProfile
     return { providerAccountId: id, displayName: sanitizeDisplayName(name) };
   }
 
-  // Google (OpenID Connect): `sub` é o identificador estável da conta. Nunca
-  // usar `email` como identidade — e-mail pode mudar de dono; `sub`, não.
-  const sub = data.sub;
-  if (typeof sub !== 'string' || sub.length === 0) return null;
+  if (provider === 'google') {
+    // Google (OpenID Connect): `sub` é o identificador estável da conta. Nunca
+    // usar `email` como identidade — e-mail pode mudar de dono; `sub`, não.
+    const sub = data.sub;
+    if (typeof sub !== 'string' || sub.length === 0) return null;
 
-  return { providerAccountId: sub, displayName: sanitizeDisplayName(data.name) };
+    return { providerAccountId: sub, displayName: sanitizeDisplayName(data.name) };
+  }
+
+  if (provider === 'facebook') {
+    // Graph API: `{ id, name }` direto no corpo, sem aninhamento — diferente
+    // do X logo abaixo, que aninha tudo sob `data`.
+    const id = data.id;
+    if (typeof id !== 'string' || id.length === 0) return null;
+
+    return { providerAccountId: id, displayName: sanitizeDisplayName(data.name) };
+  }
+
+  if (provider === 'x') {
+    // API v2 do X: a resposta vem ANINHADA sob `data` — `{ data: { id, name,
+    // username } }`. É o único dos cinco provedores com esse formato; um
+    // `data.id` direto (como nos outros) sempre daria `undefined` aqui.
+    const nested = data.data;
+    if (typeof nested !== 'object' || nested === null) return null;
+    const profile = nested as Record<string, unknown>;
+
+    const id = profile.id;
+    if (typeof id !== 'string' || id.length === 0) return null;
+
+    // `name` é o nome de exibição escolhido pela pessoa; `username` (o
+    // `@handle`) é o retrocesso para quando `name` vier vazio.
+    const name =
+      typeof profile.name === 'string' && profile.name.length > 0
+        ? profile.name
+        : profile.username;
+
+    return { providerAccountId: id, displayName: sanitizeDisplayName(name) };
+  }
+
+  // Instagram ("Instagram API with Instagram Login"): `graph.instagram.com/me`
+  // devolve `{ id, username }` — SEM nome de exibição para a maioria das contas
+  // (é uma API pensada para conta profissional, não para perfil social comum).
+  // `username` é o único dado de identificação visual que a API garante, então
+  // é ele que vira o nome exibido junto do comentário.
+  const id = data.id;
+  if (typeof id !== 'string' || id.length === 0) return null;
+
+  return { providerAccountId: id, displayName: sanitizeDisplayName(data.username) };
 }
 
 /**

@@ -95,7 +95,7 @@ import { HeatBadge } from '@/components/heat-badge';
 import { HeatBar, TrendTag } from '@/components/heat-bar';
 import { NewsletterForm } from '@/components/newsletter-form';
 import { RelativeTime } from '@/components/relative-time';
-import { getHomeData, getTickerItems, getTopFranchises } from '@/server/queries';
+import { getHomeData, getMostPopularWeekly, getTickerItems, getTopFranchises } from '@/server/queries';
 
 /**
  * =============================================================================
@@ -158,12 +158,13 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  // Paralelizamos: são três consultas independentes. Em série, a página
+  // Paralelizamos: são quatro consultas independentes. Em série, a página
   // esperaria a soma dos tempos em vez do maior deles.
-  const [home, tickerItems, franchises] = await Promise.all([
+  const [home, tickerItems, franchises, popularWeek] = await Promise.all([
     getHomeData(),
     getTickerItems(),
     getTopFranchises(),
+    getMostPopularWeekly(),
   ]);
 
   const [leadStory, ...secondaryHot] = home.hero;
@@ -348,6 +349,34 @@ export default async function HomePage() {
               tech começa nos próximos dias: deixe seu e-mail aqui embaixo para receber a
               primeira edição, ou veja <Link href="#editorias">o que vamos cobrir</Link>.
             </p>
+          </section>
+        )}
+
+        {/* ---------- MAIS POPULAR DA SEMANA ----------
+            SEÇÃO ADICIONAL, NÃO SUBSTITUI O HERO. O hero acima é sobre o
+            ALGORITMO (score do curator: HOT/RISING/mais recente); esta seção é
+            sobre o LEITOR — a matéria dos últimos 7 dias com mais curtida +
+            descurtida somadas (mesmo peso, ver Tarefa B). Ver o cabeçalho de
+            `getMostPopularWeekly` em `server/queries.ts` para o racional
+            completo, inclusive do porquê as duas fontes podem divergir.
+
+            Escondida quando coincide com o próprio hero: mostrar a MESMA
+            matéria duas vezes seguidas, uma vez como "destaque do momento" e
+            de novo como "mais popular da semana", pareceria erro de layout em
+            vez de dois critérios diferentes concordando por acaso. */}
+        {popularWeek && popularWeek.id !== leadStory?.id && (
+          <section className="section" aria-labelledby="popular-semana-titulo">
+            <div className="section-head">
+              <div>
+                <h2 id="popular-semana-titulo" className="section-title">
+                  Mais popular da semana
+                </h2>
+                <p className="section-sub">
+                  Eleita pelos leitores — a matéria com mais reações nos últimos 7 dias.
+                </p>
+              </div>
+            </div>
+            <ArticleCard item={popularWeek} variant="lead" showReactionCount />
           </section>
         )}
 

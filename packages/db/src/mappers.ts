@@ -393,6 +393,7 @@ export function mapArticle(row: ArticleWithRelations): Article {
         : null,
     isBreaking: row.isBreaking,
     viewCount: row.viewCount,
+    reactionCount: row.reactionCount,
 
     affiliateOffers: offers,
     // DERIVADO DA RELAÇÃO, e não da coluna `row.hasAffiliateLinks`.

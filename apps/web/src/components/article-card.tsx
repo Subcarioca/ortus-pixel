@@ -77,6 +77,16 @@ interface ArticleCardProps {
    * do mesmo card, e é exatamente o caso em que a barra ganha do texto.
    */
   showHeatBar?: boolean;
+  /**
+   * Mostra "N reações" na linha de rodapé (`.meta`).
+   *
+   * `false` por padrão: o número de reações não é informação que a maioria
+   * das seções do site precisa mostrar (feed, relacionadas, ranking por
+   * score...) — ligar por padrão poluiria todo card com um dado que só a
+   * seção "Mais popular da semana" (Tarefa D) usa para justificar por que
+   * aquela matéria está em destaque.
+   */
+  showReactionCount?: boolean;
 }
 
 /**
@@ -100,6 +110,7 @@ export function ArticleCard({
   rank,
   priority = false,
   showHeatBar = false,
+  showReactionCount = false,
 }: ArticleCardProps) {
   const isEvergreenFormat = (EVERGREEN_FORMATS as readonly string[]).includes(item.format);
 
@@ -237,6 +248,19 @@ export function ArticleCard({
               <Link href={routes.franchise(item.franchises[0].slug)} className="chip">
                 {item.franchises[0].label}
               </Link>
+            </>
+          )}
+
+          {/* "Mais popular da semana" (Tarefa D): a prova de que a matéria foi
+              ELEITA pelo leitor, não só pelo algoritmo — é o que justifica o
+              destaque para quem olha o card sem contexto nenhum. */}
+          {showReactionCount && item.reactionCount > 0 && (
+            <>
+              <span className="meta__sep" aria-hidden="true" />
+              <span>
+                {item.reactionCount.toLocaleString('pt-BR')}{' '}
+                {item.reactionCount === 1 ? 'reação' : 'reações'}
+              </span>
             </>
           )}
         </div>

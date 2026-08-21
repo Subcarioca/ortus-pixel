@@ -44,6 +44,8 @@ import 'server-only';
 import {
   BLOCK_WIDTHS,
   VIDEO_PROVIDERS,
+  parseCoverImageFocus,
+  toCoverImageFit,
   type ArticleBlock,
   type BlockWidth,
   type VideoProvider,
@@ -171,6 +173,16 @@ function parseBlock(raw: unknown, position: number): SingleBlockResult {
         );
       }
 
+      // ENQUADRAMENTO — mesma regra da capa (`server/article-input.ts`), e por
+      // isso a mesma função (`parseCoverImageFocus`, de `@subcarioca/core`):
+      // fora de 'focal', as coordenadas são sempre `null`, nunca resíduo de um
+      // modo anterior. `data.fit` ausente (todo bloco publicado antes deste
+      // campo existir) cai em 'cover' — o `object-fit: cover` sem posição que
+      // este bloco já tinha, então nenhuma matéria publicada muda de aparência.
+      const fit = toCoverImageFit(data.fit);
+      const focus = parseCoverImageFocus(fit, data.focalX, data.focalY);
+      if ('error' in focus) return fail(`A imagem do bloco ${position}: ${focus.error}`);
+
       return ok({
         id,
         type: 'imagem',
@@ -180,6 +192,9 @@ function parseBlock(raw: unknown, position: number): SingleBlockResult {
         legenda: optional(data.legenda, MAX_SHORT_TEXT),
         credito: optional(data.credito, 120),
         largura: width(data.largura),
+        fit,
+        focalX: focus.focalX,
+        focalY: focus.focalY,
       });
     }
 

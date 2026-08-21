@@ -773,6 +773,12 @@ export async function POST(
           tldr: input.tldr,
           coverImageUrl: input.coverImageUrl,
           coverImageAlt: input.coverImageAlt,
+          // Ver `@subcarioca/core` (`cover-image.ts`). `parseArticleInput` já
+          // garante que as coordenadas só vêm preenchidas quando
+          // `coverImageFit === 'focal'`.
+          coverImageFit: input.coverImageFit,
+          coverImageFocalX: input.coverImageFocalX,
+          coverImageFocalY: input.coverImageFocalY,
           isBreaking: input.isBreaking,
           hasSpoiler: input.hasSpoiler,
           // Na CRIAÇÃO não há valor anterior, então não há o que "reduzir":

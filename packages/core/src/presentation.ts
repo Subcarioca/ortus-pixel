@@ -18,6 +18,7 @@
  * Aqui a conversão acontece UMA vez, no servidor.
  */
 
+import type { CoverImageFit } from './cover-image';
 import { bandForScore, type ScoreBand } from './scoring-types';
 
 /**
@@ -460,6 +461,18 @@ export interface ContentCardData {
   publishedAt: Date | null;
   coverImageUrl: string | null;
   coverImageAlt: string | null;
+  /**
+   * Como a capa é recortada dentro do retângulo 16:9 do card — 'cover'
+   * (recorte automático, o padrão retrocompatível), 'contain' (imagem
+   * completa, sem cortar) ou 'focal' (recorte automático ancorado no ponto
+   * marcado pelo editor, ver `coverImageFocalX/Y`). Vocabulário e normalização
+   * em `cover-image.ts`, ao lado.
+   */
+  coverImageFit: CoverImageFit;
+  /** Ponto focal (percentual 0–100 nos dois eixos), só relevante quando
+   *  `coverImageFit === 'focal'` — `null` nos outros dois modos. */
+  coverImageFocalX: number | null;
+  coverImageFocalY: number | null;
   /** score >= 80 E fonte oficial confirmada. Calculado no servidor. */
   pushEligible: boolean;
   /**

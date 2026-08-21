@@ -46,6 +46,7 @@ import {
 } from './article-classification-fields';
 import { FORMAT_OPTIONS, formatRequiresTldr } from './article-format-options';
 import { BlockEditor } from './block-editor';
+import { CoverImageFitField, type CoverImageFitValue } from './cover-image-fit-field';
 import { ImageUrlField } from './image-url-field';
 
 /**
@@ -137,6 +138,19 @@ export function ArticleCreateForm({
   const [coverImageUrl, setCoverImageUrl] = useState('');
 
   /**
+   * ENQUADRAMENTO DA CAPA — 'cover' é o padrão, igual ao que a matéria sempre
+   * teve (ver `@subcarioca/core`, `cover-image.ts`). Uma matéria NOVA não tem
+   * "aparência de sempre" para preservar, mas o padrão continua sendo o mesmo
+   * por consistência: o `<select>` de formato, de sensibilidade e este aqui
+   * abrem todos no valor mais comum, não no mais "completo".
+   */
+  const [coverImageFit, setCoverImageFit] = useState<CoverImageFitValue>({
+    fit: 'cover',
+    focalX: null,
+    focalY: null,
+  });
+
+  /**
    * REVISÃO DE RISCO EDITORIAL — o mesmo painel da edição
    * (`editorial-risk-panel.tsx`), pela mesma razão pela qual a regra é uma só no
    * servidor.
@@ -221,6 +235,9 @@ export function ArticleCreateForm({
           tldr: tldr.filter((t) => t.trim().length > 0),
           coverImageUrl: coverImageUrl || null,
           coverImageAlt: form.get('coverImageAlt') || null,
+          coverImageFit: coverImageFit.fit,
+          coverImageFocalX: coverImageFit.focalX,
+          coverImageFocalY: coverImageFit.focalY,
           isBreaking: form.get('isBreaking') === 'on',
           hasSpoiler: form.get('hasSpoiler') === 'on',
           // --- Classificação (ver `article-classification-fields.tsx`) ---
@@ -372,6 +389,14 @@ export function ArticleCreateForm({
         label="Imagem de capa"
         value={coverImageUrl}
         onChange={setCoverImageUrl}
+        className="admin-form__full"
+      />
+
+      <CoverImageFitField
+        imageUrl={coverImageUrl}
+        value={coverImageFit}
+        onChange={setCoverImageFit}
+        groupName="coverImageFit"
         className="admin-form__full"
       />
 

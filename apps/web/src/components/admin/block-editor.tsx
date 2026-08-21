@@ -45,6 +45,7 @@ import {
   type BlockWidth,
 } from '@subcarioca/core';
 
+import { CoverImageFitField } from './cover-image-fit-field';
 import { ImageUrlField } from './image-url-field';
 
 /** Rótulos de largura de mídia, para o `<select>`. */
@@ -346,6 +347,27 @@ function BlockFields({
             className="admin-form__full"
             value={block.url}
             onChange={(url) => onChange({ url } as Partial<ArticleBlock>)}
+          />
+
+          {/* Mesma moldura 16:9 fixa da capa (`.thumb`, ver
+              `article-blocks.tsx`), então sofre o mesmo corte automático —
+              ver `@subcarioca/core` (`cover-image.ts`). `groupName` inclui o
+              `id` do bloco: sem isso, dois blocos de imagem na mesma matéria
+              teriam radios com o mesmo `name`, e escolher o enquadramento de
+              um mudaria visualmente o outro (grupo de rádio é exclusivo por
+              `name`, não por posição na tela). */}
+          <CoverImageFitField
+            imageUrl={block.url}
+            value={{ fit: block.fit ?? 'cover', focalX: block.focalX ?? null, focalY: block.focalY ?? null }}
+            onChange={(next) =>
+              onChange({
+                fit: next.fit,
+                focalX: next.focalX,
+                focalY: next.focalY,
+              } as Partial<ArticleBlock>)
+            }
+            groupName={`block-fit-${block.id}`}
+            className="admin-form__full"
           />
 
           <label className="form-inline admin-form__full">

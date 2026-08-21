@@ -33,13 +33,16 @@ import {
   can,
   isCategorySlug,
   isValidSubcategoryPath,
+  parseCoverImageFocus,
   scanArticleForRisk,
   slugify,
   toContentSensitivity,
+  toCoverImageFit,
   validateTldrRequirement,
   type ArticleBlock,
   type ContentFormat,
   type ContentSensitivity,
+  type CoverImageFit,
   type EditorialRiskFinding,
 } from '@subcarioca/core';
 
@@ -63,6 +66,21 @@ export interface ArticleInput {
   tldr: string[];
   coverImageUrl: string | null;
   coverImageAlt: string | null;
+  /**
+   * Como a capa é recortada — 'cover' (recorte automático, o de sempre),
+   * 'contain' (imagem completa) ou 'focal' (recorte automático ancorado no
+   * ponto marcado pelo editor). Ver `@subcarioca/core` (`cover-image.ts`)
+   * para o porquê dos três modos e `Article.coverImageFit` no schema para a
+   * decisão de manter 'cover' como padrão retrocompatível.
+   */
+  coverImageFit: CoverImageFit;
+  /**
+   * Ponto focal (percentual 0–100 nos dois eixos), só quando `coverImageFit`
+   * é 'focal'. `null` nos outros dois modos — ver `parseCoverImageFocus`
+   * (core) para o porquê de a ausência ser reforçada aqui e não só assumida.
+   */
+  coverImageFocalX: number | null;
+  coverImageFocalY: number | null;
   isBreaking: boolean;
   hasSpoiler: boolean;
   /**
@@ -233,6 +251,21 @@ export async function parseArticleInput(
       : null;
 
   /**
+   * ENQUADRAMENTO DA CAPA — modo mais coordenadas, validados JUNTOS.
+   *
+   * `toCoverImageFit` sozinho não bastaria: ele SEMPRE devolve um modo válido
+   * (cai em 'cover' para lixo), então usá-lo isolado deixaria passar um
+   * `coverImageFocalX` sem `coverImageFit: 'focal'` — dado órfão, que a
+   * RENDERIZAÇÃO teria de decidir se usa ou ignora. `parseCoverImageFocus`
+   * (core, compartilhada com `blocks-input.ts` para a mesma regra em imagem
+   * do corpo) decide aqui, uma vez, no formato final que vai para o banco.
+   */
+  const coverImageFit = toCoverImageFit(payload.coverImageFit);
+  const focus = parseCoverImageFocus(coverImageFit, payload.coverImageFocalX, payload.coverImageFocalY);
+  if ('error' in focus) return fail(focus.error);
+  const { focalX: coverImageFocalX, focalY: coverImageFocalY } = focus;
+
+  /**
    * SUB-CATEGORIA — validada como PAR, nunca sozinha.
    *
    * `isValidSubcategoryPath` recusa "hardware dentro de games" mesmo sendo
@@ -338,6 +371,9 @@ export async function parseArticleInput(
       tldr,
       coverImageUrl,
       coverImageAlt,
+      coverImageFit,
+      coverImageFocalX,
+      coverImageFocalY,
       isBreaking: payload.isBreaking === true,
       hasSpoiler: payload.hasSpoiler === true,
       // Valor fora do vocabulário cai em 'none' (ver `toContentSensitivity`). A

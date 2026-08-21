@@ -1497,6 +1497,21 @@ body:has(.push-prompt[data-open="true"]) .ad-anchor { display: none; }
 /* Com foto real, a textura do placeholder só sujaria a imagem. */
 .thumb:has(> img)::after { content: none; }
 
+/* ENQUADRAMENTO ESCOLHIDO PELO EDITOR (`Article.coverImageFit` e o `fit` de um
+   bloco de imagem — ver `@subcarioca/core/cover-image.ts` e o schema).
+   Aplicado por `article-view.tsx`/`article-card.tsx`/`article-blocks.tsx`
+   conforme o campo salvo — o padrão ('cover', sem classe nenhuma) continua
+   sendo exatamente a regra acima, sem nenhuma mudança visual para o acervo
+   existente.
+
+   'contain': a foto aparece INTEIRA. Sem recorte, sobra área vazia nas bordas
+   (a moldura continua 16:9) — `--surface-2` faz de letterbox em vez de deixar
+   o gradiente de placeholder aparecendo atrás de uma foto de verdade. */
+.thumb--contain > img { object-fit: contain; background: var(--surface-2); }
+/* 'focal': mesmo recorte automático de sempre, ancorado no ponto que o editor
+   marcou. `object-position` vem inline (style) por ser um valor por
+   MATÉRIA/BLOCO, não uma constante de CSS. */
+
 /* `.thumb` COMO LINK.
    No protótipo o `.thumb` é sempre uma `<div>` dentro de um `<a>` que embrulha
    o card inteiro. No produto a capa é o próprio link (um card com dois links

@@ -29,6 +29,7 @@ import { useRouter } from 'next/navigation';
 
 import {
   toContentSensitivity,
+  toCoverImageFit,
   type ArticleBlock,
   type ContentSensitivity,
   type EditorialRiskFinding,
@@ -48,6 +49,7 @@ import {
 } from './article-classification-fields';
 import { FORMAT_OPTIONS, formatRequiresTldr } from './article-format-options';
 import { BlockEditor, toEditorBlocks } from './block-editor';
+import { CoverImageFitField, type CoverImageFitValue } from './cover-image-fit-field';
 import { ImageUrlField } from './image-url-field';
 
 export interface EditableArticle {
@@ -63,6 +65,11 @@ export interface EditableArticle {
   tldr: string[];
   coverImageUrl: string | null;
   coverImageAlt: string | null;
+  /** Enquadramento salvo hoje — 'cover' | 'contain' | 'focal'. Ver `@subcarioca/core` (`cover-image.ts`). */
+  coverImageFit: string;
+  /** Ponto focal salvo, só quando `coverImageFit === 'focal'`. */
+  coverImageFocalX: number | null;
+  coverImageFocalY: number | null;
   isBreaking: boolean;
   hasSpoiler: boolean;
   status: string;
@@ -113,6 +120,16 @@ export function ArticleEditForm({
   const [format, setFormat] = useState(article.format);
   const [categorySlug, setCategorySlug] = useState(article.categorySlug);
   const [coverImageUrl, setCoverImageUrl] = useState(article.coverImageUrl ?? '');
+
+  // Normalizado no CLIENTE (e não no servidor, como `tldr`/`contentSensitivity`
+  // em `materias/page.tsx`): este componente é o único lugar que lê
+  // `article.coverImageFit`, então normalizar aqui não duplica a regra em
+  // lugar nenhum — e evita mais uma prop derivada na página do servidor.
+  const [coverImageFit, setCoverImageFit] = useState<CoverImageFitValue>({
+    fit: toCoverImageFit(article.coverImageFit),
+    focalX: article.coverImageFocalX,
+    focalY: article.coverImageFocalY,
+  });
 
   const [classification, setClassification] = useState<ArticleClassification>({
     subcategorySlug: article.subcategorySlug ?? '',
@@ -187,6 +204,9 @@ export function ArticleEditForm({
           tldr: tldr.filter((t) => t.trim().length > 0),
           coverImageUrl: coverImageUrl || null,
           coverImageAlt: form.get('coverImageAlt') || null,
+          coverImageFit: coverImageFit.fit,
+          coverImageFocalX: coverImageFit.focalX,
+          coverImageFocalY: coverImageFit.focalY,
           isBreaking: form.get('isBreaking') === 'on',
           hasSpoiler: form.get('hasSpoiler') === 'on',
           subcategorySlug: classification.subcategorySlug || null,
@@ -326,6 +346,14 @@ export function ArticleEditForm({
         label="Imagem de capa"
         value={coverImageUrl}
         onChange={setCoverImageUrl}
+        className="admin-form__full"
+      />
+
+      <CoverImageFitField
+        imageUrl={coverImageUrl}
+        value={coverImageFit}
+        onChange={setCoverImageFit}
+        groupName="coverImageFit"
         className="admin-form__full"
       />
 

@@ -41,6 +41,7 @@ import {
   MAX_HOT_ITEMS_ON_HOME,
   rankRecommendations,
   toContentSensitivity,
+  toCoverImageFit,
   TREND_UP_DELTA,
   trendForDelta,
   type ContentCardData,
@@ -172,6 +173,13 @@ const CARD_SELECT = {
   excerpt: true,
   coverImageUrl: true,
   coverImageAlt: true,
+  // Enquadramento escolhido pelo editor — ver `@subcarioca/core`
+  // (`cover-image.ts`) para o vocabulário e `toCoverImageFit` para a
+  // normalização. Barato pela mesma razão de `reactionCount` acima: já é a
+  // mesma linha, três colunas a mais no `select` não custam um round-trip novo.
+  coverImageFit: true,
+  coverImageFocalX: true,
+  coverImageFocalY: true,
   currentScore: true,
   currentBand: true,
   scoreDelta1h: true,
@@ -199,6 +207,9 @@ type CardRow = {
   excerpt: string;
   coverImageUrl: string | null;
   coverImageAlt: string | null;
+  coverImageFit: string;
+  coverImageFocalX: number | null;
+  coverImageFocalY: number | null;
   currentScore: number;
   currentBand: string;
   scoreDelta1h: number;
@@ -265,6 +276,12 @@ function toCardData(row: CardRow): ContentCardData {
     publishedAt: row.publishedAt,
     coverImageUrl: row.coverImageUrl,
     coverImageAlt: row.coverImageAlt,
+    // Normalizado aqui (e não confiado direto na coluna) pelo mesmo motivo de
+    // `contentSensitivity`/`tldr` neste arquivo: uma migração malfeita ou uma
+    // linha anterior ao campo não pode virar `undefined` na tela.
+    coverImageFit: toCoverImageFit(row.coverImageFit),
+    coverImageFocalX: row.coverImageFocalX,
+    coverImageFocalY: row.coverImageFocalY,
     // "score >= 80 E fonte oficial confirmada" (design/README.md).
     // A checagem de fonte oficial mora no pipeline; aqui usamos a faixa como
     // condição necessária. O push efetivo passa por `isEligibleForAutomation`.
@@ -1112,6 +1129,15 @@ async function loadArticleBundle(
      * descrevendo conteúdo, e quem decide sobre anúncio e aviso é a página.
      */
     contentSensitivity: toContentSensitivity(article.contentSensitivity),
+    /**
+     * ENQUADRAMENTO DA CAPA — mesmo raciocínio de `contentSensitivity`, logo
+     * acima: viaja fora de `mapArticle` porque é contrato de APRESENTAÇÃO
+     * ("como a capa é recortada"), não o que a matéria É. Ver
+     * `@subcarioca/core` (`cover-image.ts`).
+     */
+    coverImageFit: toCoverImageFit(article.coverImageFit),
+    coverImageFocalX: article.coverImageFocalX,
+    coverImageFocalY: article.coverImageFocalY,
     // Coluna `Json` desde a migração para o MySQL: normalizamos AQUI, no
     // servidor, para que a página do artigo continue recebendo `string[]` e
     // possa fazer `.length` e `.map` sem checagem defensiva na view.

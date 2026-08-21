@@ -269,7 +269,16 @@ function ImageBlockView({
 }) {
   return (
     <figure className={`media${widthClass(block.largura)}`}>
-      <div className="thumb" data-c={categoryToken}>
+      {/* ENQUADRAMENTO ESCOLHIDO PELO EDITOR (`block.fit`, ver
+          `@subcarioca/core`, `cover-image.ts`) — mesmo tratamento da capa
+          (`article-view.tsx`), porque `.thumb` é a MESMA moldura 16:9 fixa
+          nos dois lugares. `fit` ausente (bloco publicado antes deste campo
+          existir) é `undefined`, que a comparação abaixo trata como 'cover'
+          — a aparência de sempre, sem mudança nenhuma no acervo existente. */}
+      <div
+        className={block.fit === 'contain' ? 'thumb thumb--contain' : 'thumb'}
+        data-c={categoryToken}
+      >
         <Image
           src={block.url}
           // `alt` vazio em imagem decorativa é a marcação CORRETA: diz ao leitor
@@ -281,6 +290,14 @@ function ImageBlockView({
           // Sem `priority`: imagem do MEIO do corpo nunca é o LCP, e marcá-la
           // como prioritária competiria com a capa pela banda inicial.
           sizes={MEDIA_SIZES[block.largura]}
+          // Só 'focal' precisa de posição inline — mesmo raciocínio de
+          // `article-view.tsx`/`article-card.tsx`: coordenada ausente cai no
+          // centro, que é o que 'cover' já faria.
+          style={
+            block.fit === 'focal'
+              ? { objectPosition: `${block.focalX ?? 50}% ${block.focalY ?? 50}%` }
+              : undefined
+          }
         />
       </div>
 

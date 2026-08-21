@@ -213,6 +213,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           tldr: input.tldr,
           coverImageUrl: input.coverImageUrl,
           coverImageAlt: input.coverImageAlt,
+          // Ver `@subcarioca/core` (`cover-image.ts`). `parseArticleInput` já
+          // garante que as coordenadas só vêm preenchidas quando
+          // `coverImageFit === 'focal'` — inclusive limpando um resíduo de
+          // quando a matéria esteve nesse modo e o editor trocou para outro.
+          coverImageFit: input.coverImageFit,
+          coverImageFocalX: input.coverImageFocalX,
+          coverImageFocalY: input.coverImageFocalY,
           isBreaking: input.isBreaking,
           hasSpoiler: input.hasSpoiler,
           contentSensitivity: input.contentSensitivity,

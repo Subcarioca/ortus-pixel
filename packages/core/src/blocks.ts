@@ -39,6 +39,7 @@
  * nenhum dos oito portais analisados usa.
  */
 
+import type { CoverImageFit } from './cover-image';
 import { slugify } from './utils';
 
 // =============================================================================
@@ -123,6 +124,27 @@ export interface ImageBlock extends BlockBase {
    */
   credito?: string;
   largura: BlockWidth;
+  /**
+   * ENQUADRAMENTO — mesmo vocabulário e mesmo motivo da capa (ver
+   * `cover-image.ts`, ao lado): `.thumb` (a moldura 16:9 fixa) é a MESMA
+   * classe usada pela capa e por este bloco (ver `article-blocks.tsx`), então
+   * a imagem do corpo sofre o mesmo corte automático — um print vertical de
+   * jogo ou um pôster no meio do texto perde exatamente a mesma parte que uma
+   * capa perderia.
+   *
+   * OPCIONAL, e não obrigatório como no Article: todo bloco de imagem já
+   * publicado antes deste campo existir simplesmente não tem a chave no JSON
+   * — `ausente` e `'cover'` significam a MESMA coisa (o comportamento de
+   * sempre), então não há necessidade de backfill nenhum, ao contrário da
+   * coluna do Article (que precisou de `@default` porque é `NOT NULL` no
+   * banco). `parseImageBlockFit`, em `server/blocks-input.ts`, normaliza os
+   * três campos JUNTOS pela mesma razão de `parseCoverImageFocus` no
+   * `article-input.ts`: fora de 'focal', as coordenadas nunca sobrevivem à
+   * gravação.
+   */
+  fit?: CoverImageFit;
+  focalX?: number | null;
+  focalY?: number | null;
 }
 
 /** Item da caixa "Leia também". */

@@ -16,6 +16,7 @@ export * from './comment-moderation-bot';
 export * from './staff';
 export * from './blocks';
 export * from './content-sensitivity';
+export * from './cover-image';
 export * from './editorial-risk';
 export * from './topic-origin';
 export * from './content-origin';

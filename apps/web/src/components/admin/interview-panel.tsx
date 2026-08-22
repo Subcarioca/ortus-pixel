@@ -32,6 +32,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { routes } from '@subcarioca/core';
+
 import type { InterviewMessage } from '@/server/ai/interview-types';
 
 interface InterviewPanelProps {
@@ -47,6 +49,13 @@ export function InterviewPanel({ topicId, pautaTitulo, onClose }: InterviewPanel
   const [ocupado, setOcupado] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
+  /** Chamada de fechamento em andamento (separada de `ocupado`: são dois
+   *  botões diferentes, e travar os dois com o mesmo sinalizador faria o
+   *  campo de resposta parecer quebrado enquanto o rascunho é montado). */
+  const [salvando, setSalvando] = useState(false);
+  /** Mensagem de sucesso do salvamento. `null` = ainda não salvou. É também o
+   *  que esconde o botão de encerrar, contra o clique duplo. */
+  const [rascunhoSalvo, setRascunhoSalvo] = useState<string | null>(null);
 
   /**
    * Guarda se a abertura já foi pedida.
@@ -150,6 +159,42 @@ export function InterviewPanel({ topicId, pautaTitulo, onClose }: InterviewPanel
     }
   }
 
+  /**
+   * ENCERRA A ENTREVISTA: pede ao servidor que transforme a conversa em
+   * rascunho de matéria, já em blocos.
+   *
+   * Manda o histórico inteiro — é a mesma conversa que o turno normal envia, e
+   * é ela que contém o texto aprovado. Quem decide o que é matéria e o que era
+   * papo é o servidor (ver a ação `interview-finish`), que faz isso com uma
+   * chamada em modo JSON em vez de recortar texto por heurística.
+   */
+  async function encerrarESalvar() {
+    if (salvando || ocupado) return;
+
+    setSalvando(true);
+    setErro(null);
+
+    try {
+      const response = await fetch(`/api/admin/topics/${topicId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'interview-finish', mensagens }),
+      });
+
+      const data = (await response.json()) as { ok: boolean; message?: string };
+
+      if (data.ok) {
+        setRascunhoSalvo(data.message ?? 'Rascunho salvo.');
+      } else {
+        setErro(data.message ?? 'Não foi possível salvar o rascunho.');
+      }
+    } catch {
+      setErro('Não foi possível falar com o servidor. O rascunho não foi salvo.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   const temResposta = mensagens.some((m) => m.role === 'assistant');
 
   return (
@@ -157,6 +202,22 @@ export function InterviewPanel({ topicId, pautaTitulo, onClose }: InterviewPanel
       <div className="admin-row__prearticle-head">
         <h4 className="admin-row__title">Entrevista sobre a pauta</h4>
         <div className="admin-actions">
+          {/* ENCERRAR — o caminho de saída principal do modo. Só aparece
+              depois da primeira resposta (antes disso não há o que encerrar) e
+              some depois de salvar: um segundo clique criaria uma segunda
+              matéria do mesmo assunto, e a trava do servidor devolveria 409
+              — melhor não oferecer o botão do que explicar o erro. */}
+          {temResposta && !rascunhoSalvo && (
+            <button
+              type="button"
+              className="btn btn--primary btn--sm"
+              onClick={() => void encerrarESalvar()}
+              disabled={ocupado || salvando}
+              aria-busy={salvando}
+            >
+              {salvando ? 'Montando rascunho…' : 'Encerrar e salvar rascunho'}
+            </button>
+          )}
           {temResposta && (
             <button type="button" className="btn btn--ghost btn--sm" onClick={() => void copiarUltima()}>
               {copiado ? 'Copiado ✓' : 'Copiar última resposta'}
@@ -168,9 +229,23 @@ export function InterviewPanel({ topicId, pautaTitulo, onClose }: InterviewPanel
         </div>
       </div>
 
+      {/* Confirmação do salvamento, com o caminho para editar. Aponta para a
+          LISTA de matérias (e não para uma URL por id): a edição em
+          `/admin/materias` abre inline dentro da própria listagem, e o
+          rascunho recém-criado é a primeira linha de "Rascunhos". Mesmo
+          caminho que a pré-matéria já usa. */}
+      {rascunhoSalvo && (
+        <p className="admin-row__summary" role="status">
+          {rascunhoSalvo}{' '}
+          <a className="btn btn--primary btn--sm" href={routes.adminArticles()}>
+            Abrir rascunho para editar
+          </a>
+        </p>
+      )}
+
       <p className="form-hint">
         Pauta: <b>{pautaTitulo}</b> · A conversa vive só nesta tela — recarregar a página perde o
-        que foi dito. Quando o texto estiver bom, copie e cole em “Criar matéria”.
+        que foi dito. Quando o texto estiver pronto, use “Encerrar e salvar rascunho”.
       </p>
 
       <div className="admin-interview__log">

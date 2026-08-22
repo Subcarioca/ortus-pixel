@@ -110,6 +110,27 @@ export interface InterviewContext {
 
 export type InterviewResult = { ok: true; resposta: string } | DeepSeekFailure;
 
+/**
+ * A matéria final, extraída da conversa em formato de máquina.
+ *
+ * `corpoMarkdown` é Markdown de propósito, e não blocos já montados: o
+ * conversor `markdownToBlocks` (em `@subcarioca/core`) já existe, já é testado
+ * e já é o caminho que o editor usa para converter o acervo antigo. Pedir
+ * blocos ao modelo seria pedir que ele acertasse uma estrutura de dados
+ * inteira — ids, tipos, campos por tipo — quando ele acerta Markdown
+ * naturalmente. Um erro de forma vira parágrafo torto; um erro de estrutura
+ * vira rascunho que não abre.
+ */
+export interface InterviewArticle {
+  titulo: string;
+  linhaFina: string;
+  corpoMarkdown: string;
+}
+
+export type InterviewArticleResult =
+  | { ok: true; artigo: InterviewArticle }
+  | DeepSeekFailure;
+
 /** Disponibilidade — mesma fonte de verdade dos outros modos. */
 export { isDeepSeekConfigured as isInterviewConfigured, deepseekModel as interviewModel } from './deepseek';
 
@@ -669,4 +690,168 @@ export function sanitizeHistory(raw: unknown): InterviewMessage[] {
   // `MAX_INTERVIEW_MESSAGES`: o começo já virou texto, o fim é o que está em
   // andamento.
   return limpas.slice(-MAX_INTERVIEW_MESSAGES);
+}
+
+// =============================================================================
+// FECHAMENTO — da conversa para o rascunho em blocos
+// =============================================================================
+
+/**
+ * O PROMPT DO FECHAMENTO — extrair, nunca reescrever.
+ *
+ * -----------------------------------------------------------------------------
+ * POR QUE UMA SEGUNDA CHAMADA, E NÃO UM RECORTE DA ÚLTIMA RESPOSTA
+ * -----------------------------------------------------------------------------
+ * A última fala do entrevistador é conversa: ela traz o rascunho MAIS os dois
+ * blocos de serviço que o prompt principal exige ("SUAS FALAS QUE MANTIVE",
+ * "PONTOS QUE ACHEI FRACOS"), às vezes precedida de um comentário solto. Cortar
+ * isso com heurística de texto (procurar "TÍTULO:", parar antes de "SUAS
+ * FALAS") erra em silêncio no dia em que o modelo variar uma palavra — e o erro
+ * seria gravar meio rascunho, ou gravar as anotações internas como se fossem
+ * matéria.
+ *
+ * Uma chamada extra em modo JSON troca esse risco por um contrato: o modelo
+ * devolve os três campos separados, e a coação (`parseInterviewArticle`)
+ * garante que o que chega ao banco tem a forma esperada. É o mesmo padrão que
+ * `prearticle.ts` já usa, e pelo mesmo motivo.
+ *
+ * TEMPERATURA BAIXA aqui (ao contrário do resto do modo): isto não é criação, é
+ * transcrição estruturada. Variedade, que é a virtude da entrevista, seria
+ * defeito no fechamento — o texto aprovado já existe e não pode mudar de
+ * palavra no caminho para o banco.
+ */
+function buildFinalizePrompt(): string {
+  return [
+    'Você está FECHANDO uma entrevista da Ortus Pixel. A matéria já foi escrita e aprovada pelo',
+    'autor durante a conversa acima. Sua única tarefa agora é ENTREGAR o texto final em JSON.',
+    '',
+    'REGRA ÚNICA E ABSOLUTA: NÃO REESCREVA NADA. Você não está melhorando, resumindo, corrigindo',
+    'nem "dando uma última polida". Você está copiando o que já foi aprovado para um formato de',
+    'máquina. Trocar uma palavra do autor aqui desfaz, em silêncio, todo o trabalho da entrevista —',
+    'que existiu justamente para preservar a voz dele.',
+    '',
+    'De onde tirar cada campo:',
+    '- Use a versão MAIS RECENTE do texto na conversa. Se o autor colou uma edição dele, é ELA que',
+    '  vale — não a sua versão anterior.',
+    '- DESCARTE tudo que era conversa: as seções "SUAS FALAS QUE MANTIVE", "PONTOS QUE ACHEI',
+    '  FRACOS", perguntas, comentários seus e qualquer texto fora da matéria.',
+    '',
+    'FORMATO DE SAÍDA (JSON), exatamente estas três chaves:',
+    '{',
+    '  "titulo": "o título da matéria, sem prefixo como TÍTULO:",',
+    '  "linha_fina": "a linha fina / subtítulo, em uma ou duas frases",',
+    '  "corpo_markdown": "o corpo da matéria em Markdown"',
+    '}',
+    '',
+    'REGRAS DO `corpo_markdown` — o formato importa, porque ele vira blocos no editor:',
+    '- Parágrafos separados por UMA linha em branco.',
+    '- Subtítulo de seção com `## ` no início da linha (dois sustenidos e um espaço).',
+    '- Lista com `- ` no início de cada item; lista numerada com `1. `, `2. `...',
+    '- Citação com `> ` no início da linha.',
+    '- NÃO inclua o título nem a linha fina dentro do corpo: eles já têm campo próprio, e repetir',
+    '  faria a matéria abrir com o título escrito duas vezes.',
+    '- Nada de imagem, vídeo ou link em formato Markdown — quem coloca mídia é o editor, na tela.',
+    '',
+    'Se a conversa NÃO chegou a produzir uma matéria (só houve perguntas, ou o autor desistiu),',
+    'devolva as três chaves com string vazia. Não invente uma matéria para preencher o formato.',
+  ].join('\n');
+}
+
+/**
+ * Fecha a entrevista: pede ao modelo o texto aprovado em formato de máquina.
+ * NUNCA lança (contrato herdado de `chatCompletion`).
+ */
+export async function finalizeInterview(
+  context: InterviewContext,
+  historico: InterviewMessage[],
+): Promise<InterviewArticleResult> {
+  const mensagens: ChatMessage[] = [
+    // O MESMO prompt de sistema da conversa, e não um enxuto: as regras
+    // inegociáveis (não inventar fato, atribuir fonte, rumor é rumor) precisam
+    // continuar valendo no fechamento — é justamente aqui que o texto sai da
+    // tela e vai para o banco. `isWebSearchConfigured()` só muda a seção sobre
+    // a ferramenta; no fechamento ela não é oferecida, mas o prompt precisa
+    // seguir coerente com a conversa que o modelo está lendo acima.
+    { role: 'system', content: buildInterviewSystemPrompt(isWebSearchConfigured()) },
+    { role: 'user', content: buildOpeningMessage(context) },
+    ...historico.map((m) => ({ role: m.role, content: m.content })),
+    { role: 'user', content: buildFinalizePrompt() },
+  ];
+
+  const result = await chatCompletion({
+    messages: mensagens,
+    jsonMode: true,
+    // Ver o comentário de `buildFinalizePrompt`: transcrição, não criação.
+    temperature: 0.2,
+  });
+
+  if (!result.ok) return result;
+
+  return parseInterviewArticle(result.content);
+}
+
+/**
+ * Do JSON cru para o contrato tipado.
+ *
+ * Coage em vez de confiar, como `parsePreArticle`: campo ausente vira string
+ * vazia (nunca `undefined` que estouraria mais adiante), e só o caso sem
+ * conserto — nenhum texto aproveitável — vira falha declarada. A validação de
+ * TAMANHO não acontece aqui de propósito: quem conhece os limites de gravação
+ * (título 8–180, resumo 20–300, corpo mín. 40) é a rota, que também sabe o que
+ * fazer quando eles não são alcançados.
+ */
+export function parseInterviewArticle(raw: string): InterviewArticleResult {
+  let data: Record<string, unknown>;
+
+  try {
+    const parsed: unknown = JSON.parse(extractJsonObject(raw));
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      return invalidArticle();
+    }
+    data = parsed as Record<string, unknown>;
+  } catch {
+    return invalidArticle();
+  }
+
+  const artigo: InterviewArticle = {
+    titulo: asText(data.titulo),
+    linhaFina: asText(data.linha_fina),
+    corpoMarkdown: asText(data.corpo_markdown),
+  };
+
+  // Sem título E sem corpo não há matéria nenhuma — é o caso que o próprio
+  // prompt manda devolver vazio quando a conversa não produziu texto. Melhor
+  // dizer isso do que gravar um rascunho em branco na lista de matérias.
+  if (artigo.titulo.length === 0 && artigo.corpoMarkdown.length === 0) {
+    return invalidArticle();
+  }
+
+  return { ok: true, artigo };
+}
+
+function invalidArticle(): DeepSeekFailure {
+  return {
+    ok: false,
+    reason: 'invalid-response',
+    status: 502,
+    message:
+      'Não consegui montar a matéria a partir desta conversa. ' +
+      'Se o texto já estiver pronto na tela, copie e cole em "Criar matéria".',
+  };
+}
+
+/** String limpa; qualquer outro tipo vira vazio. */
+function asText(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+/**
+ * Tira a cerca de código quando o modelo devolve ```json ... ``` apesar do modo
+ * JSON. Mesmo cuidado (e mesmo motivo) de `extractJson` em `prearticle.ts`.
+ */
+function extractJsonObject(raw: string): string {
+  const semCerca = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+  const inicio = semCerca.indexOf('{');
+  const fim = semCerca.lastIndexOf('}');
+  return inicio >= 0 && fim > inicio ? semCerca.slice(inicio, fim + 1) : semCerca;
 }

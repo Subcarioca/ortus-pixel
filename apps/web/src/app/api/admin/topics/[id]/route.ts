@@ -20,6 +20,8 @@
  * core/staff.ts.
  */
 
+import { randomUUID } from 'node:crypto';
+
 import { NextResponse } from 'next/server';
 import { revalidateTag } from 'next/cache';
 
@@ -28,8 +30,10 @@ import type { Prisma } from '@prisma/client';
 import { prisma, toJsonColumn, toStringArray } from '@subcarioca/db';
 import {
   blocksReadingMinutes,
+  blocksToPlainText,
   estimateReadingMinutes,
   hasBlocks,
+  markdownToBlocks,
   requiresSensitiveApproval,
   sensitivityRank,
   slugify,
@@ -49,6 +53,7 @@ import {
 import type { PreArticleOutput } from '@/server/ai/prearticle-types';
 import {
   continueInterview,
+  finalizeInterview,
   interviewModel,
   isInterviewConfigured,
   sanitizeHistory,
@@ -807,6 +812,202 @@ export async function POST(
       }
 
       return NextResponse.json({ ok: true, resposta: entrevista.resposta });
+    }
+
+    // -------------------------------------------------------------------------
+    case 'interview-finish': {
+      /**
+       * FECHAMENTO DA ENTREVISTA — a conversa vira rascunho EM BLOCOS.
+       *
+       * -----------------------------------------------------------------------
+       * A DIFERENÇA PARA O RASCUNHO DA PRÉ-MATÉRIA
+       * -----------------------------------------------------------------------
+       * A pré-matéria grava `content` em Markdown e deixa a conversão para
+       * blocos a cargo do redator (um botão no editor). Aqui o rascunho já
+       * nasce EM BLOCOS, por pedido do dono do site — e faz sentido: a matéria
+       * da entrevista é o produto final de um trabalho longo, não um ponto de
+       * partida, então chegar ao editor já no formato que o site usa poupa o
+       * passo manual justamente no fim do fluxo mais demorado.
+       *
+       * O caminho é `markdownToBlocks` (core), o MESMO conversor que o botão do
+       * editor usa. Reaproveitá-lo é o que garante que os dois caminhos
+       * produzam a mesma estrutura — um conversor próprio aqui divergiria do
+       * outro no primeiro ajuste que alguém fizesse em só um dos dois.
+       */
+      if (!isInterviewConfigured()) {
+        return NextResponse.json(
+          { ok: false, message: 'A entrevista por IA não está configurada neste servidor.' },
+          { status: 503 },
+        );
+      }
+
+      const contextoFinal = await prisma.topic.findUnique({
+        where: { id },
+        select: {
+          title: true,
+          summary: true,
+          sourceName: true,
+          category: { select: { id: true, name: true, slug: true } },
+        },
+      });
+
+      if (!contextoFinal) {
+        return NextResponse.json({ ok: false, message: 'Tópico não encontrado.' }, { status: 404 });
+      }
+
+      // Sem categoria não há como preencher `Article.categoryId`. Recusa ANTES
+      // de gastar a chamada paga: ao contrário da pré-matéria (onde o texto
+      // gerado ainda serve para leitura na tela), aqui o texto JÁ ESTÁ na tela
+      // do autor — uma chamada que não pode terminar em rascunho não entrega
+      // nada que ele já não tenha.
+      if (!contextoFinal.category) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              'Esta pauta não tem editoria definida, e o rascunho precisa de uma. ' +
+              'Copie o texto e use "Criar matéria" para escolher a editoria.',
+          },
+          { status: 409 },
+        );
+      }
+
+      const historicoFinal = sanitizeHistory((payload as { mensagens?: unknown }).mensagens);
+
+      if (historicoFinal.length === 0) {
+        return NextResponse.json(
+          { ok: false, message: 'Não há conversa para transformar em matéria.' },
+          { status: 400 },
+        );
+      }
+
+      const fechamento = await finalizeInterview(
+        {
+          pauta: contextoFinal.title,
+          material: contextoFinal.summary?.trim() || 'Sem resumo apurado — pergunte ao autor.',
+          fonte: contextoFinal.sourceName ?? 'não informada',
+          nicho: contextoFinal.category.name,
+        },
+        historicoFinal,
+      );
+
+      if (!fechamento.ok) {
+        return NextResponse.json(
+          { ok: false, message: fechamento.message },
+          { status: fechamento.status },
+        );
+      }
+
+      const artigo = fechamento.artigo;
+
+      /**
+       * OS BLOCOS. `randomUUID` como gerador de id porque `markdownToBlocks`
+       * recebe a função de fora — o core não importa `node:crypto` de
+       * propósito (ele roda também no navegador, no editor).
+       */
+      const blocos = markdownToBlocks(artigo.corpoMarkdown, () => randomUUID());
+
+      /**
+       * `content` DERIVADO dos blocos, nunca o Markdown cru.
+       *
+       * É a mesma regra de `article-input.ts`: quando há blocos, eles são a
+       * fonte da verdade e `content` é a projeção em texto puro deles. Gravar o
+       * Markdown aqui faria o texto indexado pela busca ter marcações (`##`,
+       * `- `) que o leitor nunca vê — e, pior, divergir do que está na tela no
+       * dia em que alguém editasse um bloco.
+       */
+      const conteudoTexto = blocksToPlainText(blocos);
+
+      // Os MESMOS limites de `article-input.ts` (título 8–180, resumo 20–300,
+      // corpo mín. 40): gravar um rascunho que a tela de EDIÇÃO depois
+      // recusaria como inválido seria entregar um beco sem saída.
+      const tituloFinal = artigo.titulo.trim().slice(0, 180);
+      const resumoFinal = artigo.linhaFina.trim().slice(0, 300);
+
+      if (tituloFinal.length < 8 || resumoFinal.length < 20 || conteudoTexto.length < 40) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              'A matéria ainda está curta demais para virar rascunho (título, linha fina ou corpo). ' +
+              'Continue a entrevista ou copie o texto para "Criar matéria".',
+          },
+          { status: 422 },
+        );
+      }
+
+      const categoriaFinal = contextoFinal.category;
+      const outcomeEntrevista = await createArticleWithUniqueSlug({
+        topicId: id,
+        baseSlug: slugify(tituloFinal) || 'materia',
+        buildData: (slug) => ({
+          slug,
+          title: tituloFinal,
+          excerpt: resumoFinal,
+          content: conteudoTexto,
+          blocks: toJsonColumn(blocos),
+          // 'ai-assisted' e não 'human': o texto passou por um modelo, mesmo
+          // que a OPINIÃO seja do autor. A procedência descreve o caminho do
+          // texto, não a autoria da ideia — e afirmar 'human' aqui seria
+          // maquiar a trilha que existe justamente para essa distinção.
+          contentOrigin: 'ai-assisted',
+          status: 'draft',
+          categoryId: categoriaFinal.id,
+          authorId: guard.user.id,
+          topicId: id,
+          readingMinutes: blocksReadingMinutes(blocos),
+          currentScore: topic.currentScore,
+        }),
+        afterCreate: async (tx, created) => {
+          await tx.auditLog.create({
+            data: {
+              action: 'article.drafted',
+              entityType: 'Article',
+              entityId: created.id,
+              actorId: guard.user.id,
+              after: {
+                title: tituloFinal,
+                slug: created.slug,
+                categorySlug: categoriaFinal.slug,
+                contentOrigin: 'ai-assisted',
+                // Distingue, na trilha, o rascunho vindo da ENTREVISTA do
+                // vindo da pré-matéria (`source: 'prearticle'`) e do escrito à
+                // mão. Os três usam a mesma ação.
+                source: 'interview',
+                blocos: blocos.length,
+              },
+            },
+          });
+        },
+      });
+
+      if (outcomeEntrevista === 'already-covered') {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              'Esta pauta já virou matéria — provavelmente em outra aba. Edite a matéria existente em Matérias.',
+          },
+          { status: 409 },
+        );
+      }
+
+      if (outcomeEntrevista === null) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: 'Não foi possível criar um endereço único para o rascunho. Tente de novo.',
+          },
+          { status: 409 },
+        );
+      }
+
+      return NextResponse.json({
+        ok: true,
+        message: `Rascunho salvo com ${blocos.length} bloco(s). Revise antes de publicar.`,
+        articleId: outcomeEntrevista.id,
+        articleSlug: outcomeEntrevista.slug,
+      });
     }
 
     // -------------------------------------------------------------------------

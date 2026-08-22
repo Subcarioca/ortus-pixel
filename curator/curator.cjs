@@ -2979,8 +2979,12 @@ function createTopicQuota(limits = {}) {
 // services/curator/src/pipeline/topic-pool.ts
 var MAX_ACTIVE_TOPICS = 30;
 var MAX_TRIM_PER_CYCLE = 500;
+var NEW_TOPIC_GRACE_HOURS = 6;
 function excessOverCap(activeCount, cap = MAX_ACTIVE_TOPICS) {
   return Math.max(0, activeCount - cap);
+}
+function graceCutoff(now = /* @__PURE__ */ new Date()) {
+  return new Date(now.getTime() - NEW_TOPIC_GRACE_HOURS * 36e5);
 }
 async function trimTopicPool(options = {}) {
   const { dryRun = false, cap = MAX_ACTIVE_TOPICS } = options;
@@ -2995,7 +2999,11 @@ async function trimTopicPool(options = {}) {
         // Trabalho em andamento não é fila parada. Ver decisão 3(a).
         articles: { none: {} },
         // Decisão humana não é sobrescrita por automação. Ver decisão 3(b).
-        manualScoreOverride: null
+        manualScoreOverride: null,
+        // CARÊNCIA: pauta encontrada há menos de 6h não é candidata a corte,
+        // qualquer que seja o score. Ver `NEW_TOPIC_GRACE_HOURS` — é o conserto
+        // do bug que fazia a pauta nova morrer no ciclo em que nascia.
+        createdAt: { lt: graceCutoff() }
       },
       orderBy: [{ currentScore: "asc" }, { createdAt: "asc" }],
       take: Math.min(excesso, MAX_TRIM_PER_CYCLE),
@@ -3744,6 +3752,7 @@ function surfacesForBand(band) {
 // services/curator/src/pipeline/curate.ts
 var ENRICHMENT_THRESHOLD = 35;
 var MAX_ENRICHMENT_PER_CYCLE = 40;
+var MAX_RESCORE_PER_CYCLE = 15;
 var TRENDING_BANDS = /* @__PURE__ */ new Set(["HOT", "RISING"]);
 async function runCurationCycle(options) {
   const startedAt = Date.now();
@@ -3756,6 +3765,7 @@ async function runCurationCycle(options) {
     discovered: 0,
     expiredTopics: 0,
     trimmedTopics: 0,
+    rescored: 0,
     revived: 0,
     rewrittenToPtBr: 0,
     deduplicated: 0,
@@ -3885,6 +3895,30 @@ async function runCurationCycle(options) {
       result.enriched++;
       scoring.failedConnectors.forEach((c) => allFailedConnectors.add(c));
       if (scoring.band === "HOT") result.promotedToHot++;
+    }
+    const paraRepontuar = dryRun ? [] : await prisma.topic.findMany({
+      where: {
+        status: { in: ["new", "assigned"] },
+        // As desta rodada já foram pontuadas agora há pouco.
+        id: { notIn: topicIds },
+        // Override manual é decisão humana: o algoritmo não a revisita.
+        manualScoreOverride: null
+      },
+      // As MAIS PARADAS primeiro (`lastScoredAt` mais antigo). `nulls:
+      // 'first'` põe na frente quem nunca foi pontuada — o caso mais
+      // urgente de todos, porque é score que nunca refletiu nada.
+      orderBy: { lastScoredAt: { sort: "asc", nulls: "first" } },
+      take: MAX_RESCORE_PER_CYCLE,
+      select: { id: true }
+    });
+    for (const { id: topicId } of paraRepontuar) {
+      const scoring = await scoreTopic(topicId, discoveryConnectors, dryRun);
+      if (!scoring) continue;
+      result.rescored++;
+      scoring.failedConnectors.forEach((c) => allFailedConnectors.add(c));
+    }
+    if (result.rescored > 0) {
+      console.log(`[curate] ${result.rescored} pauta(s) da fila repontuada(s).`);
     }
     const trim = await trimTopicPool({ dryRun });
     result.trimmedTopics = trim.dismissed;

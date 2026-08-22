@@ -1,6 +1,13 @@
 # =============================================================================
-# AGENDADOR EXTERNO DO CICLO DE CURADORIA
+# DISPARO DO CICLO DE CURADORIA — SÓ MANUAL, POR DECISÃO DO DONO DO SITE
 # =============================================================================
+#
+# ⚠ ESTADO ATUAL: este workflow NÃO tem `schedule`. Ele só roda quando alguém
+# aciona (aba Actions -> "Run workflow", ou o botão "Buscar pautas agora" no
+# painel, que fala direto com a rota e nem passa por aqui). O restante deste
+# cabeçalho é o histórico de QUANDO ele tinha agendamento automático (`*/30`) —
+# mantido porque explica o resto do arquivo (o `workflow_dispatch`, o segredo,
+# os tetos de custo) e serve de referência caso o agendamento volte um dia.
 #
 # POR QUE ESTE ARQUIVO EXISTE
 # -----------------------------------------------------------------------------
@@ -77,11 +84,13 @@
 name: Ciclo de curadoria
 
 on:
-  schedule:
-    # Ver o bloco de custo acima antes de trocar para `*/15`.
-    - cron: '*/30 * * * *'
-  # Permite disparar à mão pela aba Actions — útil para testar a configuração
-  # sem esperar a próxima janela do agendamento.
+  # SEM `schedule` DE PROPÓSITO — decisão do dono do site (revertendo o padrão
+  # `*/30` que este arquivo tinha antes). O ciclo só dispara por ação humana:
+  # por aqui (aba Actions -> Run workflow) ou pelo botão "Buscar pautas agora"
+  # no painel, que chama a mesma rota (`api/internal/curator-run/route.ts`)
+  # direto, sem passar por este workflow. Ver o cabeçalho acima para o
+  # histórico de custo/atraso do agendamento via Actions, caso um dia alguém
+  # queira reativar — a linha que faltaria é só `schedule: - cron: '*/30 * * * *'`.
   workflow_dispatch:
 
 # Duas execuções simultâneas não fazem sentido aqui (a rota as recusaria de

@@ -76,6 +76,20 @@ echo "[overlay] substituindo .next/ ..."
 rm -rf "${DEPLOY_OUT}/.next"
 cp -r "${APPS_WEB_BUILD}/.next" "${DEPLOY_OUT}/.next"
 
+# `.next/cache/` (cache incremental do webpack) NUNCA é lido por um servidor
+# standalone — ele só serve `next build`/`next dev` reaproveitarem compilação
+# entre chamadas, e este processo builda do zero a cada release. Deixá-lo
+# entrar no commit é puro desperdício, e um desperdício que se paga em dobro
+# aqui: os nomes de arquivo do cache do webpack carregam hash de conteúdo, ou
+# seja, toda entrada é NOVA em relação ao commit anterior (nada para o git
+# deduplicar) — cada deploy soma milhares de arquivos únicos que nunca mais
+# são lidos, só ocupam espaço e, principalmente, INODE, que é um recurso
+# separado de espaço em disco e mais fácil de esgotar numa hospedagem
+# compartilhada. Com a branch `deploy-standalone` acumulando um commit novo a
+# cada deploy (nunca um force-push, ver o workflow), isto cresce para sempre.
+echo "[overlay] removendo .next/cache/ (nunca usado em runtime, custa inode em dobro) ..."
+rm -rf "${DEPLOY_OUT}/.next/cache"
+
 echo "[overlay] .next/static/ ..."
 cp -r "${WEB_STATIC}" "${DEPLOY_OUT}/.next/static"
 

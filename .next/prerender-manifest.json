@@ -1,35 +1,6 @@
 {
   "version": 4,
   "routes": {
-    "/apple-icon.png": {
-      "initialHeaders": {
-        "cache-control": "public, immutable, no-transform, max-age=31536000",
-        "content-type": "image/png",
-        "x-next-cache-tags": "_N_T_/layout,_N_T_/apple-icon.png/layout,_N_T_/apple-icon.png/route,_N_T_/apple-icon.png"
-      },
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "next-action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/apple-icon.png",
-      "dataRoute": null,
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
     "/favicon.ico": {
       "initialHeaders": {
         "cache-control": "public, max-age=0, must-revalidate",
@@ -78,6 +49,35 @@
       ],
       "initialRevalidateSeconds": false,
       "srcRoute": "/icon.svg",
+      "dataRoute": null,
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
+    "/apple-icon.png": {
+      "initialHeaders": {
+        "cache-control": "public, immutable, no-transform, max-age=31536000",
+        "content-type": "image/png",
+        "x-next-cache-tags": "_N_T_/layout,_N_T_/apple-icon.png/layout,_N_T_/apple-icon.png/route,_N_T_/apple-icon.png"
+      },
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/apple-icon.png",
       "dataRoute": null,
       "allowHeader": [
         "host",
@@ -278,8 +278,8 @@
   "dynamicRoutes": {},
   "notFoundRoutes": [],
   "preview": {
-    "previewModeId": "b5a3a311462b1f4a81549e0dc0007a97",
-    "previewModeSigningKey": "ee9cac6d11c4cdb00f7b80d43139146d514ec4c38346f91f1c5b186f17201319",
-    "previewModeEncryptionKey": "72d41d043dffd88ff0a042649a0b9d2057c6e3171963e04b63a604708c3e3eba"
+    "previewModeId": "69785965a221177d7fffb14716625b25",
+    "previewModeSigningKey": "230eb572a6f7cf9c75264d8cc9130b20505b367295ba82abf25bf14876b6a9a2",
+    "previewModeEncryptionKey": "6b717917531adc69f1f43c90d5a86a4c241fea572a34d2a1b732026cee2c5920"
   }
 }

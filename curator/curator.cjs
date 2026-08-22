@@ -2976,6 +2976,69 @@ function createTopicQuota(limits = {}) {
   };
 }
 
+// services/curator/src/pipeline/topic-pool.ts
+var MAX_ACTIVE_TOPICS = 30;
+var MAX_TRIM_PER_CYCLE = 500;
+function excessOverCap(activeCount, cap = MAX_ACTIVE_TOPICS) {
+  return Math.max(0, activeCount - cap);
+}
+async function trimTopicPool(options = {}) {
+  const { dryRun = false, cap = MAX_ACTIVE_TOPICS } = options;
+  const ATIVAS = { status: { in: ["new", "assigned"] } };
+  try {
+    const active = await prisma.topic.count({ where: ATIVAS });
+    const excesso = excessOverCap(active, cap);
+    if (excesso === 0) return { active, dismissed: 0, hasMore: false };
+    const candidatas = await prisma.topic.findMany({
+      where: {
+        ...ATIVAS,
+        // Trabalho em andamento não é fila parada. Ver decisão 3(a).
+        articles: { none: {} },
+        // Decisão humana não é sobrescrita por automação. Ver decisão 3(b).
+        manualScoreOverride: null
+      },
+      orderBy: [{ currentScore: "asc" }, { createdAt: "asc" }],
+      take: Math.min(excesso, MAX_TRIM_PER_CYCLE),
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        currentScore: true,
+        currentBand: true
+      }
+    });
+    const hasMore = candidatas.length < excesso;
+    if (candidatas.length === 0) return { active, dismissed: 0, hasMore };
+    if (dryRun) return { active, dismissed: candidatas.length, hasMore };
+    const ids = candidatas.map((topic) => topic.id);
+    const { count } = await prisma.topic.updateMany({
+      where: { id: { in: ids }, status: { in: ["new", "assigned"] } },
+      data: { status: "dismissed" }
+    });
+    await logPipelineEvents(
+      candidatas.map((topic) => ({
+        eventType: "topic.evicted",
+        topicId: topic.id,
+        payload: {
+          reason: "pool_cap",
+          cap,
+          activeBefore: active,
+          previousStatus: topic.status,
+          score: topic.currentScore,
+          band: topic.currentBand
+        }
+      }))
+    );
+    return { active, dismissed: count, hasMore };
+  } catch (error) {
+    console.error(
+      "[topic-pool] falha ao cortar a fila pelo teto (a fila segue como est\xE1):",
+      error instanceof Error ? error.message : error
+    );
+    return { active: 0, dismissed: 0, hasMore: false };
+  }
+}
+
 // services/curator/src/pipeline/rewrite-ptbr.ts
 var API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 var DEFAULT_MODEL = "gemini-3.1-flash-lite";
@@ -3681,6 +3744,7 @@ function surfacesForBand(band) {
 // services/curator/src/pipeline/curate.ts
 var ENRICHMENT_THRESHOLD = 35;
 var MAX_ENRICHMENT_PER_CYCLE = 40;
+var TRENDING_BANDS = /* @__PURE__ */ new Set(["HOT", "RISING"]);
 async function runCurationCycle(options) {
   const startedAt = Date.now();
   const { phase, dryRun = false, maxAgeHours = 6 } = options;
@@ -3691,6 +3755,7 @@ async function runCurationCycle(options) {
     runId: run.id,
     discovered: 0,
     expiredTopics: 0,
+    trimmedTopics: 0,
     revived: 0,
     rewrittenToPtBr: 0,
     deduplicated: 0,
@@ -3820,6 +3885,17 @@ async function runCurationCycle(options) {
       result.enriched++;
       scoring.failedConnectors.forEach((c) => allFailedConnectors.add(c));
       if (scoring.band === "HOT") result.promotedToHot++;
+    }
+    const trim = await trimTopicPool({ dryRun });
+    result.trimmedTopics = trim.dismissed;
+    if (trim.dismissed > 0) {
+      console.log(
+        `[curate] ${trim.dismissed} pauta(s) descartada(s) por ficarem fora das ${MAX_ACTIVE_TOPICS} vagas da fila (havia ${trim.active} ativas)` + // O aviso de "sobrou" explica tanto o número redondo repetido ciclo
+        // após ciclo (teto de lote, na drenagem do passivo) quanto a fila que
+        // segue acima de 30 por ter pautas protegidas — os dois casos são
+        // esperados e nenhum é falha.
+        (trim.hasMore ? " \u2014 ainda h\xE1 excesso, o pr\xF3ximo ciclo continua" : "") + (dryRun ? " [dryRun: nada foi gravado]" : "") + "."
+      );
     }
     result.failedConnectors = [...allFailedConnectors];
     result.durationMs = Date.now() - startedAt;
@@ -4025,6 +4101,7 @@ async function scoreTopic(topicId, connectors, dryRun) {
   const scoreDelta1h = previousSnapshot ? Math.round((scoreResult.score - previousSnapshot.score) * 10) / 10 : 0;
   const previousBand = topic.currentBand;
   const becameHotNow = scoreResult.band === "HOT" && previousBand !== "HOT";
+  const emAltaAgora = TRENDING_BANDS.has(scoreResult.band) && !TRENDING_BANDS.has(previousBand);
   await prisma.$transaction([
     prisma.topic.update({
       where: { id: topicId },
@@ -4042,7 +4119,14 @@ async function scoreTopic(topicId, connectors, dryRun) {
         lastScoredAt: /* @__PURE__ */ new Date(),
         // `becameHotAt` só é gravado UMA vez: é o T-zero do cronômetro de
         // time-to-publish. Sobrescrever a cada ciclo zeraria o KPI.
-        ...becameHotNow && !topic.becameHotAt ? { becameHotAt: /* @__PURE__ */ new Date() } : {}
+        ...becameHotNow && !topic.becameHotAt ? { becameHotAt: /* @__PURE__ */ new Date() } : {},
+        // MESMA trava de escrita única, pelo mesmo motivo e com um risco extra:
+        // um assunto oscila de faixa (sobe para 'EM ALTA', cai para 'RELEVANTE'
+        // no ciclo seguinte, volta a subir). Sem o `!topic.becameTrendingAt`,
+        // cada volta reiniciaria a contagem e a fila mostraria "em alta há 15
+        // min" para uma pauta que a redação vê desde a manhã — que é a leitura
+        // errada exatamente no caso em que a informação mais importa.
+        ...emAltaAgora && !topic.becameTrendingAt ? { becameTrendingAt: /* @__PURE__ */ new Date() } : {}
       }
     }),
     prisma.scoreSnapshot.create({

@@ -1,11 +1,11 @@
 {
   "version": 4,
   "routes": {
-    "/icon.svg": {
+    "/apple-icon.png": {
       "initialHeaders": {
         "cache-control": "public, immutable, no-transform, max-age=31536000",
-        "content-type": "image/svg+xml",
-        "x-next-cache-tags": "_N_T_/layout,_N_T_/icon.svg/layout,_N_T_/icon.svg/route,_N_T_/icon.svg"
+        "content-type": "image/png",
+        "x-next-cache-tags": "_N_T_/layout,_N_T_/apple-icon.png/layout,_N_T_/apple-icon.png/route,_N_T_/apple-icon.png"
       },
       "experimentalBypassFor": [
         {
@@ -19,7 +19,7 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/icon.svg",
+      "srcRoute": "/apple-icon.png",
       "dataRoute": null,
       "allowHeader": [
         "host",
@@ -59,11 +59,11 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/apple-icon.png": {
+    "/icon.svg": {
       "initialHeaders": {
         "cache-control": "public, immutable, no-transform, max-age=31536000",
-        "content-type": "image/png",
-        "x-next-cache-tags": "_N_T_/layout,_N_T_/apple-icon.png/layout,_N_T_/apple-icon.png/route,_N_T_/apple-icon.png"
+        "content-type": "image/svg+xml",
+        "x-next-cache-tags": "_N_T_/layout,_N_T_/icon.svg/layout,_N_T_/icon.svg/route,_N_T_/icon.svg"
       },
       "experimentalBypassFor": [
         {
@@ -77,7 +77,7 @@
         }
       ],
       "initialRevalidateSeconds": false,
-      "srcRoute": "/apple-icon.png",
+      "srcRoute": "/icon.svg",
       "dataRoute": null,
       "allowHeader": [
         "host",
@@ -278,8 +278,8 @@
   "dynamicRoutes": {},
   "notFoundRoutes": [],
   "preview": {
-    "previewModeId": "293a652252c521de69c2b4a7fe3d166d",
-    "previewModeSigningKey": "8e945732a49764ec89b44e99d0bc2aaf3570a8c479260c51c4d96f88088d9393",
-    "previewModeEncryptionKey": "ba6e291104c3c7565af0514133571669e41aa3c86d7d3e457c8842c397b5b62e"
+    "previewModeId": "72f5198678cbdb4a6c62c1816ad51ac2",
+    "previewModeSigningKey": "370ca8b0492462dc376b005964ccc9967c29775955ca2c5fbc087fa25eb1563e",
+    "previewModeEncryptionKey": "40e15eb7f2d1b3aec36e1e797f663332cee32add77ea958b2187eac4234bd5b0"
   }
 }

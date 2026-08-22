@@ -70,9 +70,44 @@ const MAX_OUTPUT_TOKENS = 3_000;
 // TIPOS
 // =============================================================================
 
+/**
+ * `role: 'tool'` e os dois campos opcionais existem por causa de UMA
+ * funcionalidade: a busca do modo entrevista (`interview.ts`, `web-search.ts`).
+ * Sem tool calling, `content` sempre seria uma string; com ele, o formato
+ * OpenAI-compatível (que o DeepSeek segue) exige três peças a mais:
+ *
+ *   - uma mensagem 'assistant' pode vir com `tool_calls` em vez de (ou além de)
+ *     `content` — é o modelo pedindo para executar algo;
+ *   - a resposta a esse pedido é uma mensagem `role: 'tool'`, com `tool_call_id`
+ *     apontando de volta para QUAL chamada está sendo respondida (o modelo pode
+ *     pedir mais de uma busca no mesmo turno).
+ *
+ * Nenhum consumidor que não usa ferramentas precisa tocar nestes campos —
+ * `content` continua sendo o único obrigatório para 'system'/'user'.
+ */
+export interface ToolCall {
+  id: string;
+  type: 'function';
+  function: { name: string; arguments: string };
+}
+
 export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant';
+  role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
+  /** Só em mensagens 'assistant' que pedem execução de ferramenta. */
+  tool_calls?: ToolCall[];
+  /** Só em mensagens 'tool': a qual `tool_calls[].id` esta resposta pertence. */
+  tool_call_id?: string;
+}
+
+/** Definição de UMA ferramenta, no formato que a API espera (JSON Schema). */
+export interface ToolDefinition {
+  type: 'function';
+  function: {
+    name: string;
+    description: string;
+    parameters: Record<string, unknown>;
+  };
 }
 
 /**
@@ -102,7 +137,15 @@ export interface DeepSeekFailure {
   upstreamStatus?: number;
 }
 
-export type DeepSeekChatResult = { ok: true; content: string } | DeepSeekFailure;
+export type DeepSeekChatResult =
+  | {
+      ok: true;
+      content: string;
+      /** Presente quando o modelo pediu para executar uma ferramenta em vez
+       *  de (ou além de) responder em texto. Ver `ToolCall`. */
+      toolCalls?: ToolCall[];
+    }
+  | DeepSeekFailure;
 
 // =============================================================================
 // DISPONIBILIDADE
@@ -158,6 +201,13 @@ export async function chatCompletion(options: {
    *     fracasso que aquele prompt existe para evitar.
    */
   temperature?: number;
+  /**
+   * Ferramentas que o modelo PODE pedir para executar (function calling).
+   * Ausente = comportamento de sempre, nenhuma mudança para quem já chamava
+   * esta função sem o parâmetro. Ver `interview.ts` para o único consumidor
+   * hoje (a busca do modo entrevista).
+   */
+  tools?: ToolDefinition[];
 }): Promise<DeepSeekChatResult> {
   const apiKey = readApiKey();
 
@@ -194,6 +244,7 @@ export async function chatCompletion(options: {
         temperature: options.temperature ?? 0.3,
         max_tokens: MAX_OUTPUT_TOKENS,
         ...(options.jsonMode ? { response_format: { type: 'json_object' } } : {}),
+        ...(options.tools ? { tools: options.tools } : {}),
       }),
       signal: controller.signal,
     });
@@ -207,11 +258,26 @@ export async function chatCompletion(options: {
     }
 
     const data = (await response.json()) as {
-      choices?: { message?: { content?: string } }[];
+      choices?: { message?: { content?: string; tool_calls?: ToolCall[] } }[];
     };
-    const content = data.choices?.[0]?.message?.content?.trim();
+    const message = data.choices?.[0]?.message;
+    const content = message?.content?.trim() ?? '';
+    const toolCalls = message?.tool_calls;
 
-    if (!content) {
+    /**
+     * SEM CONTEÚDO NÃO É SEMPRE ERRO — pode ser um PEDIDO DE FERRAMENTA.
+     *
+     * Quando o modelo decide chamar uma ferramenta, `content` costuma vir
+     * vazio ou nulo: ele não tem nada a dizer em texto ainda, só o pedido de
+     * execução. Tratar isso como "resposta vazia" (o comportamento de antes
+     * desta função aceitar `tools`) derrubaria toda chamada de ferramenta —
+     * exatamente o caminho que a busca do modo entrevista depende.
+     */
+    if (toolCalls && toolCalls.length > 0) {
+      return { ok: true, content, toolCalls };
+    }
+
+    if (content.length === 0) {
       logSafeError('resposta sem conteúdo', JSON.stringify(data).slice(0, 500));
       return {
         ok: false,

@@ -26,21 +26,27 @@
  * FRACASSO aqui, mesmo bem escrito. É o oposto do critério da pré-matéria.
  *
  * -----------------------------------------------------------------------------
- * ⚠ O MODELO NÃO PESQUISA — E O PROMPT FOI ESCRITO SABENDO DISSO
+ * BUSCA NA WEB — OPCIONAL, E O PROMPT MUDA DE FORMA CONFORME ELA EXISTE
  * -----------------------------------------------------------------------------
- * O rascunho original deste prompt mandava o modelo "pesquisar o assunto antes
- * de falar qualquer coisa". Não dá: a integração com o DeepSeek é uma chamada
- * de `chat/completions` sem ferramenta de busca (ver `deepseek.ts`) — o modelo
- * não acessa a internet. Mandá-lo pesquisar não produz pesquisa, produz
- * ALUCINAÇÃO com cara de apuração, que é o pior resultado possível num produto
- * jornalístico.
+ * A integração original com o DeepSeek era só `chat/completions` sem ferramenta
+ * nenhuma — o modelo não tinha acesso à internet, e o prompt dizia isso com
+ * todas as letras para não instruí-lo a "pesquisar" algo que ele não conseguia
+ * fazer de verdade (o resultado disso é ALUCINAÇÃO com cara de apuração, o pior
+ * erro possível num produto jornalístico).
  *
- * O que ele tem de verdade é o material da pauta que o curator já coletou
- * (título, resumo, fonte, score) — o mesmo insumo da pré-matéria. O prompt foi
- * reescrito para dizer isso com todas as letras: use o material, e quando
- * precisar de um fato que não está nele, PERGUNTE ao autor em vez de preencher.
- * Se um dia entrar busca de verdade na integração, esta é a seção do prompt que
- * muda.
+ * Agora existe uma ferramenta real (`web-search.ts`, via Serper.dev), mas ela é
+ * OPCIONAL — sem `SERPER_API_KEY` no ambiente, `isWebSearchConfigured()` volta
+ * `false` e a ferramenta simplesmente não é oferecida ao modelo. Por isso
+ * `buildInterviewSystemPrompt` recebe um booleano: o texto que explica "você não
+ * tem internet" só existe na versão SEM busca. Com busca, a seção equivalente
+ * ensina COMO e QUANDO usar a ferramenta — a regra de não inventar fato
+ * continua valendo do mesmo jeito, ela só passa a ter uma saída real (pesquisar)
+ * além de perguntar ao autor.
+ *
+ * O material da pauta que o curator já coletou (título, resumo, fonte, score)
+ * continua sendo o PONTO DE PARTIDA nos dois casos — a busca complementa, não
+ * substitui: ela existe para os fatos que faltam nesse material, não para
+ * reescrever o que já se sabe.
  *
  * -----------------------------------------------------------------------------
  * O HISTÓRICO VEM DO CLIENTE — e o que isso significa para a segurança
@@ -60,12 +66,19 @@
  * que um humano lê antes de publicar.
  */
 
-import { chatCompletion, type ChatMessage, type DeepSeekFailure } from './deepseek';
+import {
+  chatCompletion,
+  type ChatMessage,
+  type DeepSeekFailure,
+  type ToolCall,
+  type ToolDefinition,
+} from './deepseek';
 import {
   MAX_INTERVIEW_MESSAGES,
   MAX_INTERVIEW_MESSAGE_CHARS,
   type InterviewMessage,
 } from './interview-types';
+import { isWebSearchConfigured, webSearch } from './web-search';
 
 // =============================================================================
 // CONFIGURAÇÃO
@@ -117,7 +130,7 @@ export { isDeepSeekConfigured as isInterviewConfigured, deepseekModel as intervi
  * mesmo site. A regra 6 é própria deste modo — é ela que separa "opinião
  * afiada", que é o produto, de "escândalo fabricado", que é problema.
  */
-export function buildInterviewSystemPrompt(): string {
+export function buildInterviewSystemPrompt(searchAvailable: boolean): string {
   return [
     'Você é o EDITOR-ENTREVISTADOR da Ortus Pixel, um portal brasileiro de cultura pop/geek',
     '(games, cinema, séries, anime, HQs, tecnologia). Você conversa com o DONO do site — daqui',
@@ -133,21 +146,61 @@ export function buildInterviewSystemPrompt(): string {
     'neste modo, mesmo bem escrito. Se o texto final pudesse ter sido publicado por qualquer',
     'portal com o mesmo material, você errou.',
     '',
-    '=============================================================================',
-    'VOCÊ NÃO TEM ACESSO À INTERNET — LEIA ISTO ANTES DE QUALQUER COISA',
-    '=============================================================================',
-    'Você NÃO pesquisa, NÃO abre links e NÃO consulta nada. Tudo que você sabe sobre este assunto',
-    'específico está no material da pauta que vem na primeira mensagem, mais o seu conhecimento',
-    'geral de cultura pop.',
-    '',
-    'A consequência prática é uma regra dura: quando faltar um fato (uma data, um número, quem',
-    'assina o projeto, o que aconteceu antes), você PERGUNTA AO AUTOR ou escreve que não está',
-    'confirmado. É PROIBIDO preencher a lacuna com o que "provavelmente" é o caso. Inventar uma',
-    'apuração que você não fez é o pior erro possível aqui — pior que uma matéria fraca.',
-    '',
-    'Se o material da pauta for curto ou vago, diga isso na cara e pergunte o que o autor já sabe',
-    'sobre o assunto. Ele quase sempre sabe mais que o resumo do feed.',
-    '',
+    ...(searchAvailable
+      ? [
+          '=============================================================================',
+          'VOCÊ TEM UMA FERRAMENTA DE BUSCA — USE-A COM CRITÉRIO',
+          '=============================================================================',
+          'Você pode chamar `buscar_na_web` para pesquisar de verdade. Ela devolve resultados reais',
+          'de busca (título, link, resumo) — não é o seu conhecimento geral, é apuração fresca.',
+          '',
+          'QUANDO USAR: no início, para checar o que o material da pauta não cobre (data exata,',
+          'desdobramento recente, o que a cobertura já está dizendo sobre o tema) — e durante a',
+          'entrevista, sempre que o autor mencionar algo específico que vale confirmar (um precedente',
+          'que ele citou, um número que ele não tem certeza). NÃO chame a ferramenta para checar o',
+          'óbvio nem para cada frase — 1 a 3 buscas por entrevista já cobrem o que interessa.',
+          '',
+          'QUANDO NÃO USAR EM VEZ DE PERGUNTAR: a busca serve para FATO PÚBLICO verificável, nunca',
+          'para adivinhar a OPINIÃO do autor. "O que ele acha disso" nunca é pergunta de busca.',
+          '',
+          'Se a busca não trouxer nada útil (a ferramenta pode devolver "nenhum resultado" ou uma',
+          'falha), NÃO invente para preencher — trate como se não tivesse buscado: pergunte ao autor',
+          'ou escreva que não está confirmado. A busca é um ATALHO para não perguntar o que é público;',
+          'ela não é permissão para inventar quando ela falha.',
+          '',
+        ]
+      : [
+          '=============================================================================',
+          'VOCÊ NÃO TEM ACESSO À INTERNET — LEIA ISTO ANTES DE QUALQUER COISA',
+          '=============================================================================',
+          'Você NÃO pesquisa, NÃO abre links e NÃO consulta nada. Tudo que você sabe sobre este',
+          'assunto específico está no material da pauta que vem na primeira mensagem, mais o seu',
+          'conhecimento geral de cultura pop.',
+          '',
+        ]),
+    ...(searchAvailable
+      ? [
+          'A consequência prática é uma regra dura: quando faltar um fato (uma data, um número, quem',
+          'assina o projeto, o que aconteceu antes), você BUSCA ou PERGUNTA AO AUTOR — busque primeiro',
+          'quando for algo que uma busca resolve rápido; pergunte quando for algo que só ele sabe. Se',
+          'nem busca nem pergunta resolverem, escreva que não está confirmado. É PROIBIDO preencher a',
+          'lacuna com o que "provavelmente" é o caso. Inventar uma apuração que você não fez é o pior',
+          'erro possível aqui — pior que uma matéria fraca.',
+          '',
+          'Se o material da pauta for curto ou vago, diga isso na cara, busque o que der e pergunte ao',
+          'autor o que ele já sabe sobre o assunto. Ele quase sempre sabe mais que o resumo do feed.',
+          '',
+        ]
+      : [
+          'A consequência prática é uma regra dura: quando faltar um fato (uma data, um número, quem',
+          'assina o projeto, o que aconteceu antes), você PERGUNTA AO AUTOR ou escreve que não está',
+          'confirmado. É PROIBIDO preencher a lacuna com o que "provavelmente" é o caso. Inventar uma',
+          'apuração que você não fez é o pior erro possível aqui — pior que uma matéria fraca.',
+          '',
+          'Se o material da pauta for curto ou vago, diga isso na cara e pergunte o que o autor já sabe',
+          'sobre o assunto. Ele quase sempre sabe mais que o resumo do feed.',
+          '',
+        ]),
     '=============================================================================',
     'FLUXO OBRIGATÓRIO — 3 FASES',
     '=============================================================================',
@@ -368,8 +421,101 @@ export function buildOpeningMessage(context: InterviewContext): string {
 }
 
 // =============================================================================
+// A FERRAMENTA DE BUSCA
+// =============================================================================
+
+/** Nome exato que o modelo usa para pedir a ferramenta — tem que bater com o
+ *  que `executeToolCall` reconhece abaixo. */
+const SEARCH_TOOL_NAME = 'buscar_na_web';
+
+/**
+ * Definição JSON Schema da ferramenta, no formato que a API espera.
+ *
+ * Um parâmetro só (`consulta`), de propósito: a busca por trás (`web-search.ts`,
+ * Serper.dev) é uma consulta de texto livre, igual ao Google — não há filtro de
+ * data, site ou idioma para expor sem inventar suporte que o provedor não tem.
+ */
+function searchToolDefinition(): ToolDefinition {
+  return {
+    type: 'function',
+    function: {
+      name: SEARCH_TOOL_NAME,
+      description:
+        'Pesquisa na web (resultados reais de busca) para checar um fato que o material da pauta ' +
+        'não cobre. Use consultas curtas e específicas, como digitaria num buscador — não uma ' +
+        'pergunta em linguagem natural.',
+      parameters: {
+        type: 'object',
+        properties: {
+          consulta: {
+            type: 'string',
+            description: 'A consulta de busca, curta e específica.',
+          },
+        },
+        required: ['consulta'],
+      },
+    },
+  };
+}
+
+/**
+ * Executa UMA chamada de ferramenta pedida pelo modelo e devolve a mensagem
+ * `role: 'tool'` correspondente — pronta para entrar de volta no histórico.
+ *
+ * Função separada (e não inline no loop) porque é o único ponto que precisa
+ * saber o FORMATO de resposta da API (`tool_call_id`, `content` como texto) —
+ * se um dia existir uma segunda ferramenta, é aqui que o `switch` cresce, sem
+ * mexer no loop que orquestra a conversa.
+ */
+async function executeToolCall(chamada: ToolCall): Promise<ChatMessage> {
+  if (chamada.function.name !== SEARCH_TOOL_NAME) {
+    // Ferramenta desconhecida: o modelo não pode ter pedido isso (só uma é
+    // oferecida), mas a API é texto livre por baixo — tratar como resultado
+    // vazio é mais seguro que lançar no meio de uma conversa em andamento.
+    return {
+      role: 'tool',
+      tool_call_id: chamada.id,
+      content: 'Ferramenta desconhecida.',
+    };
+  }
+
+  let consulta = '';
+  try {
+    const args = JSON.parse(chamada.function.arguments) as { consulta?: unknown };
+    consulta = typeof args.consulta === 'string' ? args.consulta : '';
+  } catch {
+    // Argumento mal formado do próprio modelo — raro, mas `JSON.parse` de
+    // entrada de rede nunca é assumido seguro, nem quando "de rede" significa
+    // "a mesma API que estamos chamando".
+  }
+
+  const resultado = await webSearch(consulta);
+
+  const texto = !resultado.ok
+    ? `Busca sem resultado: ${resultado.message}`
+    : resultado.resultados
+        .map((hit, i) => `${i + 1}. ${hit.titulo}${hit.link ? ` (${hit.link})` : ''}\n${hit.resumo}`)
+        .join('\n\n');
+
+  return { role: 'tool', tool_call_id: chamada.id, content: texto };
+}
+
+// =============================================================================
 // A CHAMADA
 // =============================================================================
+
+/**
+ * Teto de RODADAS de ferramenta dentro de um único turno de conversa.
+ *
+ * Um turno pode virar: modelo pede busca → busca → modelo lê e pede outra →
+ * busca → modelo finalmente responde. Sem teto, um modelo preso num padrão de
+ * "sempre pedir mais uma busca" prenderia o turno inteiro (e o orçamento de
+ * TIMEOUT_MS de `deepseek.ts`, que corre por CHAMADA, não pelo turno somado).
+ * 2 rodadas cobrem o caso real (1 a 3 buscas por entrevista, ver o prompt) com
+ * folga — na terceira chamada a ferramenta simplesmente não é oferecida de
+ * novo, o que obriga o modelo a responder com o que já tem.
+ */
+const MAX_TOOL_ROUNDS = 2;
 
 /**
  * Continua a conversa: recebe o histórico, devolve a próxima fala do
@@ -380,42 +526,81 @@ export function buildOpeningMessage(context: InterviewContext): string {
  * manda o que já foi dito. Quem decide isso é o servidor — e não o cliente
  * mandando um sinalizador — porque a mensagem de abertura carrega o material da
  * pauta, que é lido do banco aqui e não pode vir do navegador.
+ *
+ * O LOOP DE FERRAMENTA É INTEIRAMENTE INTERNO: se o modelo pedir busca, as
+ * mensagens `tool_calls`/`tool` trocadas NUNCA voltam para `InterviewMessage[]`
+ * (o tipo que o painel guarda e reenvia). O cliente só vê o texto final — é o
+ * que mantém `sanitizeHistory` simples (só 'user'/'assistant' precisam existir
+ * do lado de fora) e evita reconstruir buscas antigas a cada turno novo.
  */
 export async function continueInterview(
   context: InterviewContext,
   historico: InterviewMessage[],
 ): Promise<InterviewResult> {
+  const buscaDisponivel = isWebSearchConfigured();
+
   const mensagens: ChatMessage[] = [
-    { role: 'system', content: buildInterviewSystemPrompt() },
+    { role: 'system', content: buildInterviewSystemPrompt(buscaDisponivel) },
   ];
 
-  if (historico.length === 0) {
-    mensagens.push({ role: 'user', content: buildOpeningMessage(context) });
-  } else {
-    // A abertura é RECONSTRUÍDA a cada turno, e não guardada pelo cliente: é ela
-    // que carrega o material da pauta (que vem do banco), e deixá-la trafegar
-    // pelo navegador seria deixar o cliente reescrever a apuração no meio da
-    // conversa. O painel só guarda o que ele mesmo produziu e o que o modelo
-    // respondeu.
-    mensagens.push({ role: 'user', content: buildOpeningMessage(context) });
-    mensagens.push(...historico.map((m) => ({ role: m.role, content: m.content })));
-  }
+  // A abertura é RECONSTRUÍDA a cada turno, e não guardada pelo cliente: é ela
+  // que carrega o material da pauta (que vem do banco), e deixá-la trafegar
+  // pelo navegador seria deixar o cliente reescrever a apuração no meio da
+  // conversa. O painel só guarda o que ele mesmo produziu e o que o modelo
+  // respondeu.
+  mensagens.push({ role: 'user', content: buildOpeningMessage(context) });
+  mensagens.push(...historico.map((m) => ({ role: m.role, content: m.content })));
 
-  return callInterview(mensagens);
+  return callInterview(mensagens, buscaDisponivel);
 }
 
-async function callInterview(mensagens: ChatMessage[]): Promise<InterviewResult> {
-  const result = await chatCompletion({
-    messages: mensagens,
-    // Sem `jsonMode`: a saída é conversa e, no fim, texto de matéria — nenhum
-    // dos dois cabe num objeto JSON, e forçá-lo aqui faria o modelo devolver
-    // texto corrido dentro de um campo, sem ganho nenhum.
-    temperature: INTERVIEW_TEMPERATURE,
-  });
+async function callInterview(
+  mensagens: ChatMessage[],
+  buscaDisponivel: boolean,
+): Promise<InterviewResult> {
+  const tools = buscaDisponivel ? [searchToolDefinition()] : undefined;
 
-  if (!result.ok) return result;
+  for (let rodada = 0; rodada <= MAX_TOOL_ROUNDS; rodada++) {
+    const result = await chatCompletion({
+      messages: mensagens,
+      // Sem `jsonMode`: a saída é conversa e, no fim, texto de matéria — nenhum
+      // dos dois cabe num objeto JSON, e forçá-lo aqui faria o modelo devolver
+      // texto corrido dentro de um campo, sem ganho nenhum.
+      temperature: INTERVIEW_TEMPERATURE,
+      // Na ÚLTIMA rodada permitida, a ferramenta não é oferecida: é o que
+      // obriga o modelo a responder em texto em vez de pedir mais uma busca —
+      // sem isso, o `for` chegaria ao fim do jeito errado (um pedido de
+      // ferramenta sem ninguém para executá-lo).
+      tools: rodada < MAX_TOOL_ROUNDS ? tools : undefined,
+    });
 
-  return { ok: true, resposta: result.content };
+    if (!result.ok) return result;
+
+    if (!result.toolCalls || result.toolCalls.length === 0) {
+      return { ok: true, resposta: result.content };
+    }
+
+    // O modelo pediu ferramenta: a mensagem 'assistant' com `tool_calls` entra
+    // no histórico ANTES das respostas — é o formato que a API exige (toda
+    // mensagem 'tool' responde a uma `tool_calls` que veio antes dela na
+    // mesma conversa).
+    mensagens.push({ role: 'assistant', content: result.content, tool_calls: result.toolCalls });
+
+    for (const chamada of result.toolCalls) {
+      mensagens.push(await executeToolCall(chamada));
+    }
+  }
+
+  // Só chega aqui se a última rodada (sem ferramenta oferecida) AINDA assim
+  // devolveu `toolCalls` — não deveria acontecer (a API não tem ferramenta
+  // para pedir), mas é o tipo de "não deveria" que vale ter resposta pronta em
+  // vez de deixar `undefined` estourar mais adiante.
+  return {
+    ok: false,
+    reason: 'invalid-response',
+    status: 502,
+    message: 'O modelo não conseguiu concluir a resposta. Tente de novo.',
+  };
 }
 
 // =============================================================================

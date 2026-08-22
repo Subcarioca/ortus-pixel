@@ -16,6 +16,10 @@
  *   [4] CORTE             só quem passa do limiar segue para o estágio caro
  *   [5] ENRIQUECIMENTO    conectores 'enrichment' -> score final
  *   [6] AÇÕES             alerta / push / hero, conforme a faixa
+ *   [6.4] REPONTUAÇÃO     as pautas mais paradas da fila voltam a ser avaliadas,
+ *                         para o score refletir HOJE e não o dia em que
+ *                         entraram — é ela que faz "perder relevância" existir
+ *                         no dado, e sem ela a etapa seguinte corta errado
  *   [6.5] TETO DA FILA    o que ficou fora das 30 vagas sai por RELEVÂNCIA (a
  *                         etapa [0] corta por idade; esta corta por score, e só
  *                         pode rodar aqui porque precisa dos scores já
@@ -73,6 +77,22 @@ const ENRICHMENT_THRESHOLD = 35;
 
 /** Teto de tópicos enriquecidos por ciclo. Trava dura contra estouro de custo. */
 const MAX_ENRICHMENT_PER_CYCLE = 40;
+
+/**
+ * Teto de pautas JÁ NA FILA repontuadas por ciclo (etapa [6.4]).
+ *
+ * A repontuação usa só conectores de TRIAGEM (os baratos), mas "barato" não é
+ * "de graça": são chamadas de rede por pauta, e a fila inteira a cada ciclo
+ * seria trabalho recorrente proporcional ao tamanho dela.
+ *
+ * 15 é o número que fecha a conta com o resto: a fila tem teto de 30
+ * (`MAX_ACTIVE_TOPICS`), então 15 por ciclo revisa a fila INTEIRA a cada duas
+ * rodadas. Como a etapa pega sempre as mais paradas primeiro
+ * (`lastScoredAt` mais antigo), nenhuma pauta fica com score congelado por
+ * mais que isso — que é exatamente o problema que a etapa existe para
+ * resolver.
+ */
+const MAX_RESCORE_PER_CYCLE = 15;
 
 /**
  * AS FAIXAS QUE SIGNIFICAM "ESTE ASSUNTO ESTÁ EM ALTA".
@@ -134,6 +154,17 @@ export interface CurationCycleResult {
    */
   trimmedTopics: number;
   /**
+   * Pautas JÁ NA FILA cujo score foi recalculado na etapa [6.4].
+   *
+   * Contador próprio (e não somado a `screened`) porque mede outra coisa:
+   * `screened` é "quantas pautas NOVAS este ciclo avaliou", este é "quantas
+   * pautas VELHAS este ciclo trouxe de volta à realidade". Um ciclo com muita
+   * repontuação e pouca descoberta é uma manhã sem notícia; o contrário é um
+   * dia de anúncio grande. Somados, os dois viram um número que não responde
+   * nenhuma das duas perguntas.
+   */
+  rescored: number;
+  /**
    * Pautas expiradas que REAPARECERAM nos feeds e voltaram para a fila
    * (`status: 'dismissed'` -> `'new'`) neste ciclo. Ver o "REVIVAL" em
    * `upsertTopicFromItem`.
@@ -169,6 +200,7 @@ export async function runCurationCycle(
     discovered: 0,
     expiredTopics: 0,
     trimmedTopics: 0,
+    rescored: 0,
     revived: 0,
     rewrittenToPtBr: 0,
     deduplicated: 0,
@@ -487,6 +519,59 @@ export async function runCurationCycle(
       scoring.failedConnectors.forEach((c) => allFailedConnectors.add(c));
 
       if (scoring.band === 'HOT') result.promotedToHot++;
+    }
+
+    // -------------------------------------------------------------------------
+    // [6.4] REPONTUAÇÃO DA FILA EXISTENTE — o que faz "perder relevância" existir
+    // -------------------------------------------------------------------------
+    /**
+     * As etapas [3] e [5] pontuam SÓ as pautas descobertas nesta rodada
+     * (`topicIds`). As que já estavam na fila ficavam com o score CONGELADO do
+     * dia em que entraram — e é isso que quebrava o teto da etapa seguinte:
+     * ele corta pelo menor score, então a pauta velha com score alto congelado
+     * sobrevivia para sempre enquanto a pauta nova (score baixo por ainda não
+     * ter acumulado sinal) morria no ciclo em que nascia. A fila parava de
+     * renovar, que é o oposto do requisito.
+     *
+     * Esta etapa conserta a outra metade: reavalia as pautas mais paradas da
+     * fila para que o score delas reflita a realidade de HOJE. Uma pauta cujo
+     * assunto esfriou cai de verdade, e aí o corte da etapa [6.5] passa a mirar
+     * quem merece — que é o comportamento que "sobrescrever as pautas que
+     * perderam relevância" descreve.
+     *
+     * SÓ CONECTORES DE TRIAGEM (`discoveryConnectors`), nunca os de
+     * enriquecimento: repontuar é manutenção de rotina, não apuração nova, e os
+     * caros já foram gastos na etapa [5] com quem merecia. Com o teto de
+     * `MAX_RESCORE_PER_CYCLE` abaixo, o custo por ciclo fica limitado e
+     * previsível.
+     */
+    const paraRepontuar = dryRun
+      ? []
+      : await prisma.topic.findMany({
+          where: {
+            status: { in: ['new', 'assigned'] },
+            // As desta rodada já foram pontuadas agora há pouco.
+            id: { notIn: topicIds },
+            // Override manual é decisão humana: o algoritmo não a revisita.
+            manualScoreOverride: null,
+          },
+          // As MAIS PARADAS primeiro (`lastScoredAt` mais antigo). `nulls:
+          // 'first'` põe na frente quem nunca foi pontuada — o caso mais
+          // urgente de todos, porque é score que nunca refletiu nada.
+          orderBy: { lastScoredAt: { sort: 'asc', nulls: 'first' } },
+          take: MAX_RESCORE_PER_CYCLE,
+          select: { id: true },
+        });
+
+    for (const { id: topicId } of paraRepontuar) {
+      const scoring = await scoreTopic(topicId, discoveryConnectors, dryRun);
+      if (!scoring) continue;
+      result.rescored++;
+      scoring.failedConnectors.forEach((c) => allFailedConnectors.add(c));
+    }
+
+    if (result.rescored > 0) {
+      console.log(`[curate] ${result.rescored} pauta(s) da fila repontuada(s).`);
     }
 
     // -------------------------------------------------------------------------

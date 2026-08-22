@@ -27,7 +27,7 @@
 import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
 
-import { excessOverCap, MAX_ACTIVE_TOPICS } from './topic-pool.ts';
+import { excessOverCap, graceCutoff, MAX_ACTIVE_TOPICS } from './topic-pool.ts';
 
 describe('o número do requisito', () => {
   it('a fila ativa cabe em 30 pautas', () => {
@@ -89,5 +89,58 @@ describe('quantas pautas passam do teto', () => {
     assert.equal(excessOverCap(10, 4), 6);
     assert.equal(excessOverCap(4, 4), 0);
     assert.equal(excessOverCap(100), excessOverCap(100, MAX_ACTIVE_TOPICS));
+  });
+});
+
+/**
+ * =============================================================================
+ * CARÊNCIA DA PAUTA NOVA — o conserto de um bug que derrubava a funcionalidade
+ * =============================================================================
+ *
+ * Sem a carência, a pauta nova era cortada no MESMO ciclo em que nascia e a
+ * fila parava de renovar. A engrenagem está documentada em
+ * `NEW_TOPIC_GRACE_HOURS`; o resumo é que pauta nova tem score baixo por
+ * construção (ainda não acumulou sinal) e o corte mira o menor score primeiro.
+ *
+ * O que estes testes travam é a ARITMÉTICA da janela — a parte que erra em
+ * silêncio. O filtro em si (`createdAt: { lt: graceCutoff() }`) precisa de
+ * banco e é exercitado em produção; a conta de data, não.
+ */
+describe('carência da pauta recém-encontrada', () => {
+  it('o corte fica 6 horas no passado — nem 6 minutos, nem 6 dias', () => {
+    const agora = new Date('2026-08-22T12:00:00.000Z');
+    assert.equal(graceCutoff(agora).toISOString(), '2026-08-22T06:00:00.000Z');
+  });
+
+  it('pauta encontrada AGORA está protegida; a de ontem, não', () => {
+    const agora = new Date('2026-08-22T12:00:00.000Z');
+    const corte = graceCutoff(agora);
+
+    // O filtro do Prisma é `createdAt < corte`. Reproduzimos a comparação aqui
+    // para travar o SENTIDO da desigualdade: invertê-la protegeria justamente
+    // as pautas velhas e cortaria as novas — o bug original, ao contrário.
+    const recemEncontrada = new Date('2026-08-22T11:59:00.000Z');
+    const deOntem = new Date('2026-08-21T12:00:00.000Z');
+
+    assert.equal(recemEncontrada < corte, false, 'pauta nova NÃO pode ser candidata a corte');
+    assert.equal(deOntem < corte, true, 'pauta de ontem pode ser cortada normalmente');
+  });
+
+  it('a fronteira exata: 6h e 1min sai da proteção, 5h59 continua protegida', () => {
+    const agora = new Date('2026-08-22T12:00:00.000Z');
+    const corte = graceCutoff(agora);
+
+    assert.equal(new Date('2026-08-22T05:59:00.000Z') < corte, true);
+    assert.equal(new Date('2026-08-22T06:01:00.000Z') < corte, false);
+  });
+
+  it('a janela é menor que um dia — senão ela viraria o próprio teto', () => {
+    // Com 20 pautas novas por ciclo (`MAX_NEW_TOPICS_PER_CYCLE`) e 30 vagas,
+    // uma carência de 24h protegeria mais pautas do que existem lugares, e o
+    // corte não teria o que cortar. Ver o racional da constante.
+    const agora = new Date('2026-08-22T12:00:00.000Z');
+    const horas = (agora.getTime() - graceCutoff(agora).getTime()) / 3_600_000;
+    assert.ok(horas < 24, 'a carência não pode chegar a um dia inteiro');
+    assert.ok(horas >= 1, 'a carência precisa cobrir pelo menos um ciclo com folga');
   });
 });

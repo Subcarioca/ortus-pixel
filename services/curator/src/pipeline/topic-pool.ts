@@ -94,6 +94,14 @@
  *          BAIXO, que em tese ficaria eterno, continua saindo pela expiração de
  *          7 dias.
  *
+ *      (c) PAUTA ENCONTRADA HÁ MENOS DE 6 HORAS (`NEW_TOPIC_GRACE_HOURS`). É a
+ *          proteção mais importante das três, e a única que nasceu de um BUG em
+ *          produção: sem ela, a pauta nova era cortada no mesmo ciclo em que
+ *          nascia e a fila parava de renovar. O racional completo está na
+ *          constante — em resumo, pauta nova tem score baixo por construção, e
+ *          cortar pelo menor score sem carência é cortar exatamente o que
+ *          acabou de chegar.
+ *
  *    A CONSEQUÊNCIA HONESTA da assimetria: se um dia houver 30+ pautas
  *    protegidas, a fila fica acima do teto e esta rotina não terá o que cortar.
  *    É o comportamento certo — trabalho humano em andamento vale mais que um
@@ -167,6 +175,43 @@ export const MAX_ACTIVE_TOPICS = 30;
  */
 const MAX_TRIM_PER_CYCLE = 500;
 
+/**
+ * CARÊNCIA DA PAUTA RECÉM-ENCONTRADA — 6 horas de proteção contra o corte.
+ *
+ * -----------------------------------------------------------------------------
+ * O BUG QUE ISTO CONSERTA (e ele derrubava a funcionalidade inteira)
+ * -----------------------------------------------------------------------------
+ * Sem esta janela, o corte por score matava as pautas NOVAS no mesmo ciclo em
+ * que elas nasciam, e a fila parava de renovar. A engrenagem, passo a passo:
+ *
+ *   1. o ciclo pontua APENAS as pautas descobertas naquela rodada (ver
+ *      `topicIds` em `curate.ts`, etapa [3]) — as que já estavam na fila NÃO
+ *      são repontuadas e ficam com o score congelado de quando entraram;
+ *   2. pauta nova nasce com score BAIXO por construção: ela ainda não acumulou
+ *      sinal (velocidade de busca, repercussão social levam horas para
+ *      aparecer) e só passa pelo enriquecimento caro se já tirar 35 na triagem;
+ *   3. este módulo corta pelo MENOR score.
+ *
+ * Resultado: a fila enchia de pauta velha com score alto congelado, e toda
+ * pauta nova entrava e saía na mesma rodada. O oposto exato do requisito ("as
+ * que perderam relevância devem ser sobrescritas por novas") — as velhas nunca
+ * "perdiam relevância" NO DADO, porque ninguém recalculava o score delas.
+ *
+ * A outra metade do conserto é repontuar a fila existente a cada ciclo (ver
+ * `rescoreStaleTopics` em `curate.ts`): é ela que faz o score da pauta velha
+ * cair de verdade. As duas se complementam — esta protege a pauta nova enquanto
+ * ela ainda não teve tempo de mostrar serviço; aquela garante que a pauta velha
+ * seja julgada pelo que ela vale HOJE.
+ *
+ * POR QUE 6 HORAS: é o tempo em que um assunto de cultura pop mostra a que
+ * veio. Menos que isso (1 ou 2h) não cobre a pauta descoberta de madrugada, que
+ * só ganha tração quando o Brasil acorda; muito mais que isso e a carência
+ * viraria o próprio teto — com 20 pautas novas por ciclo, uma janela de 24h
+ * protegeria mais pautas do que as 30 vagas existentes, e o corte não teria o
+ * que cortar.
+ */
+const NEW_TOPIC_GRACE_HOURS = 6;
+
 export interface TrimTopicPoolResult {
   /** Quantas pautas ativas existiam ANTES do corte. Vai para o log do ciclo. */
   active: number;
@@ -201,6 +246,20 @@ export interface TrimTopicPoolResult {
  */
 export function excessOverCap(activeCount: number, cap: number = MAX_ACTIVE_TOPICS): number {
   return Math.max(0, activeCount - cap);
+}
+
+/**
+ * O instante ANTES do qual uma pauta já saiu da carência e pode ser cortada.
+ *
+ * Separada e exportada pelo mesmo motivo de `expiryCutoff` em
+ * `expire-topics.ts`: é aritmética de data, o tipo de código que erra em
+ * silêncio. Trocar horas por minutos aqui não lança exceção nenhuma — só
+ * encolhe a carência de 6 horas para 6 minutos, e o sintoma (pauta nova sendo
+ * cortada de novo) é exatamente o bug que ela existe para consertar, de volta
+ * sem ninguém perceber. Com a função isolada, o teste trava o comportamento.
+ */
+export function graceCutoff(now: Date = new Date()): Date {
+  return new Date(now.getTime() - NEW_TOPIC_GRACE_HOURS * 3_600_000);
 }
 
 /**
@@ -256,6 +315,10 @@ export async function trimTopicPool(
         articles: { none: {} },
         // Decisão humana não é sobrescrita por automação. Ver decisão 3(b).
         manualScoreOverride: null,
+        // CARÊNCIA: pauta encontrada há menos de 6h não é candidata a corte,
+        // qualquer que seja o score. Ver `NEW_TOPIC_GRACE_HOURS` — é o conserto
+        // do bug que fazia a pauta nova morrer no ciclo em que nascia.
+        createdAt: { lt: graceCutoff() },
       },
       orderBy: [{ currentScore: 'asc' }, { createdAt: 'asc' }],
       take: Math.min(excesso, MAX_TRIM_PER_CYCLE),

@@ -394,6 +394,14 @@ export default async function AdminPage() {
                   // ids são para pré-selecionar as franquias no formulário de
                   // matéria (ver `defaultFranchiseIds` em article-create-form).
                   franchiseIds: topic.franchises.map((f) => f.franchise.id),
+                  // QUANDO A PAUTA FOI ENCONTRADA. `createdAt`, e não
+                  // `firstSeenAt`: aquele é a data de publicação DECLARADA
+                  // PELO FEED de terceiro (dado externo, frequentemente errado
+                  // ou no futuro); este é quando a linha entrou na NOSSA fila,
+                  // que é literalmente "quando o curator achou". Mesma escolha
+                  // e mesmo motivo de `expire-topics.ts`, que conta a validade
+                  // de 7 dias por `createdAt`.
+                  createdAt: topic.createdAt,
                   becameHotAt: topic.becameHotAt,
                   // Os dois marcos de tempo viajam JUNTOS e significam coisas
                   // diferentes: `becameHotAt` é o T-zero da meta de 30 min (só

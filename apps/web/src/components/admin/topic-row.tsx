@@ -110,6 +110,15 @@ interface TopicRowProps {
      * quando nunca passou do fluxo normal — ou quando a pauta é anterior à
      * coluna. NÃO é o mesmo que `becameHotAt`: ver o campo em `schema.prisma`.
      */
+    /**
+     * Quando o curator ENCONTROU esta pauta (`Topic.createdAt`).
+     *
+     * Diferente dos dois marcos abaixo, este SEMPRE existe: toda pauta foi
+     * achada em algum momento, mesmo a que nunca subiu de faixa. É a etiqueta
+     * de "de quando é isto aqui" que a fila precisa para o editor julgar se
+     * ainda vale escrever.
+     */
+    createdAt: Date;
     becameTrendingAt: Date | null;
     claimedAt: Date | null;
     status: string;
@@ -198,9 +207,7 @@ export function TopicRow({
    * Não é gated por faixa nem por status: a idade do assunto continua sendo a
    * informação relevante mesmo depois de a pauta ser assumida.
    */
-  const trendingAgeMinutes = topic.becameTrendingAt
-    ? Math.max(0, Math.floor((Date.now() - topic.becameTrendingAt.getTime()) / 60_000))
-    : null;
+  const trendingAgeMinutes = topic.becameTrendingAt ? minutesSince(topic.becameTrendingAt) : null;
 
   async function callAction(action: string, payload: Record<string, unknown> = {}) {
     setFeedback('');
@@ -444,10 +451,34 @@ export function TopicRow({
             </p>
           )}
 
+          {/* QUANDO A PAUTA FOI ENCONTRADA — data e hora, sempre presente.
+
+              Mostra as DUAS coisas de uma vez (relativo + absoluto) porque as
+              duas respondem perguntas diferentes do mesmo editor: "há 3h" é o
+              que ele usa para decidir na hora se ainda vale escrever; "22/08
+              às 11:36" é o que ele usa para comparar com outra pauta, casar com
+              o horário de um anúncio ou explicar a alguém depois. Uma sozinha
+              obrigaria a fazer a conta de cabeça.
+
+              `dateTime` no `<time>` leva a data em formato de máquina, que é o
+              que um leitor de tela anuncia por extenso em vez de soletrar
+              "22/08". */}
+          <p className="form-hint">
+            Encontrada há {formatTrendingAge(minutesSince(topic.createdAt))} ·{' '}
+            <time dateTime={topic.createdAt.toISOString()}>
+              {formatFoundAt(topic.createdAt)}
+            </time>
+          </p>
+
           {/* IDADE DO ASSUNTO EM ALTA — some sozinho quando a pauta nunca passou
               do fluxo normal (ou é anterior à coluna `becameTrendingAt`), que é
               o comportamento certo: melhor não dizer nada do que exibir "em alta
               há 0 min" para uma pauta cuja data ninguém sabe.
+
+              NÃO é a mesma informação da linha acima, e é fácil confundir: uma
+              pauta pode ter sido ENCONTRADA há dois dias e só ter entrado EM
+              ALTA há vinte minutos. A primeira mede o tempo na nossa fila; esta
+              mede o tempo de vida do hype.
 
               Reaproveita `form-hint` em vez de ganhar classe própria: o projeto
               confere que toda classe servida existe na folha do design system
@@ -877,6 +908,31 @@ function isPreArticle(value: unknown): value is PreArticleOutput {
     p.pre_materia !== null &&
     typeof (p.pre_materia as { titulo?: unknown }).titulo === 'string'
   );
+}
+
+/** Minutos decorridos desde uma data. Piso em zero: relógio do servidor
+ *  adiantado em relação ao do navegador produziria idade negativa, e "há -3
+ *  min" é a cara de um bug mesmo quando é só um segundo de diferença. */
+function minutesSince(date: Date): number {
+  return Math.max(0, Math.floor((Date.now() - date.getTime()) / 60_000));
+}
+
+/**
+ * "22/08 às 11:36" — a data e a hora exatas em que a pauta foi encontrada.
+ *
+ * SEM O ANO, de propósito: a fila expira em 7 dias (`TOPIC_EXPIRY_DAYS`), então
+ * nenhuma pauta viva é do ano passado — o ano seria quatro caracteres de ruído
+ * em toda linha. `pt-BR` no `toLocaleString` fixa o formato dia/mês e o relógio
+ * de 24h; sem o locale explícito, a saída mudaria conforme a configuração da
+ * máquina de quem abre o painel.
+ */
+function formatFoundAt(date: Date): string {
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 /**

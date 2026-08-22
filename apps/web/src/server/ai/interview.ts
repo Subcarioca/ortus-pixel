@@ -561,7 +561,9 @@ async function callInterview(
   const tools = buscaDisponivel ? [searchToolDefinition()] : undefined;
 
   for (let rodada = 0; rodada <= MAX_TOOL_ROUNDS; rodada++) {
-    const result = await chatCompletion({
+    const ofereceFerramenta = rodada < MAX_TOOL_ROUNDS ? tools : undefined;
+
+    let result = await chatCompletion({
       messages: mensagens,
       // Sem `jsonMode`: a saída é conversa e, no fim, texto de matéria — nenhum
       // dos dois cabe num objeto JSON, e forçá-lo aqui faria o modelo devolver
@@ -571,8 +573,30 @@ async function callInterview(
       // obriga o modelo a responder em texto em vez de pedir mais uma busca —
       // sem isso, o `for` chegaria ao fim do jeito errado (um pedido de
       // ferramenta sem ninguém para executá-lo).
-      tools: rodada < MAX_TOOL_ROUNDS ? tools : undefined,
+      tools: ofereceFerramenta,
     });
+
+    /**
+     * QUEDA PARA O MODO SEM FERRAMENTA — a entrevista NUNCA pode quebrar por
+     * causa da busca ter dado errado.
+     *
+     * `SERPER_API_KEY` configurada só prova que A BUSCA existe; não prova que
+     * a conta/modelo do DeepSeek aceita `tools` no formato que mandamos (uma
+     * incompatibilidade de API viria como falha HTTP, não como ausência de
+     * `tool_calls`). Sem este desvio, essa incompatibilidade quebraria TODA
+     * entrevista sempre que a busca estivesse configurada — o oposto do
+     * requisito ("sem busca, a entrevista segue do jeito antigo").
+     *
+     * A tentativa de novo acontece só na PRIMEIRA rodada (`rodada === 0`) e só
+     * quando a ferramenta tinha sido oferecida: é o único ponto em que "tirar
+     * a ferramenta e tentar de novo" é uma mudança real na chamada. Numa
+     * rodada posterior, a falha já não tem relação com `tools` (a conversa já
+     * usou ferramenta com sucesso antes) — insistir ali só mascararia um erro
+     * de outra natureza atrás de um retry que nunca ajuda.
+     */
+    if (!result.ok && rodada === 0 && ofereceFerramenta) {
+      result = await chatCompletion({ messages: mensagens, temperature: INTERVIEW_TEMPERATURE });
+    }
 
     if (!result.ok) return result;
 

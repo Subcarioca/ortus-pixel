@@ -37,6 +37,7 @@ import { ArticleCreateForm } from './article-create-form';
 // módulo de servidor entra no pacote do navegador. Ver `article-create-form`.
 import type { AiDraft } from '@/server/ai-draft';
 import type { PreArticleOutput } from '@/server/ai/prearticle-types';
+import { InterviewPanel } from './interview-panel';
 
 interface TopicRowProps {
   categories: { slug: string; name: string }[];
@@ -163,6 +164,18 @@ export function TopicRow({
    * criado (tópico sem categoria, texto curto demais — ver a mensagem).
    */
   const [prearticleDraft, setPrearticleDraft] = useState<{ id: string; slug: string } | null>(null);
+
+  /**
+   * A entrevista está aberta? (Segundo modo de geração — ver `interview-panel.tsx`.)
+   *
+   * Só um booleano AQUI: todo o estado da conversa (histórico, mensagem sendo
+   * digitada, turno em andamento) mora dentro do painel. Fechar e reabrir perde
+   * a conversa, e isso é intencional — o alternativo seria guardar o histórico
+   * nesta linha da fila para sobreviver ao fechamento, o que faria cada resposta
+   * do entrevistador re-renderizar a linha inteira, formulário de matéria
+   * aberto incluído.
+   */
+  const [interviewing, setInterviewing] = useState(false);
 
   /** Minutos restantes da meta de 30 min. Negativo = estourou. */
   const minutesLeft = topic.becameHotAt
@@ -527,6 +540,31 @@ export function TopicRow({
           </button>
         )}
 
+        {/* ---------- ENTREVISTA POR IA (SEGUNDO MODO DE GERAÇÃO) ---------- */}
+        {/* O terceiro botão de IA da linha, e o que produz matéria AUTORAL: em
+            vez de devolver texto pronto, ele entrevista o autor e escreve a
+            partir das opiniões dele. Ver `server/ai/interview.ts` para a
+            decisão de produto por trás disso.
+
+            Compartilha `preArticleEnabled` com a pré-matéria porque a condição
+            é literalmente a mesma (existe chave do DeepSeek configurada?) — uma
+            segunda prop com o mesmo valor daria a impressão de que os dois modos
+            podem ser ligados separadamente, o que não é verdade hoje.
+
+            Some com o formulário aberto, como os outros dois, e pela mesma
+            razão: fluxo de geração competindo com texto já digitado é como se
+            perde texto. */}
+        {preArticleEnabled && !creatingArticle && topic.status !== 'published' && topic.status !== 'dismissed' && (
+          <button
+            type="button"
+            className="btn btn--ghost btn--sm"
+            onClick={() => setInterviewing(!interviewing)}
+            aria-expanded={interviewing}
+          >
+            {interviewing ? 'Ocultar entrevista' : 'Entrevistar sobre a pauta'}
+          </button>
+        )}
+
         <button
           type="button"
           className="btn btn--ghost btn--sm"
@@ -591,6 +629,20 @@ export function TopicRow({
           JSON do REDATOR-CHEFE (contextualização, hype, popularidade, texto e
           otimização), e o botão "Copiar JSON" permite levar o pacote inteiro
           para o formulário de matéria sem perda de estrutura. */}
+      {/* Painel da entrevista. Montado só quando aberto (e não escondido por
+          CSS) de propósito: montar dispara a primeira chamada paga ao modelo,
+          então um painel "escondido mas montado" cobraria uma entrevista que
+          ninguém pediu. Desmontar ao fechar é também o que garante que reabrir
+          comece uma conversa nova, em vez de continuar uma que o autor achou
+          que tinha encerrado. */}
+      {interviewing && (
+        <InterviewPanel
+          topicId={topic.id}
+          pautaTitulo={topic.title}
+          onClose={() => setInterviewing(false)}
+        />
+      )}
+
       {prearticle && (
         <div className="admin-row__detail admin-row__prearticle">
           <div className="admin-row__prearticle-head">

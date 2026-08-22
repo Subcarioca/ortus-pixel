@@ -102,6 +102,38 @@
 .admin-row__prearticle ul { margin: 0; padding-left: 1.2em; display: grid; gap: 2px; }
 .admin-override { font-size: var(--fs-xxs); color: var(--ink-3); font-family: var(--font-mono); }
 
+/* ENTREVISTA POR IA (`interview-panel.tsx`) — o segundo modo de geração.
+   Reaproveita a moldura tracejada de `.admin-row__prearticle` (é o mesmo tipo
+   de conteúdo: rascunho dentro da linha da fila); o que ganha estilo próprio é
+   só o que a pré-matéria não tem — o log da conversa. */
+.admin-interview__log {
+  display: grid; gap: var(--s-3);
+  /* Teto de altura com rolagem própria: uma entrevista de 10 turnos empurraria
+     o resto da fila para fora da tela, e o campo de resposta (que fica ABAIXO)
+     sairia junto — a pessoa teria de rolar para achar onde responder. */
+  max-height: 26rem; overflow-y: auto;
+  padding-right: var(--s-2);
+}
+.admin-interview__msg { display: grid; gap: 2px; }
+/* A fala do autor recebe um filete da marca à esquerda. É a única distinção
+   entre os dois lados, e é suficiente: numa conversa de duas pessoas, quem
+   falou já está escrito em `.admin-interview__quem` logo acima do texto —
+   cor sozinha nunca é o sinal (mesma regra de `.form-hint--error`). */
+.admin-interview__msg--autor {
+  border-left: 2px solid var(--brand); padding-left: var(--s-3);
+}
+.admin-interview__quem {
+  font-family: var(--font-mono); font-size: var(--fs-xxs);
+  text-transform: uppercase; letter-spacing: .04em; color: var(--ink-3);
+}
+/* `pre-wrap` preserva as quebras de linha do modelo, que estrutura as respostas
+   em bullets e seções. Sem isto, o briefing inteiro vira um parágrafo só. */
+.admin-interview__texto {
+  margin: 0; font-size: var(--fs-sm); color: var(--ink-2); white-space: pre-wrap;
+}
+.admin-interview__form { display: grid; gap: var(--s-2); }
+.admin-interview__form textarea { width: 100%; resize: vertical; }
+
 .admin-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
 .admin-table th, .admin-table td {
   border-bottom: 1px solid var(--line-soft); padding: 10px var(--s-3);

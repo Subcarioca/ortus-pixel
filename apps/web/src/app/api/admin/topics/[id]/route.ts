@@ -47,6 +47,12 @@ import {
   preArticleModel,
 } from '@/server/ai/prearticle';
 import type { PreArticleOutput } from '@/server/ai/prearticle-types';
+import {
+  continueInterview,
+  interviewModel,
+  isInterviewConfigured,
+  sanitizeHistory,
+} from '@/server/ai/interview';
 import { parseArticleInput } from '@/server/article-input';
 import { editorialRiskGate } from '@/server/editorial-risk-gate';
 import { syncArticleTaxonomy } from '@/server/article-taxonomy';
@@ -662,6 +668,145 @@ export async function POST(
         articleId: draft.id,
         articleSlug: draft.slug,
       });
+    }
+
+    // -------------------------------------------------------------------------
+    case 'interview': {
+      /**
+       * MODO ENTREVISTA — o SEGUNDO modo de geração, ao lado da pré-matéria.
+       *
+       * A diferença entre os dois está no cabeçalho de `server/ai/interview.ts`
+       * e é de produto, não de implementação: a pré-matéria devolve texto
+       * pronto numa chamada; a entrevista PERGUNTA ao autor e só escreve depois,
+       * em várias chamadas. O que sai daqui é a próxima fala do entrevistador.
+       *
+       * -----------------------------------------------------------------------
+       * POR QUE ESTA AÇÃO NÃO CRIA RASCUNHO SOZINHA (a pré-matéria cria)
+       * -----------------------------------------------------------------------
+       * Porque ela não sabe quando terminou. A pré-matéria tem um fim definido
+       * (a chamada volta, o JSON está completo, o rascunho nasce). A entrevista
+       * é um ir e vir: a mesma ação atende tanto "faça as primeiras perguntas"
+       * quanto "reescreve o terceiro parágrafo". Criar um rascunho a cada turno
+       * encheria a lista de matérias de fragmentos de conversa. Quem decide que
+       * o texto está pronto é o autor, copiando o resultado para o formulário —
+       * o mesmo caminho que a sugestão por IA já usa.
+       */
+      if (!isInterviewConfigured()) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              'A entrevista por IA não está configurada neste servidor. ' +
+              'Use "Criar matéria" e escreva normalmente.',
+          },
+          { status: 503 },
+        );
+      }
+
+      if (topic.status === 'published') {
+        return NextResponse.json(
+          {
+            ok: false,
+            message: 'Este tópico já virou matéria. Edite a matéria existente em Matérias.',
+          },
+          { status: 409 },
+        );
+      }
+
+      /**
+       * LIMITE MAIS FOLGADO QUE O DOS OUTROS MODOS — 30 a cada 10 minutos, e a
+       * diferença é da natureza do modo, não generosidade.
+       *
+       * Sugestão e pré-matéria gastam UMA chamada por clique: 8 por janela é
+       * bastante. Uma entrevista inteira são muitas chamadas (briefing, 3
+       * rodadas de perguntas, rascunho, revisões) — com teto de 8 o autor
+       * levaria um "espere 10 minutos" no meio da primeira conversa, que é onde
+       * o modo mais precisa de fluidez. 30 cobre duas entrevistas completas com
+       * folga e continua fechando o cenário de laço acidental.
+       *
+       * Chave própria, como os outros: um modo não come a cota do outro.
+       */
+      const limiteEntrevista = checkRateLimit(`interview:${guard.user.id}`, {
+        maxRequests: 30,
+        windowSeconds: 600,
+      });
+
+      if (!limiteEntrevista.allowed) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              `Muitas mensagens seguidas. Espere ${Math.ceil(limiteEntrevista.resetInSeconds / 60)} ` +
+              'minuto(s) e continue a conversa — o que já foi dito continua na tela.',
+          },
+          { status: 429 },
+        );
+      }
+
+      const contextoEntrevista = await prisma.topic.findUnique({
+        where: { id },
+        select: {
+          title: true,
+          summary: true,
+          sourceName: true,
+          category: { select: { name: true } },
+        },
+      });
+
+      if (!contextoEntrevista) {
+        return NextResponse.json({ ok: false, message: 'Tópico não encontrado.' }, { status: 404 });
+      }
+
+      /**
+       * O HISTÓRICO VEM DO NAVEGADOR — e por isso passa por `sanitizeHistory`
+       * antes de qualquer coisa. Ver o cabeçalho de `interview.ts`: é ela que
+       * descarta um `role: 'system'` injetado, corta mensagem gigante e limita o
+       * tamanho da conversa (que é o custo por turno).
+       */
+      const historico = sanitizeHistory((payload as { mensagens?: unknown }).mensagens);
+
+      const entrevista = await continueInterview(
+        {
+          pauta: contextoEntrevista.title,
+          material: contextoEntrevista.summary?.trim() || 'Sem resumo apurado — pergunte ao autor.',
+          fonte: contextoEntrevista.sourceName ?? 'não informada',
+          nicho: contextoEntrevista.category?.name ?? 'Cultura pop/geek',
+        },
+        historico,
+      );
+
+      if (!entrevista.ok) {
+        return NextResponse.json(
+          { ok: false, message: entrevista.message },
+          { status: entrevista.status },
+        );
+      }
+
+      /**
+       * AUDITORIA SÓ NA ABERTURA, e não a cada turno.
+       *
+       * O que a trilha precisa responder é "quantas entrevistas foram abertas e
+       * quanto isso custou", não "quantas frases foram trocadas". Uma linha por
+       * mensagem encheria o `AuditLog` de ruído — uma conversa longa geraria
+       * dezenas de registros do mesmo evento, e o log deixaria de servir para o
+       * que serve. `historico.length === 0` é exatamente o primeiro turno.
+       */
+      if (historico.length === 0) {
+        await prisma.auditLog.create({
+          data: {
+            action: 'topic.ai_interview',
+            entityType: 'Topic',
+            entityId: id,
+            actorId: guard.user.id,
+            after: {
+              model: interviewModel(),
+              modo: 'entrevista',
+            },
+          },
+        });
+      }
+
+      return NextResponse.json({ ok: true, resposta: entrevista.resposta });
     }
 
     // -------------------------------------------------------------------------

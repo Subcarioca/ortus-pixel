@@ -144,6 +144,20 @@ export function deepseekModel(): string {
 export async function chatCompletion(options: {
   messages: ChatMessage[];
   jsonMode?: boolean;
+  /**
+   * Temperatura do modelo. Ausente = 0.3, o valor que a pré-matéria sempre usou
+   * e que continua sendo o padrão para NÃO mudar o comportamento de quem já
+   * chamava esta função sem o parâmetro.
+   *
+   * Existe porque os dois modos de geração querem coisas OPOSTAS do modelo:
+   *   - pré-matéria (0.3): saída ESTRUTURADA em JSON, onde variação é defeito —
+   *     o campo tem que vir no formato combinado, sempre.
+   *   - entrevista (ver `interview.ts`): perguntas que precisam ser
+   *     ESPECÍFICAS e variadas. Com 0.3 o modelo converge para o mesmo punhado
+   *     de perguntas genéricas ("o que você achou?"), que é exatamente o
+   *     fracasso que aquele prompt existe para evitar.
+   */
+  temperature?: number;
 }): Promise<DeepSeekChatResult> {
   const apiKey = readApiKey();
 
@@ -177,7 +191,7 @@ export async function chatCompletion(options: {
       body: JSON.stringify({
         model,
         messages: options.messages,
-        temperature: 0.3,
+        temperature: options.temperature ?? 0.3,
         max_tokens: MAX_OUTPUT_TOKENS,
         ...(options.jsonMode ? { response_format: { type: 'json_object' } } : {}),
       }),

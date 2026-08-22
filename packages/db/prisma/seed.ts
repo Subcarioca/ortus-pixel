@@ -626,6 +626,14 @@ Para quem joga a 1440p, é a compra mais racional da geração. Para 4K, o degra
         firstSeenAt,
         lastScoredAt: now,
         becameHotAt: item.band === 'HOT' ? hoursAgo(item.hoursOld - 0.2) : null,
+        // "Em alta" começa uma faixa ANTES de "quente" (ver o campo no schema):
+        // por isso 'RISING' também recebe a marca, e ela é mais ANTIGA que o
+        // `becameHotAt` acima — o assunto sobe para EM ALTA e só depois estoura.
+        // Sem isto, o painel local nunca exibiria o aviso "Em alta há ...".
+        becameTrendingAt:
+          item.band === 'HOT' || item.band === 'RISING'
+            ? hoursAgo(item.hoursOld - 0.1)
+            : null,
         publishedAt: item.publish ? hoursAgo(item.hoursOld - 0.4) : null,
         franchises: {
           create: item.franchises.map((slug) => ({ franchiseId: frId(slug) })),
@@ -927,6 +935,10 @@ async function seedPendingTopics() {
         firstSeenAt: hoursAgo(p.hoursOld),
         lastScoredAt: now,
         becameHotAt: p.band === 'HOT' ? hoursAgo(p.hoursOld - 0.1) : null,
+        // Mesma regra do outro bloco de seed: 'EM ALTA' já conta, e a marca é
+        // anterior à de "quente".
+        becameTrendingAt:
+          p.band === 'HOT' || p.band === 'RISING' ? hoursAgo(p.hoursOld - 0.05) : null,
         claimedAt: p.status === 'assigned' ? hoursAgo(p.hoursOld - 0.5) : null,
         franchises: { create: p.franchises.map((s) => ({ franchiseId: frId(s) })) },
       },

@@ -104,6 +104,12 @@ interface TopicRowProps {
     /** 'curator' | 'manual'. Ver core/topic-origin.ts. */
     origin: TopicOrigin;
     becameHotAt: Date | null;
+    /**
+     * Desde quando o assunto está EM ALTA (faixa 'EM ALTA' ou 'QUENTE'). Nulo
+     * quando nunca passou do fluxo normal — ou quando a pauta é anterior à
+     * coluna. NÃO é o mesmo que `becameHotAt`: ver o campo em `schema.prisma`.
+     */
+    becameTrendingAt: Date | null;
     claimedAt: Date | null;
     status: string;
     contributions: unknown;
@@ -161,6 +167,26 @@ export function TopicRow({
   /** Minutos restantes da meta de 30 min. Negativo = estourou. */
   const minutesLeft = topic.becameHotAt
     ? 30 - Math.floor((Date.now() - topic.becameHotAt.getTime()) / 60_000)
+    : null;
+
+  /**
+   * HÁ QUANTO TEMPO O ASSUNTO ESTÁ EM ALTA — o outro sinal de tempo desta linha,
+   * e deliberadamente NÃO é o cronômetro acima.
+   *
+   * A diferença entre os dois é a razão de este existir:
+   *   - o cronômetro de 30 min responde "quanto tempo ainda tenho?", só nasce
+   *     quando o score cruza 80 e some para todo o resto da fila;
+   *   - este responde "isso ainda é notícia?", e aparece para QUALQUER pauta que
+   *     tenha entrado em alta alguma vez — inclusive a que nunca chegou a QUENTE,
+   *     que é justamente a que hoje não mostra sinal de tempo nenhum. Uma pauta
+   *     em alta há 3 horas é uma decisão editorial diferente de uma que estourou
+   *     há 5 minutos, e sem este dado as duas parecem iguais na tela.
+   *
+   * Não é gated por faixa nem por status: a idade do assunto continua sendo a
+   * informação relevante mesmo depois de a pauta ser assumida.
+   */
+  const trendingAgeMinutes = topic.becameTrendingAt
+    ? Math.max(0, Math.floor((Date.now() - topic.becameTrendingAt.getTime()) / 60_000))
     : null;
 
   async function callAction(action: string, payload: Record<string, unknown> = {}) {
@@ -403,6 +429,19 @@ export function TopicRow({
                   .join(', ')}`}
               . Push automático bloqueado.
             </p>
+          )}
+
+          {/* IDADE DO ASSUNTO EM ALTA — some sozinho quando a pauta nunca passou
+              do fluxo normal (ou é anterior à coluna `becameTrendingAt`), que é
+              o comportamento certo: melhor não dizer nada do que exibir "em alta
+              há 0 min" para uma pauta cuja data ninguém sabe.
+
+              Reaproveita `form-hint` em vez de ganhar classe própria: o projeto
+              confere que toda classe servida existe na folha do design system
+              (`npm run check:classes`), e um sinal informativo não justifica
+              abrir estilo novo. */}
+          {trendingAgeMinutes !== null && (
+            <p className="form-hint">Em alta há {formatTrendingAge(trendingAgeMinutes)}</p>
           )}
 
           {/* Cronômetro da meta de 30 minutos. */}
@@ -786,6 +825,35 @@ function isPreArticle(value: unknown): value is PreArticleOutput {
     p.pre_materia !== null &&
     typeof (p.pre_materia as { titulo?: unknown }).titulo === 'string'
   );
+}
+
+/**
+ * "47 min", "2h10", "3 dias" — a idade escrita como uma pessoa falaria.
+ *
+ * POR QUE NÃO `Intl.RelativeTimeFormat` NEM UMA BIBLIOTECA DE DATA: a saída
+ * pronta ("há 2 horas") arredonda para UMA unidade, e é exatamente a segunda
+ * unidade que decide a pauta — "2h10" e "2h55" viram a mesma frase, mas quem
+ * está julgando se o assunto ainda rende trata as duas de formas diferentes.
+ * Trazer uma dependência para depois perder a precisão que motivou o campo não
+ * se paga; a conta inteira cabe em três ramos.
+ *
+ * As três faixas seguem a granularidade útil em cada escala: no primeiro dia o
+ * minuto importa; passado um dia, a pauta já é velha para o padrão desta fila
+ * (que expira em 7 dias) e o número de horas vira ruído.
+ */
+function formatTrendingAge(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+
+  const horas = Math.floor(minutes / 60);
+  if (horas < 24) {
+    const resto = minutes % 60;
+    // `padStart` para "2h05" e não "2h5": sem ele, o leitor lê "2 h 5" como
+    // "2h50" no canto do olho — é o formato de relógio que evita a ambiguidade.
+    return resto === 0 ? `${horas}h` : `${horas}h${String(resto).padStart(2, '0')}`;
+  }
+
+  const dias = Math.floor(horas / 24);
+  return dias === 1 ? '1 dia' : `${dias} dias`;
 }
 
 const DIMENSION_LABELS: Record<string, string> = {

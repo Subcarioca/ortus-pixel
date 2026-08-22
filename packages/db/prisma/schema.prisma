@@ -532,6 +532,36 @@ model Topic {
   /// Momento em que o score cruzou 80 pela primeira vez. É o T-zero do
   /// cronômetro de time-to-publish, o KPI editorial mais importante.
   becameHotAt   DateTime?
+  /// Momento em que o assunto ENTROU EM ALTA pela primeira vez — ou seja, quando
+  /// a faixa saiu do fluxo normal e passou a 'RISING' ou 'HOT'.
+  ///
+  /// POR QUE NÃO BASTA O `becameHotAt` LOGO ACIMA: aquele campo responde a uma
+  /// pergunta específica e já usada por dois consumidores (o cronômetro de 30
+  /// min da linha da fila e o KPI de time-to-publish em
+  /// `curator/actions/instrumentation.ts`) — "há quanto tempo isto é BREAKING?".
+  /// Ele só é gravado quando o score cruza 80, então uma pauta que subiu para
+  /// 'EM ALTA' e ficou lá por seis horas nasce e morre com ele NULO. Na fila, o
+  /// efeito é uma pauta sem nenhum sinal de tempo: o editor não distingue o
+  /// assunto que estourou há cinco minutos daquele que está morno desde ontem —
+  /// e essa é justamente a informação que decide se ainda vale escrever.
+  ///
+  /// Este campo responde à pergunta mais larga: "desde quando este assunto está
+  /// em alta?". Vale para RISING e para HOT, e é gravado UMA ÚNICA VEZ (mesma
+  /// trava de escrita do `becameHotAt`, em `pipeline/curate.ts`): é uma data de
+  /// INÍCIO, e recalculá-la a cada ciclo transformaria "está em alta há 3h" em
+  /// "está em alta há 15 min" para sempre.
+  ///
+  /// 'RELEVANT' (40-59) NÃO conta como "em alta", de propósito: aquela faixa é
+  /// descrita no próprio catálogo de faixas como "fluxo editorial normal, sem
+  /// meta de velocidade" (ver `core/scoring-types.ts`), e "em alta" é literalmente
+  /// o rótulo da faixa RISING. Contar RELEVANT faria quase toda pauta da fila
+  /// exibir o aviso, e um aviso que aparece em tudo não informa nada.
+  ///
+  /// Nulo = nunca passou de 'RELEVANT' (ou é anterior a esta coluna: linhas
+  /// antigas ficam nulas na migração, e a tela simplesmente não mostra o sinal
+  /// para elas — não há como reconstruir a data retroativamente sem varrer o
+  /// histórico de `ScoreSnapshot`, e uma data inventada seria pior que nenhuma).
+  becameTrendingAt DateTime?
   /// Quando um jornalista assumiu a pauta.
   claimedAt     DateTime?
   claimedById   String?

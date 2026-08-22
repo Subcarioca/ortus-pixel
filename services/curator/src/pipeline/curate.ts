@@ -16,6 +16,10 @@
  *   [4] CORTE             só quem passa do limiar segue para o estágio caro
  *   [5] ENRIQUECIMENTO    conectores 'enrichment' -> score final
  *   [6] AÇÕES             alerta / push / hero, conforme a faixa
+ *   [6.5] TETO DA FILA    o que ficou fora das 30 vagas sai por RELEVÂNCIA (a
+ *                         etapa [0] corta por idade; esta corta por score, e só
+ *                         pode rodar aqui porque precisa dos scores já
+ *                         atualizados deste ciclo — ver `topic-pool.ts`)
  *   [7] INSTRUMENTAÇÃO    eventos internos para os KPIs editoriais
  *
  * A ETAPA [4] É O QUE TORNA O PRODUTO VIÁVEL FINANCEIRAMENTE.
@@ -51,6 +55,7 @@ import {
   MAX_NEW_TOPICS_PER_CATEGORY_PER_CYCLE,
   MAX_NEW_TOPICS_PER_CYCLE,
 } from './topic-quota';
+import { MAX_ACTIVE_TOPICS, trimTopicPool } from './topic-pool';
 import { isRewriteConfigured, rewriteItemsToPtBr } from './rewrite-ptbr';
 import { collectSignals } from './orchestrator';
 import { onScoreCalculated } from '../actions/dispatcher';
@@ -68,6 +73,24 @@ const ENRICHMENT_THRESHOLD = 35;
 
 /** Teto de tópicos enriquecidos por ciclo. Trava dura contra estouro de custo. */
 const MAX_ENRICHMENT_PER_CYCLE = 40;
+
+/**
+ * AS FAIXAS QUE SIGNIFICAM "ESTE ASSUNTO ESTÁ EM ALTA".
+ *
+ * São as duas do topo do catálogo (`core/scoring-types.ts`): 'HOT' (80-100,
+ * "QUENTE / BREAKING") e 'RISING' (60-79, cujo rótulo é literalmente "EM ALTA").
+ * Ficam de fora 'RELEVANT' (40-59) e 'EVERGREEN' (0-39) — a primeira é descrita
+ * no próprio catálogo como "fluxo editorial normal, sem meta de velocidade", e a
+ * segunda está fora da curadoria de velocidade por definição.
+ *
+ * Escrito como conjunto, e não como `banda !== 'EVERGREEN'`, porque a negação
+ * silenciosamente passaria a incluir qualquer faixa NOVA que alguém acrescente
+ * ao catálogo no futuro — e o efeito (toda a fila marcada como "em alta") não
+ * apareceria em teste nenhum. `Set<string>` e não `Set<ScoreBand>` para poder
+ * comparar direto com `Topic.currentBand`, que o Prisma devolve como `string`
+ * (a faixa não é enum no schema, ver o comentário de `Author.systemRole`).
+ */
+const TRENDING_BANDS: ReadonlySet<string> = new Set(['HOT', 'RISING']);
 
 /**
  * OS OUTROS DOIS TETOS DO CICLO — e por que não moram aqui.
@@ -103,6 +126,14 @@ export interface CurationCycleResult {
   /** Pautas retiradas da fila por idade na etapa [0]. Ver `expire-topics.ts`. */
   expiredTopics: number;
   /**
+   * Pautas retiradas da fila por RELEVÂNCIA na etapa [6.5] — as que ficaram
+   * fora das 30 vagas. Contador separado de `expiredTopics` de propósito: as
+   * duas rotinas deixam a MESMA marca no banco ('dismissed') e só este número
+   * (mais o evento 'topic.evicted') distingue "envelheceu" de "perdeu no
+   * ranking". Ver `topic-pool.ts`.
+   */
+  trimmedTopics: number;
+  /**
    * Pautas expiradas que REAPARECERAM nos feeds e voltaram para a fila
    * (`status: 'dismissed'` -> `'new'`) neste ciclo. Ver o "REVIVAL" em
    * `upsertTopicFromItem`.
@@ -137,6 +168,7 @@ export async function runCurationCycle(
     runId: run.id,
     discovered: 0,
     expiredTopics: 0,
+    trimmedTopics: 0,
     revived: 0,
     rewrittenToPtBr: 0,
     deduplicated: 0,
@@ -455,6 +487,38 @@ export async function runCurationCycle(
       scoring.failedConnectors.forEach((c) => allFailedConnectors.add(c));
 
       if (scoring.band === 'HOT') result.promotedToHot++;
+    }
+
+    // -------------------------------------------------------------------------
+    // [6.5] TETO DA FILA ATIVA — a faxina por RELEVÂNCIA
+    // -------------------------------------------------------------------------
+    // A OUTRA faxina do ciclo, e o par com a etapa [0]: aquela corta por IDADE
+    // (7 dias), esta corta por RELEVÂNCIA (as piores colocadas, além das 30).
+    // São perguntas diferentes e por isso são duas rotinas — ver os cabeçalhos
+    // de `expire-topics.ts` e `topic-pool.ts`.
+    //
+    // POR QUE AQUI E NÃO LÁ EM CIMA, junto da expiração: o critério é
+    // comparativo. Este passo precisa enxergar os scores JÁ RECALCULADOS nas
+    // etapas [3] e [5] e as pautas novas JÁ CRIADAS na etapa [2] — rodando
+    // antes, decidiria quem sai com os números da rodada passada e cortaria
+    // justamente a pauta que acabou de subir. O preço de ficar no fim (um ciclo
+    // que estoure antes não corta nada) é aceitável: o excesso continua lá no
+    // ciclo seguinte, e a rotina não lança em hipótese alguma.
+    const trim = await trimTopicPool({ dryRun });
+    result.trimmedTopics = trim.dismissed;
+
+    if (trim.dismissed > 0) {
+      console.log(
+        `[curate] ${trim.dismissed} pauta(s) descartada(s) por ficarem fora das ` +
+          `${MAX_ACTIVE_TOPICS} vagas da fila (havia ${trim.active} ativas)` +
+          // O aviso de "sobrou" explica tanto o número redondo repetido ciclo
+          // após ciclo (teto de lote, na drenagem do passivo) quanto a fila que
+          // segue acima de 30 por ter pautas protegidas — os dois casos são
+          // esperados e nenhum é falha.
+          (trim.hasMore ? ' — ainda há excesso, o próximo ciclo continua' : '') +
+          (dryRun ? ' [dryRun: nada foi gravado]' : '') +
+          '.',
+      );
     }
 
     result.failedConnectors = [...allFailedConnectors];
@@ -855,6 +919,36 @@ async function scoreTopic(
   const previousBand = topic.currentBand;
   const becameHotNow = scoreResult.band === 'HOT' && previousBand !== 'HOT';
 
+  /**
+   * ENTROU EM ALTA AGORA? — a versão LARGA do `becameHotNow` acima.
+   *
+   * As duas marcas convivem porque respondem a perguntas diferentes, e confundi-las
+   * quebraria um KPI que já está em produção:
+   *
+   *   `becameHotNow`  -> "cruzou 80 AGORA?" É o T-zero do cronômetro de
+   *                      time-to-publish (meta de 30 min) e alimenta o KPI de
+   *                      `actions/instrumentation.ts`. Mexer nele é mexer na
+   *                      medição da redação.
+   *   esta variável   -> "saiu do fluxo normal AGORA?" É o T-zero de "este
+   *                      assunto está em alta desde quando", que a fila do painel
+   *                      exibe para o editor julgar se a pauta ainda vale.
+   *
+   * O corte é RISING (60) e não HOT (80) porque a pauta que só chega a 'EM ALTA'
+   * é exatamente a que hoje não tem sinal NENHUM de tempo na fila — ela nunca
+   * grava `becameHotAt` e portanto parece igualmente fresca no minuto 5 e na
+   * hora 6. 'RELEVANT' fica de fora de propósito: o catálogo de faixas descreve
+   * aquela faixa como "fluxo editorial normal, sem meta de velocidade", e um
+   * aviso que aparece em quase toda linha da fila deixa de ser aviso.
+   *
+   * O `Set` é comparado contra `topic.currentBand`, que vem do banco como
+   * `string` livre (a faixa não é enum no schema — ver o comentário de
+   * `Author.systemRole`). Ler a faixa ANTERIOR desse jeito, e não do último
+   * `ScoreSnapshot`, é o mesmo caminho que `becameHotNow` já usa: uma leitura a
+   * menos e a mesma fonte de verdade.
+   */
+  const emAltaAgora =
+    TRENDING_BANDS.has(scoreResult.band) && !TRENDING_BANDS.has(previousBand);
+
   // Persistimos tudo numa transação: score atual, histórico e leituras brutas
   // precisam ser consistentes entre si. Se gravássemos separadamente e o
   // processo caísse no meio, teríamos um tópico com score novo e histórico
@@ -877,6 +971,13 @@ async function scoreTopic(
         // `becameHotAt` só é gravado UMA vez: é o T-zero do cronômetro de
         // time-to-publish. Sobrescrever a cada ciclo zeraria o KPI.
         ...(becameHotNow && !topic.becameHotAt ? { becameHotAt: new Date() } : {}),
+        // MESMA trava de escrita única, pelo mesmo motivo e com um risco extra:
+        // um assunto oscila de faixa (sobe para 'EM ALTA', cai para 'RELEVANTE'
+        // no ciclo seguinte, volta a subir). Sem o `!topic.becameTrendingAt`,
+        // cada volta reiniciaria a contagem e a fila mostraria "em alta há 15
+        // min" para uma pauta que a redação vê desde a manhã — que é a leitura
+        // errada exatamente no caso em que a informação mais importa.
+        ...(emAltaAgora && !topic.becameTrendingAt ? { becameTrendingAt: new Date() } : {}),
       },
     }),
 

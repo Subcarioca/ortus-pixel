@@ -395,6 +395,12 @@ export default async function AdminPage() {
                   // matéria (ver `defaultFranchiseIds` em article-create-form).
                   franchiseIds: topic.franchises.map((f) => f.franchise.id),
                   becameHotAt: topic.becameHotAt,
+                  // Os dois marcos de tempo viajam JUNTOS e significam coisas
+                  // diferentes: `becameHotAt` é o T-zero da meta de 30 min (só
+                  // existe se o score cruzou 80), `becameTrendingAt` é "desde
+                  // quando o assunto está em alta" (vale a partir de 'EM ALTA').
+                  // Ver o comentário do campo em `schema.prisma`.
+                  becameTrendingAt: topic.becameTrendingAt,
                   claimedAt: topic.claimedAt,
                   status: topic.status,
                   contributions: topic.scoreSnapshots[0]?.contributions ?? null,

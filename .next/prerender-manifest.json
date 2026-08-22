@@ -225,30 +225,6 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/metodologia": {
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "next-action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/metodologia",
-      "dataRoute": "/metodologia.rsc",
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
     "/politica-de-afiliados": {
       "experimentalBypassFor": [
         {
@@ -273,13 +249,37 @@
         "x-next-revalidated-tags",
         "x-next-revalidate-tag-token"
       ]
+    },
+    "/metodologia": {
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/metodologia",
+      "dataRoute": "/metodologia.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
     }
   },
   "dynamicRoutes": {},
   "notFoundRoutes": [],
   "preview": {
-    "previewModeId": "678dd9dc00ce780b1b29185fbe139d14",
-    "previewModeSigningKey": "148b55493700c64ea1f5cb7ca00d520716a83f68af04be3fd09b9fccd2e08578",
-    "previewModeEncryptionKey": "9365e4a19f3217c838e0d2ec23d678f988f95f50afdda3f63597dfe1d1fc32e0"
+    "previewModeId": "31b5b7926c4aee4845b6b4180426cf7f",
+    "previewModeSigningKey": "87e39112fc516bd3e20491c142c6ff093d71723e42022ae2fdd3e9805e8f3da0",
+    "previewModeEncryptionKey": "4197392e103d7be82e65bd24210e226dcda4c8d50a5b5ce7eac33846c4b9de79"
   }
 }

@@ -128,13 +128,24 @@ jobs:
           # `--max-time 120` acima do teto do servidor (75s) para que quem
           # decide o corte seja o servidor, que sabe traduzir o motivo.
           # `-w` põe o código HTTP na última linha, separado do corpo.
+          #
+          # `&& curl_status=0 || curl_status=$?`, E NÃO `curl_status=$?` NUMA LINHA
+          # SEPARADA — esse era o bug real. O shell que o GitHub usa para `run:`
+          # é `bash -e {0}` (visto no log: "shell: /usr/bin/bash -e {0}"), e sob
+          # `-e` uma ATRIBUIÇÃO cujo lado direito é `$(comando que falha)` aborta
+          # o script NA HORA — a linha seguinte (`curl_status=$?`) nunca era
+          # executada. Era exatamente o timeout que este bloco existe para tratar
+          # sem vermelho (comentário abaixo) que disparava o vermelho: o job
+          # morria ANTES de chegar no `if` que perdoa o timeout. Com `&&`/`||`
+          # presos à mesma linha da atribuição, o desvio acontece sem passar pelo
+          # `-e` — é o idioma padrão para capturar `$?` de um `$(...)` que pode
+          # falhar dentro de um script com errexit ligado.
           resposta="$(curl --silent --show-error --max-time 120 \
             --request POST "${URL}" \
             --header "x-internal-secret: ${SEGREDO}" \
             --header 'Content-Type: application/json' \
             --data '{}' \
-            --write-out '\n%{http_code}')"
-          curl_status=$?
+            --write-out '\n%{http_code}')" && curl_status=0 || curl_status=$?
 
           codigo="$(printf '%s' "${resposta}" | tail -n 1)"
           corpo="$(printf '%s' "${resposta}" | sed '$d')"

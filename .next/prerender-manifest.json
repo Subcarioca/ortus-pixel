@@ -88,6 +88,31 @@
         "x-next-revalidate-tag-token"
       ]
     },
+    "/_not-found": {
+      "initialStatus": 404,
+      "experimentalBypassFor": [
+        {
+          "type": "header",
+          "key": "next-action"
+        },
+        {
+          "type": "header",
+          "key": "content-type",
+          "value": "multipart/form-data;.*"
+        }
+      ],
+      "initialRevalidateSeconds": false,
+      "srcRoute": "/_not-found",
+      "dataRoute": "/_not-found.rsc",
+      "allowHeader": [
+        "host",
+        "x-matched-path",
+        "x-prerender-revalidate",
+        "x-prerender-revalidate-if-generated",
+        "x-next-revalidated-tags",
+        "x-next-revalidate-tag-token"
+      ]
+    },
     "/ads.txt": {
       "initialStatus": 404,
       "initialHeaders": {
@@ -176,31 +201,6 @@
         "x-next-revalidate-tag-token"
       ]
     },
-    "/_not-found": {
-      "initialStatus": 404,
-      "experimentalBypassFor": [
-        {
-          "type": "header",
-          "key": "next-action"
-        },
-        {
-          "type": "header",
-          "key": "content-type",
-          "value": "multipart/form-data;.*"
-        }
-      ],
-      "initialRevalidateSeconds": false,
-      "srcRoute": "/_not-found",
-      "dataRoute": "/_not-found.rsc",
-      "allowHeader": [
-        "host",
-        "x-matched-path",
-        "x-prerender-revalidate",
-        "x-prerender-revalidate-if-generated",
-        "x-next-revalidated-tags",
-        "x-next-revalidate-tag-token"
-      ]
-    },
     "/editorias": {
       "experimentalBypassFor": [
         {
@@ -278,8 +278,8 @@
   "dynamicRoutes": {},
   "notFoundRoutes": [],
   "preview": {
-    "previewModeId": "e5b0dab4aca2270eb18c6b9a6bdd4955",
-    "previewModeSigningKey": "cba5f2ef7a9c32e82ae8b6ba1d867c7a146929392fad98e42eb6d71e2d0ec1f8",
-    "previewModeEncryptionKey": "1977e498026614647cb5aa8075311f040c56f250321a59a698628f44b799f23b"
+    "previewModeId": "c938834a66288a6030d19d58aacc0551",
+    "previewModeSigningKey": "b99170a95a0c6faf890b5b8c6a82531d2ab8987dfd01060701d4eb9dc5b6b230",
+    "previewModeEncryptionKey": "c19951b8e8ff3a2677d33286020fae69f4c70c00091166b32f064626d6da7018"
   }
 }
